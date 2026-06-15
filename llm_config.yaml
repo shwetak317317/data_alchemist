@@ -1,0 +1,19 @@
+# LiteLLM model configuration
+# Change `model` to switch LLM without touching any agent code.
+#
+# Examples:
+#   model: claude-sonnet-4-6          → Anthropic Claude (default)
+#   model: claude-opus-4-8            → Anthropic Claude Opus
+#   model: gpt-4o                     → OpenAI GPT-4o
+#   model: azure/gpt-4o               → Azure OpenAI (set AZURE_* env vars)
+#   model: gemini/gemini-1.5-pro      → Google Gemini
+#   model: ollama/mistral             → Local Ollama (no API key needed)
+#   model: ollama/llama3              → Local LLaMA 3
+
+model: gemini-3.5-flash
+#claude-sonnet-4-6
+
+# Optional overrides (leave blank to use env vars)
+api_key_env: GEMINI_API_KEY    # env var that holds the key for this provider
+max_tokens: 4096
+temperature: 0.1                  # low temp for structured outputs
