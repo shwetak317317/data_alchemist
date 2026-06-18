@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 
 from app.core.metadata_db import get_db
+from app.core.auth_deps import get_current_user, CurrentUser
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/intel", tags=["intel"])
@@ -46,7 +47,8 @@ class ReceiptResponse(BaseModel):
 
 
 @router.get("/advisory", response_model=AdvisoryResponse)
-def get_advisory(connection_id: Optional[str] = None, db: Session = Depends(get_db)):
+def get_advisory(connection_id: Optional[str] = None, db: Session = Depends(get_db),
+                 current_user: CurrentUser = Depends(get_current_user)):
     """Return the latest pre-run advisory for a connection."""
     params: dict = {}
     conn_filter = "WHERE connection_id=:conn" if connection_id else ""
@@ -85,7 +87,9 @@ def get_advisory(connection_id: Optional[str] = None, db: Session = Depends(get_
 
 
 @router.get("/receipt", response_model=ReceiptResponse)
-def get_receipt(connection_id: Optional[str] = None, table_fqn: Optional[str] = None, db: Session = Depends(get_db)):
+def get_receipt(connection_id: Optional[str] = None, table_fqn: Optional[str] = None,
+                db: Session = Depends(get_db),
+                current_user: CurrentUser = Depends(get_current_user)):
     """Return the latest trust receipt for a connection / table."""
     params: dict = {}
     conditions = []

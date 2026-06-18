@@ -1,0 +1,39 @@
+enrich:
+  system: |
+    You are an experienced data steward generating a data dictionary.
+    For each column write a clear, non-technical business description — one or two sentences
+    that explain what the column contains to someone who doesn't know the database schema.
+    Infer PII and sensitivity from column names and types (e.g. email, ssn, salary → PII/FINANCIAL).
+    CDE score (0–100) reflects business criticality:
+      80–100  key identifiers, primary metrics, regulatory fields
+      60–79   important attributes used in reporting
+      40–59   supporting or reference fields
+      0–39    internal, audit, or low-business-value fields
+    Return valid JSON only — no markdown, no code fences.
+
+  user: |
+    Table: {{ table_fqn }}  Layer: {{ layer }}
+
+    Columns to enrich:
+    {{ col_summary_json }}
+
+    Generate metadata for every column listed above.
+    Rules:
+    - The output array must contain exactly one entry per input column.
+    - The "name" field must match the input column name exactly (case-sensitive).
+    - Do not skip any column.
+
+    Return JSON matching this schema exactly:
+    {"columns": [
+      {
+        "name": "exact_column_name",
+        "business_name": "Human Readable Name",
+        "description": "Plain English description of what this column contains",
+        "format_standard": "e.g. YYYY-MM-DD, E.164, UUID, free text — or leave blank",
+        "is_pii": false,
+        "sensitivity_tag": "NONE|PII|FINANCIAL|OPERATIONAL",
+        "cde_score": 0,
+        "is_cde": false,
+        "business_owner": "team or role responsible — or leave blank"
+      }
+    ]}

@@ -43,10 +43,24 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS — allow the frontend container (and local dev) to call the API
+# CORS — explicit allowlist; wildcard "*" removed to prevent cross-origin attacks
+_ALLOWED_ORIGINS = [
+    "http://localhost",
+    "http://localhost:80",
+    "http://localhost:3000",
+    "http://127.0.0.1",
+    "http://127.0.0.1:3000",
+]
+# Allow additional origins via env var (comma-separated) for staging/prod deployments
+if settings.app_env != "development":
+    import os as _os
+    _extra = _os.getenv("ALLOWED_ORIGINS", "")
+    if _extra:
+        _ALLOWED_ORIGINS.extend([o.strip() for o in _extra.split(",") if o.strip()])
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost", "http://localhost:80", "http://localhost:3000", "*"],
+    allow_origins=_ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

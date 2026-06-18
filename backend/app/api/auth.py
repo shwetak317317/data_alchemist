@@ -28,6 +28,7 @@ from passlib.context import CryptContext
 
 from app.core.config import settings
 from app.core.metadata_db import get_db
+from app.core.auth_deps import create_access_token
 
 _pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -51,6 +52,9 @@ class TokenExchangeRequest(BaseModel):
 class UserInfo(BaseModel):
     name: str
     email: str
+    org_id: Optional[str] = None
+    role: Optional[str] = None
+    token: Optional[str] = None    # JWT Bearer token — present after login
     given_name: Optional[str] = None
     tenant: Optional[str] = None
     oid: Optional[str] = None
@@ -176,45 +180,59 @@ def register_user(req: RegisterRequest, db: Session = Depends(get_db)):
     """
     Create a new local user account. Passwords are hashed with bcrypt and
     stored in the PostgreSQL metadata database (users table).
+    org_id is derived from the email domain. First user in org = admin.
     """
     from sqlalchemy import text
 
+    email = req.email.lower().strip()
     # Check for duplicate email
     existing = db.execute(
         text("SELECT id FROM users WHERE email = :email"),
-        {"email": req.email.lower().strip()},
+        {"email": email},
     ).fetchone()
     if existing:
         raise HTTPException(409, "An account with this email already exists.")
 
+    # Derive org_id from email domain (e.g. user@pal.tech → pal.tech)
+    org_id = email.split("@")[1] if "@" in email else "default"
+
+    # First user in org becomes admin; subsequent users get data_engineer role
+    org_count = db.execute(
+        text("SELECT COUNT(*) FROM users WHERE org_id = :org"),
+        {"org": org_id},
+    ).scalar() or 0
+    role = "admin" if org_count == 0 else "data_engineer"
+
     password_hash = _pwd_ctx.hash(req.password)
     db.execute(
         text(
-            "INSERT INTO users (email, name, password_hash) "
-            "VALUES (:email, :name, :password_hash)"
+            "INSERT INTO users (email, name, password_hash, org_id, role) "
+            "VALUES (:email, :name, :password_hash, :org_id, :role)"
         ),
         {
-            "email": req.email.lower().strip(),
+            "email": email,
             "name": req.name.strip(),
             "password_hash": password_hash,
+            "org_id": org_id,
+            "role": role,
         },
     )
     db.commit()
-    logger.info("New user registered: %s", req.email)
-    return UserInfo(name=req.name.strip(), email=req.email.lower().strip())
+    logger.info("New user registered: %s (org=%s role=%s)", email, org_id, role)
+    return UserInfo(name=req.name.strip(), email=email, org_id=org_id, role=role)
 
 
 @router.post("/login", response_model=UserInfo)
 def login_user(req: LoginRequest, db: Session = Depends(get_db)):
     """
-    Authenticate with email + password against the local PostgreSQL users table.
-    Returns user info on success; 401 on wrong credentials.
+    Authenticate with email + password. Returns user info + JWT Bearer token.
     """
     from sqlalchemy import text
 
+    email = req.email.lower().strip()
     row = db.execute(
-        text("SELECT name, email, password_hash FROM users WHERE email = :email"),
-        {"email": req.email.lower().strip()},
+        text("SELECT name, email, password_hash, org_id, role FROM users WHERE email = :email"),
+        {"email": email},
     ).fetchone()
 
     if not row or not _pwd_ctx.verify(req.password, row.password_hash):
@@ -223,8 +241,13 @@ def login_user(req: LoginRequest, db: Session = Depends(get_db)):
     # Update last_login timestamp
     db.execute(
         text("UPDATE users SET last_login = NOW() WHERE email = :email"),
-        {"email": req.email.lower().strip()},
+        {"email": email},
     )
     db.commit()
-    logger.info("User login: %s", req.email)
-    return UserInfo(name=row.name, email=row.email)
+
+    org_id = getattr(row, "org_id", None) or "default"
+    role   = getattr(row, "role",   None) or "viewer"
+    token  = create_access_token(email=email, name=row.name, org_id=org_id, role=role)
+
+    logger.info("User login: %s (org=%s role=%s)", email, org_id, role)
+    return UserInfo(name=row.name, email=row.email, org_id=org_id, role=role, token=token)

@@ -22,12 +22,11 @@ ALTER TABLE profiling_reports ADD COLUMN IF NOT EXISTS schema_name  VARCHAR(128)
 ALTER TABLE profiling_reports ADD COLUMN IF NOT EXISTS table_name   VARCHAR(128);
 
 -- anomaly_log: structured explanation fields + metric tracking
+-- NOTE: metric_value, baseline_value, deviation_pct, ack_note already exist in
+-- 05_anomaly_log.sql CREATE TABLE — the duplicate ALTERs were silently ignored
+-- (IF NOT EXISTS guard). Only truly new columns are listed here.
 ALTER TABLE anomaly_log ADD COLUMN IF NOT EXISTS explanation     TEXT;
 ALTER TABLE anomaly_log ADD COLUMN IF NOT EXISTS metric_name     VARCHAR(128);
-ALTER TABLE anomaly_log ADD COLUMN IF NOT EXISTS metric_value    DECIMAL(20,6);
-ALTER TABLE anomaly_log ADD COLUMN IF NOT EXISTS baseline_value  DECIMAL(20,6);
-ALTER TABLE anomaly_log ADD COLUMN IF NOT EXISTS deviation_pct   DECIMAL(10,2);
-ALTER TABLE anomaly_log ADD COLUMN IF NOT EXISTS ack_note        TEXT;
 ALTER TABLE anomaly_log ADD COLUMN IF NOT EXISTS history_values  JSONB;
 
 -- audit_trail: normalize entity display name
@@ -41,3 +40,6 @@ ALTER TABLE dq_rules ADD COLUMN IF NOT EXISTS column_name VARCHAR(128);
 
 -- dq_run_results: track rule name for display without join
 ALTER TABLE dq_run_results ADD COLUMN IF NOT EXISTS rule_name VARCHAR(256);
+
+-- connections: store layer architecture map (Medallion / custom layers)
+ALTER TABLE connections ADD COLUMN IF NOT EXISTS layer_map JSONB;

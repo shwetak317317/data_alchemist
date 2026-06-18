@@ -39,6 +39,7 @@ class ConnectionCreate(BaseModel):
     environment: str = "production"
     credentials: ConnectionCredentials
     schemas_scope: list[str] = []
+    layer_map: Optional[dict] = None           # {layers: [...], assignment: {...}}
 
 
 class ConnectionTestRequest(BaseModel):
@@ -62,9 +63,16 @@ class ConnectionResponse(BaseModel):
     status: str
     error_message: Optional[str] = None
     schemas_scope: list[str] = []
+    layer_map: Optional[dict] = None
     last_tested_at: Optional[datetime] = None
     last_sync_at: Optional[datetime] = None
     created_at: datetime
+    table_count: Optional[int] = None
+    # Denormalized credential preview (no secrets)
+    host: Optional[str] = None
+    port: Optional[int] = None
+    database_name: Optional[str] = None
+    auth_type: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -73,3 +81,11 @@ class ConnectionResponse(BaseModel):
 class ConnectionUpdate(BaseModel):
     name: Optional[str] = None
     schemas_scope: Optional[list[str]] = None
+    layer_map: Optional[dict] = None
+    credentials: Optional[dict] = None   # partial update — merged with existing encrypted config
+    environment: Optional[str] = None
+
+
+class ConnectionCredentialOverride(BaseModel):
+    """Used for POST /{id}/test to test with optional partial overrides."""
+    credentials: Optional[dict] = None

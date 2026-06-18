@@ -144,7 +144,7 @@ const Sidebar = () => {
           <div style={{ fontSize: 12.5, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{userName}</div>
           <div style={{ fontSize: 10, color: "var(--fg-2)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{userSub}</div>
         </div>
-        <button onClick={() => setStage("login")} title="Sign out" style={{ background: "none", border: "none", cursor: "pointer", padding: 4, display: "inline-flex", color: "var(--fg-2)" }}>
+        <button onClick={() => { sessionStorage.removeItem('dt_token'); sessionStorage.removeItem('dt_user'); setStage("login"); }} title="Sign out" style={{ background: "none", border: "none", cursor: "pointer", padding: 4, display: "inline-flex", color: "var(--fg-2)" }}>
           <i data-lucide="log-out" style={{ width: 15, height: 15 }}></i>
         </button>
       </div>
@@ -223,7 +223,10 @@ const DemoBanner = () => {
 
 // ---------- App ----------
 function App() {
-  const [stage, setStage] = React.useState("login"); // login | app
+  // Auto-resume if a valid session exists (set by login or injected by test runner)
+  const [stage, setStage] = React.useState(() => {
+    try { return JSON.parse(sessionStorage.getItem('dt_user') || '{}').name ? "app" : "login"; } catch { return "login"; }
+  });
   const [route, setRoute] = React.useState("home");
   const [trustScore, setTrustScore] = React.useState(69);
   const [pipeline, setPipeline] = React.useState("ISSUES");
@@ -237,7 +240,10 @@ function App() {
   const [activeConnectionId, setActiveConnectionId] = React.useState(() => localStorage.getItem('dt_conn_id') || null);
   const [activeConnectionName, setActiveConnectionName] = React.useState(() => localStorage.getItem('dt_conn_name') || null);
   const [activeConnectionPlatform, setActiveConnectionPlatform] = React.useState(() => localStorage.getItem('dt_conn_platform') || null);
+  const [activeTableFqn, setActiveTableFqn] = React.useState(null);
   const [lastRunId, setLastRunId] = React.useState(null);
+  const [datasets, setDatasets] = React.useState([]);
+  const [datasetsLoading, setDatasetsLoading] = React.useState(false);
 
   const go = (r) => { setRoute(r); const s = document.getElementById("dt-scroll"); if (s) s.scrollTop = 0; };
 
@@ -277,6 +283,22 @@ function App() {
       .catch(() => {});
   }, [stage]);
 
+  // Fetch datasets once per connection — shared by all screens; avoids per-screen re-fetch on navigation.
+  // forceLive=false (default) uses the DB cache for fast navigation; forceLive=true hits the live connector.
+  const refreshDatasets = React.useCallback((forceLive = false) => {
+    if (!window.DTApi?.listDatasets || !activeConnectionId) { setDatasets([]); return; }
+    setDatasetsLoading(true);
+    window.DTApi.listDatasets(activeConnectionId, !forceLive)  // use_cache = !forceLive
+      .then(data => { if (data) setDatasets(data); })
+      .catch(() => {})
+      .finally(() => setDatasetsLoading(false));
+  }, [activeConnectionId]);
+
+  React.useEffect(() => {
+    if (stage !== 'app') { setDatasets([]); return; }
+    refreshDatasets();
+  }, [activeConnectionId, stage]);
+
   const store = {
     stage, setStage, route, go, trustScore, setTrustScore, pipeline, setPipeline,
     ruleDecisions, setRuleDecisions, customRules, setCustomRules,
@@ -284,7 +306,9 @@ function App() {
     metaDecisions, setMetaDecisions, statusPromoted, setStatusPromoted,
     taskList, setTaskList,
     activeConnectionId, activeConnectionName, activeConnectionPlatform, setActiveConn,
+    activeTableFqn, setActiveTableFqn,
     lastRunId, setLastRunId,
+    datasets, setDatasets, datasetsLoading, refreshDatasets,
   };
 
   useIcons();

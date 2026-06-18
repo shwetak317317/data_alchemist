@@ -6,11 +6,23 @@
 
 const BASE = '/api';
 
+function _authHeaders() {
+  const token = sessionStorage.getItem('dt_token');
+  return token ? { 'Authorization': `Bearer ${token}` } : {};
+}
+
 async function _fetch(path, opts = {}) {
   const res = await fetch(`${BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...opts.headers },
+    headers: { 'Content-Type': 'application/json', ..._authHeaders(), ...opts.headers },
     ...opts,
   });
+  if (res.status === 401) {
+    // Token expired — clear session and reload to login screen
+    sessionStorage.removeItem('dt_token');
+    sessionStorage.removeItem('dt_user');
+    window.location.reload();
+    return;
+  }
   if (!res.ok) {
     const err = await res.text().catch(() => res.statusText);
     throw new Error(`API ${res.status}: ${err}`);
@@ -29,10 +41,12 @@ export const testConnection    = (body)       => _fetch('/connections/test', { m
 export const createConnection  = (body)       => _fetch('/connections', { method: 'POST', body: JSON.stringify(body) });
 export const deleteConnection      = (id)       => _fetch(`/connections/${id}`, { method: 'DELETE' });
 export const updateConnection      = (id, body) => _fetch(`/connections/${id}`, { method: 'PATCH', body: JSON.stringify(body) });
-export const getConnectionSchemas  = (id)       => _fetch(`/connections/${id}/schemas`);
+export const getConnectionSchemas      = (id)       => _fetch(`/connections/${id}/schemas`);
+export const getConnectionCredentials  = (id)       => _fetch(`/connections/${id}/credentials`);
+export const testSavedConnection       = (id, body) => _fetch(`/connections/${id}/test`, { method: 'POST', body: JSON.stringify(body || {}) });
 
 // ── Profiling ─────────────────────────────────────────────────────────────────
-export const listDatasets      = (connId)     => _fetch(`/profiling/datasets?connection_id=${connId}`);
+export const listDatasets      = (connId, useCache = false) => _fetch(`/profiling/datasets?connection_id=${connId}${useCache ? '&use_cache=true' : ''}`);
 export const getReport         = (reportId)   => _fetch(`/profiling/report/${reportId}`);
 export const getReportByTable  = (tableFqn, connId) => _fetch(`/profiling/report/by-table/${encodeURIComponent(tableFqn)}${connId ? `?connection_id=${connId}` : ''}`);
 
@@ -44,14 +58,21 @@ export const getReportByTable  = (tableFqn, connId) => _fetch(`/profiling/report
  */
 export function streamProfiling({ connectionId, schemaName, tableName, onProgress, onReport, onError }) {
   const body = JSON.stringify({ connection_id: connectionId, schema_name: schemaName, table_name: tableName });
-  fetch(`${BASE}/profiling/run`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body })
+  fetch(`${BASE}/profiling/run`, { method: 'POST', headers: { 'Content-Type': 'application/json', ..._authHeaders() }, body })
     .then(res => {
+      if (!res.ok) { onError?.(`HTTP ${res.status}`); return; }
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
+      let gotReport = false;
       function pump() {
         reader.read().then(({ done, value }) => {
-          if (done) return;
+          if (done) {
+            // Stream closed: if no report was received, signal an error so
+            // callers (e.g. batch mode) are not left hanging indefinitely.
+            if (!gotReport) onError?.('Stream closed without a report');
+            return;
+          }
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split('\n\n');
           buffer = lines.pop();
@@ -60,12 +81,12 @@ export function streamProfiling({ connectionId, schemaName, tableName, onProgres
             try {
               const evt = JSON.parse(line.slice(5).trim());
               if (evt.type === 'progress') onProgress?.(evt.data);
-              else if (evt.type === 'report') onReport?.(evt.data);
-              else if (evt.type === 'error') onError?.(evt.message);
+              else if (evt.type === 'report') { gotReport = true; onReport?.(evt.data); }
+              else if (evt.type === 'error')  onError?.(evt.message);
             } catch (_) {}
           }
           pump();
-        });
+        }).catch(err => onError?.(err.message));
       }
       pump();
     })
@@ -75,9 +96,13 @@ export function streamProfiling({ connectionId, schemaName, tableName, onProgres
 // ── Metadata ──────────────────────────────────────────────────────────────────
 export const listDictionary    = (connId, table) => _fetch(`/metadata/dictionary?connection_id=${connId}${table ? `&table_fqn=${encodeURIComponent(table)}` : ''}`);
 export const enrichMetadata    = (reportId, connId) => _fetch(`/metadata/enrich?report_id=${reportId}&connection_id=${connId}`, { method: 'POST' });
-export const decideColumn      = (colId, decision, body) => _fetch(`/metadata/dictionary/${encodeURIComponent(colId)}/${decision}`, { method: 'POST', body: JSON.stringify(body) });
+// Map past-tense UI values ("approved","rejected") to backend verb form ("approve","reject")
+const _decisionVerb = (d) => ({ approved: 'approve', rejected: 'reject', edited: 'edit' }[d] || d);
+export const decideColumn      = (colId, decision, body) => _fetch(`/metadata/dictionary/${encodeURIComponent(colId)}/${_decisionVerb(decision)}`, { method: 'POST', body: JSON.stringify(body) });
 export const listCDEs          = (connId)         => _fetch(`/metadata/cdes?connection_id=${connId}`);
 export const cdePromote        = (colId, action, body) => _fetch(`/metadata/cdes/${encodeURIComponent(colId)}/${action}`, { method: 'POST', body: JSON.stringify(body) });
+export const bulkDecide        = (columnIds, decision) => _fetch('/metadata/dictionary/bulk-decide', { method: 'POST', body: JSON.stringify({ column_ids: columnIds, decision }) });
+export const addColumnManually = (body)           => _fetch('/metadata/dictionary', { method: 'POST', body: JSON.stringify(body) });
 
 // ── Rules ─────────────────────────────────────────────────────────────────────
 export const listRules         = (connId, status) => _fetch(`/rules?connection_id=${connId}${status ? `&status=${status}` : ''}`);
@@ -88,6 +113,7 @@ export const createRule        = (body)           => _fetch('/rules', { method: 
 
 // ── Execution ─────────────────────────────────────────────────────────────────
 export const runExecution      = (connId)         => _fetch(`/execution/run?connection_id=${connId}`, { method: 'POST' });
+export const getLatestRun      = (connId)         => _fetch(`/execution/latest?connection_id=${connId}`);
 export const getRunResults     = (runId)           => _fetch(`/execution/results/${runId}`);
 export const acknowledgeFailure = (body)           => _fetch('/execution/acknowledge', { method: 'POST', body: JSON.stringify(body) });
 
@@ -134,7 +160,7 @@ export function streamSimulation({ scenarioText, connectionId, onMeta, onEvent, 
   const body = JSON.stringify({ scenario_text: scenarioText, connection_id: connectionId || null });
   fetch(`${BASE}/simulation/inject`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ..._authHeaders() },
     body,
     signal: ctrl.signal,
   })

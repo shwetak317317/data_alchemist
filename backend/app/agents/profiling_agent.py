@@ -28,6 +28,7 @@ from app.services.profiling_service import (
 )
 from app.core.llm import chat
 from app.models.profiling import ProfilingReport, ColumnStats, ProfilingRisk, ProfilingProgressEvent
+from app.prompts.profiling import build_profiling_summary_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -134,11 +135,14 @@ def compute_numerics(state: ProfilingState) -> ProfilingState:
 
 def detect_duplicates(state: ProfilingState) -> ProfilingState:
     schema, table = state["schema_name"], state["table_name"]
+    connector = state["connector"]
     try:
-        result = state["connector"].query(
-            f'SELECT COUNT(*) - COUNT(DISTINCT *) FROM "{schema}"."{table}"'
+        tref = connector.table_ref(schema, table)
+        result = connector.query(
+            f"SELECT COUNT(*) FROM (SELECT DISTINCT * FROM {tref}) _d"
         )
-        state["duplicate_count"] = int(result.rows[0][0]) if result.rows else 0
+        distinct_count = int(result.rows[0][0]) if result.rows else state["row_count"]
+        state["duplicate_count"] = max(0, state["row_count"] - distinct_count)
     except Exception:
         state["duplicate_count"] = 0
     _emit(state, "Duplicate detection", f"{state['duplicate_count']} duplicate row(s)", 72)
@@ -232,18 +236,7 @@ def generate_summary(state: ProfilingState) -> ProfilingState:
     scores = state["scores"]
     risks = state["risks"][:5]  # top 5 for prompt
 
-    risk_text = "\n".join(f"- {r.severity}: {r.description}" for r in risks) or "None"
-    prompt = [{"role": "user", "content": (
-        f"You are a data quality analyst. Generate a concise (3–4 sentences) business-readable "
-        f"summary for a data profiling report.\n\n"
-        f"Table: {schema}.{table}\n"
-        f"Row count: {state['row_count']:,}\n"
-        f"Quality score: {scores['overall']}/100\n"
-        f"Completeness: {scores['completeness']}%  Uniqueness: {scores['uniqueness']}%  "
-        f"Consistency: {scores['consistency']}%\n"
-        f"Top risks:\n{risk_text}\n\n"
-        f"Write a short summary that a data engineer would find useful."
-    )}]
+    prompt = build_profiling_summary_prompt(schema, table, state["row_count"], scores, risks)
     try:
         state["summary_text"] = chat(prompt, max_tokens=300)
     except Exception as e:
@@ -281,10 +274,12 @@ def run_profiling(
     connection_id: str,
     schema_name: str,
     table_name: str,
+    layer_override: str | None = None,
 ) -> Generator[ProfilingProgressEvent | ProfilingReport, None, None]:
     """
     Stream profiling progress events, then yield the final ProfilingReport.
-    Use in FastAPI SSE endpoints.
+    layer_override: if provided (e.g. from the wizard layer_map), used directly;
+                    otherwise falls back to schema-name heuristic.
     """
     state: ProfilingState = {
         "connection_id": connection_id,
@@ -305,16 +300,20 @@ def run_profiling(
             for ev in events[seen_events:]:
                 seen_events += 1
                 yield ev
-            # Capture final state
             state = node_state
 
     report_id = str(uuid.uuid4())
     scores = state.get("scores", {})
+    _LAYER_NAMES = {"RAW", "BRONZE", "SILVER", "GOLD"}
+    if layer_override and layer_override.upper() in _LAYER_NAMES:
+        detected_layer = layer_override.upper()
+    else:
+        detected_layer = schema_name.upper() if schema_name.upper() in _LAYER_NAMES else "UNKNOWN"
     yield ProfilingReport(
         report_id=report_id,
         connection_id=connection_id,
         table_fqn=f"{schema_name}.{table_name}",
-        layer=schema_name.upper() if schema_name.upper() in ("RAW", "BRONZE", "SILVER", "GOLD") else "UNKNOWN",
+        layer=detected_layer,
         run_at=datetime.now(timezone.utc),
         row_count=state.get("row_count", 0),
         quality_score=scores.get("overall", 0),

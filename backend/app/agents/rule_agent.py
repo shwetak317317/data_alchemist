@@ -6,17 +6,12 @@ Both use LiteLLM for intelligence.
 """
 import json
 import logging
-from app.core.llm import chat
+from app.core.llm import chat, parse_llm_json
 from app.models.rule import DQRule, NLConvertResponse
 from app.models.profiling import ProfilingReport
+from app.prompts.rules import build_recommend_rules_prompt, build_nl_to_rule_prompt
 
 logger = logging.getLogger(__name__)
-
-_SYSTEM_RULE = (
-    "You are a senior data engineer who specialises in data quality. "
-    "Your job is to write precise, executable DQ rules. "
-    "Always return valid JSON with no markdown fences."
-)
 
 
 def recommend_rules(
@@ -24,35 +19,27 @@ def recommend_rules(
     connection_id: str,
     cde_columns: list[str] | None = None,
 ) -> list[DQRule]:
-    """
-    Given a profiling report, return a ranked list of recommended DQ rules.
-    """
     cde_set = set(cde_columns or [])
-    col_summary = []
-    for c in report.columns:
-        col_summary.append({
+    col_summary = [
+        {
             "name": c.name, "type": c.data_type,
             "null_pct": c.null_pct, "cardinality_ratio": c.cardinality_ratio,
             "format_pattern": c.format_pattern, "is_cde": c.name in cde_set,
-        })
-
-    prompt = [
-        {"role": "system", "content": _SYSTEM_RULE},
-        {"role": "user", "content": (
-            f"Table: {report.table_fqn}  Layer: {report.layer}  Rows: {report.row_count:,}\n\n"
-            f"Column statistics:\n{json.dumps(col_summary, indent=2)}\n\n"
-            f"Top risks detected:\n"
-            + "\n".join(f"- {r.severity}: {r.description}" for r in report.risks[:10])
-            + "\n\nGenerate a list of 5–15 DQ rules. For each rule return JSON:\n"
-            '{"rules": [{"rule_name": "", "rule_description": "", "column_name": "" or null, '
-            '"rule_expression": "(SQL returning TRUE=pass)", "rule_type": "NULL_CHECK|RANGE|FORMAT|FK|VOLUME|CUSTOM", '
-            '"severity": "CRITICAL|HIGH|MEDIUM|LOW", "is_cde_rule": true/false}]}'
-        )},
+        }
+        for c in report.columns
     ]
+
+    prompt = build_recommend_rules_prompt(
+        table_fqn=report.table_fqn,
+        layer=report.layer,
+        row_count=report.row_count,
+        col_summary=col_summary,
+        risks=report.risks,
+    )
 
     try:
         raw = chat(prompt)
-        data = json.loads(raw)
+        data = parse_llm_json(raw)
         rules_raw = data.get("rules", [])
     except Exception as e:
         logger.error("Rule recommendation LLM failed: %s", e)
@@ -83,25 +70,15 @@ def nl_to_rule(
     connection_id: str,
     layer: str = "UNKNOWN",
 ) -> NLConvertResponse:
-    """
-    Convert a plain-English quality expectation to a structured DQ rule.
-    """
-    prompt = [
-        {"role": "system", "content": _SYSTEM_RULE},
-        {"role": "user", "content": (
-            f"Table: {table_fqn or 'unknown'}  Layer: {layer}\n\n"
-            f"Business user says: \"{natural_language}\"\n\n"
-            "Convert this into a DQ rule. Return JSON:\n"
-            '{"rule_name": "", "rule_expression": "(SQL returning TRUE=pass)", '
-            '"rule_type": "NULL_CHECK|RANGE|FORMAT|FK|VOLUME|CUSTOM", '
-            '"severity": "CRITICAL|HIGH|MEDIUM|LOW", "description": "", '
-            '"is_cde_rule": true/false, "explanation": "(why this rule matters)"}'
-        )},
-    ]
+    prompt = build_nl_to_rule_prompt(
+        table_fqn=table_fqn,
+        layer=layer,
+        natural_language=natural_language,
+    )
 
     try:
         raw = chat(prompt)
-        data = json.loads(raw)
+        data = parse_llm_json(raw)
     except Exception as e:
         logger.error("NL to rule LLM failed: %s", e)
         return NLConvertResponse(

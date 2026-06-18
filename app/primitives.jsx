@@ -294,15 +294,24 @@ const LayerPill = ({ layer, size = "md" }) => {
 };
 
 // Health status icon (HEALTHY / WARN / CRIT / PASS / FAIL)
+// Uses inline SVG paths to avoid Lucide DOM-mutation vs React reconciliation conflicts.
 const Health = ({ status }) => {
   const map = {
-    HEALTHY: ["check-circle-2", "var(--green-500)"], PASS: ["check-circle-2", "var(--green-500)"],
-    WARN:    ["alert-triangle", "var(--yellow-600)"],
-    CRIT:    ["x-circle", "var(--red-500)"], FAIL: ["x-circle", "var(--red-500)"],
-    OK:      ["check", "var(--grey-500)"],
+    HEALTHY: { color: "var(--green-500)", path: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z", fill: false },
+    PASS:    { color: "var(--green-500)", path: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z", fill: false },
+    WARN:    { color: "var(--yellow-600)", path: "M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z", fill: false },
+    CRIT:    { color: "var(--red-500)", path: "M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z", fill: false },
+    FAIL:    { color: "var(--red-500)", path: "M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z", fill: false },
+    OK:      { color: "var(--grey-500)", path: "M5 13l4 4L19 7", fill: false },
   };
-  const [icon, color] = map[status] || map.OK;
-  return <i data-lucide={icon} style={{ width: 16, height: 16, color }}></i>;
+  const cfg = map[status] || map.OK;
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+      stroke={cfg.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+      style={{ flexShrink: 0 }}>
+      <path d={cfg.path} />
+    </svg>
+  );
 };
 
 // Toast container + helper (global event bus)

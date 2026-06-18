@@ -15,6 +15,7 @@ class LayerHealth(BaseModel):
 class TrustSummary(BaseModel):
     overall_score: float
     score_delta: float                        # change vs yesterday
+    yesterday_score: Optional[float] = None  # yesterday's score for "vs yesterday (X)" display
     pipeline_status: str                      # HEALTHY | RECOVERING | ISSUES
     layers: list[LayerHealth]
     open_critical: int
@@ -24,6 +25,10 @@ class TrustSummary(BaseModel):
     cde_health_pct: float
     last_run_at: Optional[datetime] = None
     recent_activity: list[dict[str, Any]] = []
+    anomaly_breakdown: list[dict[str, Any]] = []   # [{type, label, count, intent}]
+    workflow_states: dict[str, str] = {}            # {step_id: "done"|"active"|"pending"}
+    profiled_table_count: int = 0
+    layer_anomaly_counts: dict[str, int] = {}       # {layer: open_anomaly_count}
 
 
 class TrendPoint(BaseModel):

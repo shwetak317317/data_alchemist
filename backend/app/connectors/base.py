@@ -56,5 +56,10 @@ class BaseConnector(ABC):
             return result.rows[0][0]
         return None
 
+    def table_ref(self, schema: str, table: str) -> str:
+        """Return a SQL-safe fully-qualified table reference for use in FROM clauses.
+        Override in connectors that use non-ANSI quoting or cross-database naming."""
+        return f'"{schema}"."{table}"'
+
     def close(self) -> None:
         """Release connection resources. Override if needed."""

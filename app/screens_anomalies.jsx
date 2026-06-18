@@ -6,15 +6,17 @@
     // When a real API explanation is available, render it; otherwise fall back to demo content
     const sections = data
       ? [
-          ["What happened",    data.what_happened    || data.summary || ""],
-          ["Likely root cause", data.root_cause      || data.cause   || ""],
-          ["Business impact",  data.business_impact  || data.impact  || ""],
+          ["What happened",   data.what_happened  || data.summary || ""],
+          ["Why it matters",  data.why_it_matters || data.business_impact || ""],
         ].filter(([, v]) => v)
       : [
           ["What happened", "Today's order dataset contains 1.84 million records — 57% fewer than the daily average of 4.3 million."],
           ["Likely root cause", "The OMS extract arrived 85 minutes late; the Silver net_revenue step failed, filtering 206K records."],
           ["Business impact", "Finance Revenue Dashboard is showing only 42% of today's orders. 3 ML models have incomplete training data."],
         ];
+
+    const aiActions = data?.recommended_actions;
+
     return (
     <div style={{ marginTop: 14, background: "#fff", border: "1px solid var(--grey-200)", borderRadius: 12, padding: 18 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
@@ -29,13 +31,22 @@
         </div>
       ))}
       <div style={{ display: "flex", gap: 16, padding: 14, background: "var(--red-50)", borderRadius: 10, marginBottom: 12, flexWrap: "wrap" }}>
-        <div><Eyebrow color="var(--red-600)">Est. revenue undercount</Eyebrow><div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 26, color: "var(--red-500)", marginTop: 2 }}>$221.9M</div></div>
+        {!data && (
+          <div><Eyebrow color="var(--red-600)">Est. revenue undercount</Eyebrow>
+            <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 26, color: "var(--red-500)", marginTop: 2 }}>$221.9M</div>
+          </div>
+        )}
         <div style={{ flex: 1 }}><Eyebrow color="var(--red-600)">Recommended actions</Eyebrow>
           <ol style={{ margin: "4px 0 0", paddingLeft: 18, fontSize: 12.5, color: "var(--fg-1)", lineHeight: 1.7 }}>
-            <li>Confirm OMS extract completed fully (~4.4M rows expected)</li>
-            <li>Re-run Bronze orders pipeline for 2024-11-05</li>
-            <li>Fix Silver net_revenue step and re-run Silver</li>
-            <li>Notify Finance not to publish today's dashboard</li>
+            {aiActions && aiActions.length > 0
+              ? aiActions.map((action, i) => <li key={i}>{action}</li>)
+              : <>
+                  <li>Confirm OMS extract completed fully (~4.4M rows expected)</li>
+                  <li>Re-run Bronze orders pipeline for 2024-11-05</li>
+                  <li>Fix Silver net_revenue step and re-run Silver</li>
+                  <li>Notify Finance not to publish today's dashboard</li>
+                </>
+            }
           </ol>
         </div>
       </div>

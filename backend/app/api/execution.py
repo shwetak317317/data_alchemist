@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 
 from app.core.metadata_db import get_db
+from app.core.auth_deps import get_current_user, CurrentUser
 from app.api.connections import get_active_connector
 from app.agents.execution_agent import run_all_rules
 from app.models.execution import ExecutionRunResponse, AcknowledgeFailureRequest
@@ -16,7 +17,8 @@ router = APIRouter(prefix="/api/execution", tags=["execution"])
 
 
 @router.post("/run", response_model=ExecutionRunResponse)
-def run_execution(connection_id: str, db: Session = Depends(get_db)):
+def run_execution(connection_id: str, db: Session = Depends(get_db),
+                  current_user: CurrentUser = Depends(get_current_user)):
     """Run all approved/active rules for a connection."""
     connector = get_active_connector(connection_id, db)
 
@@ -49,7 +51,7 @@ def run_execution(connection_id: str, db: Session = Depends(get_db)):
             VALUES
                 (:result_id, :run_id, :run_ts, :conn, :rule_id, :table_fqn,
                  :layer, :status, :total, :failed, :fail_pct, :score,
-                 :severity, :sample::jsonb, :remediation)
+                 :severity, CAST(:sample AS jsonb), :remediation)
         """), {
             "result_id": result.result_id,
             "run_id": run_response.run_id,
@@ -71,8 +73,22 @@ def run_execution(connection_id: str, db: Session = Depends(get_db)):
     return run_response
 
 
+@router.get("/latest")
+def get_latest_run(connection_id: str, db: Session = Depends(get_db),
+                   current_user: CurrentUser = Depends(get_current_user)):
+    """Return the run_id of the most recent execution run for a connection."""
+    row = db.execute(text(
+        "SELECT run_id FROM dq_run_results WHERE connection_id=:conn "
+        "ORDER BY run_timestamp DESC LIMIT 1"
+    ), {"conn": connection_id}).fetchone()
+    if not row:
+        raise HTTPException(404, "No runs found for this connection")
+    return {"run_id": row[0]}
+
+
 @router.get("/results/{run_id}", response_model=ExecutionRunResponse)
-def get_run_results(run_id: str, db: Session = Depends(get_db)):
+def get_run_results(run_id: str, db: Session = Depends(get_db),
+                    current_user: CurrentUser = Depends(get_current_user)):
     rows = db.execute(text(
         "SELECT r.result_id, r.run_id, r.run_timestamp, r.connection_id, r.rule_id, "
         "r.table_fqn, r.layer, r.status, r.total_records, r.failed_records, r.fail_pct, "
@@ -118,15 +134,16 @@ def get_run_results(run_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/acknowledge")
-def acknowledge_failure(req: AcknowledgeFailureRequest, db: Session = Depends(get_db)):
+def acknowledge_failure(req: AcknowledgeFailureRequest, db: Session = Depends(get_db),
+                        current_user: CurrentUser = Depends(get_current_user)):
     db.execute(text(
         "UPDATE dq_run_results SET acknowledged_by=:by, acknowledged_at=NOW(), "
         "is_expected_failure=:expected, expected_failure_reason=:reason "
         "WHERE result_id=:id"
-    ), {"by": req.acknowledged_by, "expected": req.is_expected,
+    ), {"by": current_user.email, "expected": req.is_expected,
         "reason": req.reason, "id": req.rule_result_id})
     db.commit()
-    log_event(db, user_name=req.acknowledged_by, event_type="ACK",
+    log_event(db, user_email=current_user.email, event_type="ACK",
               entity_type="RULE_RESULT", entity_id=req.rule_result_id,
               new_value={"is_expected": req.is_expected, "reason": req.reason})
     db.commit()

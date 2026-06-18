@@ -1,0 +1,23 @@
+{
+  "name": "data-alchemist",
+  "version": "1.0.0",
+  "description": "> *Move enterprise data quality from reactive checks to proactive, agentic trust.*",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shwetak317317/data_alchemist.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/shwetak317317/data_alchemist/issues"
+  },
+  "homepage": "https://github.com/shwetak317317/data_alchemist#readme",
+  "dependencies": {
+    "playwright": "^1.61.0"
+  }
+}

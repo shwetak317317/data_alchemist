@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 
 from app.core.metadata_db import get_db
+from app.core.auth_deps import get_current_user, CurrentUser
 from app.models.task import TaskCreate, TaskUpdate, TaskResponse
 
 logger = logging.getLogger(__name__)
@@ -26,7 +27,8 @@ def _row_to_task(row) -> TaskResponse:
 
 @router.get("", response_model=list[TaskResponse])
 def list_tasks(connection_id: str | None = None, status: str | None = None,
-               db: Session = Depends(get_db)):
+               db: Session = Depends(get_db),
+               current_user: CurrentUser = Depends(get_current_user)):
     filters, params = [], {}
     if connection_id:
         filters.append("connection_id=:conn")
@@ -47,7 +49,8 @@ def list_tasks(connection_id: str | None = None, status: str | None = None,
 
 
 @router.post("", response_model=TaskResponse, status_code=201)
-def create_task(task: TaskCreate, db: Session = Depends(get_db)):
+def create_task(task: TaskCreate, db: Session = Depends(get_db),
+                current_user: CurrentUser = Depends(get_current_user)):
     tid = str(uuid.uuid4())
     now = datetime.now(timezone.utc)
     db.execute(text("""
@@ -64,7 +67,7 @@ def create_task(task: TaskCreate, db: Session = Depends(get_db)):
         "priority": task.priority, "phase": task.phase, "owner": task.owner,
         "rel_type": task.related_entity_type, "rel_id": task.related_entity_id,
         "due": task.due_date, "conn": task.connection_id,
-        "created_by": task.created_by, "now": now,
+        "created_by": current_user.email, "now": now,
     })
     db.commit()
 
@@ -77,7 +80,8 @@ def create_task(task: TaskCreate, db: Session = Depends(get_db)):
 
 
 @router.patch("/{task_id}", response_model=TaskResponse)
-def update_task(task_id: str, update: TaskUpdate, db: Session = Depends(get_db)):
+def update_task(task_id: str, update: TaskUpdate, db: Session = Depends(get_db),
+                current_user: CurrentUser = Depends(get_current_user)):
     row = db.execute(text("SELECT task_id FROM task_board WHERE task_id=:id"),
                      {"id": task_id}).fetchone()
     if not row:
@@ -112,7 +116,8 @@ def update_task(task_id: str, update: TaskUpdate, db: Session = Depends(get_db))
 
 
 @router.delete("/{task_id}", status_code=204)
-def delete_task(task_id: str, db: Session = Depends(get_db)):
+def delete_task(task_id: str, db: Session = Depends(get_db),
+                current_user: CurrentUser = Depends(get_current_user)):
     result = db.execute(text("DELETE FROM task_board WHERE task_id=:id"), {"id": task_id})
     if result.rowcount == 0:
         raise HTTPException(404, "Task not found")

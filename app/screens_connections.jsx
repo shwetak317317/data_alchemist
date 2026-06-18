@@ -1,5 +1,70 @@
 // DataTrust — Screen: Connections manager (in-app data source management)
 (function () {
+  const CRED_FIELDS = {
+    sqlserver: {
+      authTypes: [
+        { id: "sql",      label: "SQL Server Auth" },
+        { id: "windows",  label: "Windows Auth" },
+        { id: "azure_ad", label: "Azure AD" },
+      ],
+      fields: (authType) => [
+        { key: "host",     label: "Server / IP",  placeholder: "MYSERVER or 192.168.1.10" },
+        { key: "port",     label: "Port",          placeholder: "1433" },
+        { key: "database", label: "Database",      placeholder: "(default)", optional: true },
+        { key: "instance", label: "Instance",      placeholder: "SQLEXPRESS", optional: true },
+        ...(authType !== "windows" ? [
+          { key: "username", label: "Username",    placeholder: "sa" },
+          { key: "password", label: "Password",    placeholder: "leave blank to keep current", type: "password" },
+        ] : []),
+      ],
+    },
+    snowflake: {
+      authTypes: [
+        { id: "keypair",  label: "Key pair" },
+        { id: "oauth",    label: "OAuth 2.0" },
+        { id: "password", label: "Password" },
+      ],
+      fields: (authType) => [
+        { key: "account",   label: "Account",    placeholder: "org-account.us-east-1" },
+        { key: "warehouse", label: "Warehouse",   placeholder: "COMPUTE_WH" },
+        { key: "database",  label: "Database",    placeholder: "MY_DB" },
+        { key: "role",      label: "Role",        placeholder: "DQ_SERVICE_ROLE", optional: true },
+        ...(authType === "password" ? [
+          { key: "username", label: "Username",   placeholder: "my_user" },
+          { key: "password", label: "Password",   placeholder: "leave blank to keep current", type: "password" },
+        ] : []),
+      ],
+    },
+    postgres: {
+      authTypes: [{ id: "password", label: "Password" }],
+      fields: () => [
+        { key: "host",     label: "Host",     placeholder: "localhost" },
+        { key: "port",     label: "Port",     placeholder: "5432" },
+        { key: "database", label: "Database", placeholder: "my_db" },
+        { key: "username", label: "Username", placeholder: "postgres" },
+        { key: "password", label: "Password", placeholder: "leave blank to keep current", type: "password" },
+      ],
+    },
+    databricks: {
+      authTypes: [
+        { id: "pat",   label: "Access Token" },
+        { id: "oauth", label: "OAuth M2M" },
+      ],
+      fields: () => [
+        { key: "host",      label: "Workspace host",     placeholder: "adb-12345.azuredatabricks.net", full: true },
+        { key: "http_path", label: "HTTP path",          placeholder: "/sql/1.0/warehouses/abc123",    full: true },
+        { key: "database",  label: "Schema / database",  placeholder: "default" },
+        { key: "token",     label: "Access token",       placeholder: "leave blank to keep current", type: "password", full: true },
+      ],
+    },
+    duckdb: {
+      authTypes: [],
+      fields: () => [
+        { key: "file_path", label: "File path", placeholder: "/data/mydb.duckdb or :memory:", full: true },
+      ],
+    },
+  };
+
   const PLATFORM_META = {
     sqlserver:  { glyph: "⬡", color: "#cc2020" },
     snowflake:  { glyph: "❄", color: "var(--navy-500)" },
@@ -30,6 +95,13 @@
       lastSync: syncTime,
       auth: c.auth_type ? `${c.auth_type} auth` : c.platform,
       err: c.error_message,
+      // Raw credential preview for pre-populating the edit form (no secrets)
+      credPreview: {
+        host: c.host || null,
+        port: c.port || null,
+        database: c.database_name || null,
+        auth_type: c.auth_type || null,
+      },
     };
   }
 
@@ -40,29 +112,38 @@
   ];
 
   const Connections = () => {
-    const { setStage, setActiveConn, activeConnectionId } = useApp();
+    const { setStage, setActiveConn, activeConnectionId, refreshDatasets } = useApp();
     const [showWizard, setShowWizard] = React.useState(false);
     const [syncing, setSyncing] = React.useState(null);
     const [conns, setConns] = React.useState([]);
     const [loading, setLoading] = React.useState(true);
     const [editingSchemas, setEditingSchemas] = React.useState(null);
-    // editingSchemas: null | { connId, loading, available: str[], selected: str[] }
+    const [editingName, setEditingName] = React.useState(null);
+    const [editingCreds, setEditingCreds] = React.useState(null);
+    // editingCreds: null | { connId, platform, authType, form, testResult, testing, saving }
+    const nameInputRef = React.useRef(null);
     useIcons();
+
+    React.useEffect(() => {
+      if (editingName && nameInputRef.current) nameInputRef.current.focus();
+    }, [editingName?.connId]);
 
     const loadConns = (autoSelectIfNone) => {
       if (!window.DTApi) { setLoading(false); return; }
       window.DTApi.listConnections()
         .then(list => {
-          if (list && list.length) {
-            setConns(list.map(mapConn));
-            if (autoSelectIfNone && !activeConnectionId && setActiveConn) {
-              const first = list.find(c => c.status === "active") || list[0];
-              if (first) setActiveConn(first.id, first.name, first.platform);
-            }
+          const rows = list || [];
+          setConns(rows.map(mapConn));
+          if (autoSelectIfNone && rows.length && !activeConnectionId && setActiveConn) {
+            const first = rows.find(c => c.status === "active") || rows[0];
+            if (first) setActiveConn(first.id, first.name, first.platform);
           }
           setLoading(false);
         })
-        .catch(() => setLoading(false));
+        .catch(err => {
+          console.error("[connections] listConnections failed:", err);
+          setLoading(false);
+        });
     };
 
     React.useEffect(() => { loadConns(true); }, []);
@@ -82,7 +163,11 @@
       const p = window.DTApi?.deleteConnection?.(c.id);
       if (p && typeof p.then === "function") {
         p.then(() => { setConns(prev => prev.filter(x => x.id !== c.id)); toast("Connection deleted", { kind: "info" }); })
-          .catch(() => toast("Delete failed", { kind: "error" }));
+          .catch(err => {
+            const msg = String(err);
+            if (msg.includes("403")) toast("Permission denied — please log out and log back in to refresh your session", { kind: "error" });
+            else toast("Delete failed", { kind: "error" });
+          });
       } else {
         setConns(prev => prev.filter(x => x.id !== c.id));
         toast("Connection deleted", { kind: "info" });
@@ -96,6 +181,7 @@
 
     const openSchemaEdit = (c) => {
       if (editingSchemas?.connId === c.id) { setEditingSchemas(null); return; }
+      setEditingCreds(null);
       setEditingSchemas({ connId: c.id, loading: true, available: [], selected: [...c.scopeList] });
       if (!window.DTApi?.getConnectionSchemas) {
         setEditingSchemas({ connId: c.id, loading: false, available: ["raw", "bronze", "silver", "gold"], selected: [...c.scopeList] });
@@ -116,18 +202,126 @@
       });
     };
 
+    const saveName = () => {
+      if (!editingName) return;
+      const { connId, value } = editingName;
+      const trimmed = value.trim();
+      if (!trimmed) { setEditingName(null); return; }
+      const conn = conns.find(c => c.id === connId);
+      if (trimmed === conn?.name) { setEditingName(null); return; }
+      if (!window.DTApi?.updateConnection) {
+        setConns(prev => prev.map(c => c.id === connId ? { ...c, name: trimmed } : c));
+        if (connId === activeConnectionId) setActiveConn(connId, trimmed, conn?.platform);
+        toast("Connection renamed", { kind: "success" });
+        setEditingName(null);
+        return;
+      }
+      window.DTApi.updateConnection(connId, { name: trimmed })
+        .then(updated => {
+          const newName = updated?.name || trimmed;
+          setConns(prev => prev.map(c => c.id === connId ? { ...c, name: newName } : c));
+          // Propagate to global context so sidebar/header update immediately
+          if (connId === activeConnectionId) setActiveConn(connId, newName, conn?.platform);
+          toast("Connection renamed", { kind: "success" });
+          setEditingName(null);
+        })
+        .catch(err => {
+          const msg = String(err);
+          if (msg.includes("403")) toast("Permission denied — please log out and log back in to refresh your session", { kind: "error" });
+          else toast("Rename failed", { kind: "error" });
+        });
+    };
+
     const saveSchemas = () => {
       if (!editingSchemas) return;
       const { connId, selected } = editingSchemas;
+      const conn = conns.find(c => c.id === connId);
       if (!window.DTApi?.updateConnection) {
         setConns(prev => prev.map(c => c.id === connId ? { ...c, schemas: selected.length, scopeList: [...selected] } : c));
+        if (connId === activeConnectionId) refreshDatasets?.();
         toast("Schemas updated", { kind: "success" });
         setEditingSchemas(null);
         return;
       }
       window.DTApi.updateConnection(connId, { schemas_scope: selected })
-        .then(() => { toast("Schemas updated", { kind: "success" }); loadConns(false); setEditingSchemas(null); })
-        .catch(() => toast("Failed to save schemas", { kind: "error" }));
+        .then(() => {
+          setConns(prev => prev.map(c => c.id === connId ? { ...c, schemas: selected.length, scopeList: [...selected] } : c));
+          // Schema scope changed — refresh shared dataset list so all sidebars update
+          if (connId === activeConnectionId) refreshDatasets?.();
+          toast("Schemas updated", { kind: "success" });
+          setEditingSchemas(null);
+        })
+        .catch(err => {
+          const msg = String(err);
+          if (msg.includes("403")) toast("Permission denied — please log out and log back in to refresh your session", { kind: "error" });
+          else toast("Failed to save schemas", { kind: "error" });
+        });
+    };
+
+    const openCredEdit = (c) => {
+      if (editingCreds?.connId === c.id) { setEditingCreds(null); return; }
+      setEditingSchemas(null);
+      setEditingName(null);
+      const platCfg = CRED_FIELDS[c.platform];
+      // Detect auth type: prefer stored value, fall back to platform default
+      const storedAuth = c.credPreview?.auth_type;
+      const defaultAuth = storedAuth || platCfg?.authTypes?.[0]?.id || "sql";
+      // Pre-populate from list data immediately (host, port, database, auth_type are already fetched)
+      const initialForm = {};
+      if (c.credPreview) {
+        if (c.credPreview.host)     initialForm.host    = c.credPreview.host;
+        if (c.credPreview.port)     initialForm.port    = c.credPreview.port;
+        if (c.credPreview.database) initialForm.database = c.credPreview.database;
+        // Snowflake uses 'account' key, not 'host'
+        if (c.platform === "snowflake" && c.credPreview.host) initialForm.account = c.credPreview.host;
+      }
+      setEditingCreds({ connId: c.id, platform: c.platform, authType: defaultAuth, form: initialForm, testResult: null, testing: false, saving: false });
+      // Enrich with remaining fields (username, instance, warehouse, etc.) from decrypted config
+      if (window.DTApi?.getConnectionCredentials) {
+        window.DTApi.getConnectionCredentials(c.id)
+          .then(data => {
+            setEditingCreds(prev => {
+              if (!prev || prev.connId !== c.id) return prev;
+              // Merge: API data wins over our initial guess, but keep password placeholder empty
+              return { ...prev, authType: data.auth_type || defaultAuth, form: { ...initialForm, ...data } };
+            });
+          })
+          .catch(() => {}); // Initial form still shows from credPreview
+      }
+    };
+
+    const testCreds = () => {
+      if (!editingCreds) return;
+      const { connId, authType, form } = editingCreds;
+      setEditingCreds(prev => ({ ...prev, testing: true, testResult: null }));
+      const creds = { ...form, auth_type: authType };
+      ["password", "token"].forEach(k => { if (!creds[k]) delete creds[k]; });
+      (window.DTApi?.testSavedConnection
+        ? window.DTApi.testSavedConnection(connId, { credentials: creds })
+        : Promise.reject(new Error("API unavailable"))
+      )
+        .then(result => setEditingCreds(prev => prev?.connId === connId ? { ...prev, testing: false, testResult: result } : prev))
+        .catch(() => setEditingCreds(prev => prev?.connId === connId ? { ...prev, testing: false, testResult: { success: false, message: "Test request failed" } } : prev));
+    };
+
+    const saveCreds = () => {
+      if (!editingCreds) return;
+      const { connId, authType, form } = editingCreds;
+      setEditingCreds(prev => ({ ...prev, saving: true }));
+      const creds = { ...form, auth_type: authType };
+      ["password", "token"].forEach(k => { if (!creds[k]) delete creds[k]; });
+      window.DTApi.updateConnection(connId, { credentials: creds })
+        .then(() => {
+          toast("Credentials updated", { kind: "success" });
+          setEditingCreds(null);
+          loadConns(false);
+        })
+        .catch(err => {
+          const msg = String(err);
+          setEditingCreds(prev => ({ ...prev, saving: false }));
+          if (msg.includes("403")) toast("Permission denied", { kind: "error" });
+          else toast("Failed to save credentials", { kind: "error" });
+        });
     };
 
     const StatusTag = ({ c }) => c.status === "connected"
@@ -166,6 +360,7 @@
           {conns.map(c => {
             const isActive = activeConnectionId === c.id;
             const editOpen = editingSchemas?.connId === c.id;
+            const credOpen = editingCreds?.connId === c.id;
             return (
               <Card key={c.id} pad={0} style={{ overflow: "hidden", borderLeft: `3px solid ${isActive ? "var(--brand)" : c.status === "error" ? "var(--red-500)" : "var(--green-500)"}` }}>
                 <div style={{ padding: 18 }}>
@@ -173,7 +368,33 @@
                     <span style={{ width: 44, height: 44, borderRadius: 11, background: c.color, color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 21, flexShrink: 0 }}>{c.glyph}</span>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 9, flexWrap: "wrap" }}>
-                        <span style={{ fontSize: 15, fontWeight: 700 }}>{c.name}</span>
+                        {editingName?.connId === c.id ? (
+                          <input
+                            ref={nameInputRef}
+                            value={editingName.value}
+                            onChange={e => setEditingName(n => ({ ...n, value: e.target.value }))}
+                            onKeyDown={e => { if (e.key === "Enter") saveName(); if (e.key === "Escape") setEditingName(null); }}
+                            onBlur={saveName}
+                            style={{ fontSize: 15, fontWeight: 700, border: "1.5px solid var(--brand)", borderRadius: 6,
+                              padding: "3px 8px", outline: "none", minWidth: 180, maxWidth: 320,
+                              boxShadow: "0 0 0 3px var(--brand-ring)", background: "#fff" }}
+                          />
+                        ) : (
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                            <span style={{ fontSize: 15, fontWeight: 700 }}>{c.name}</span>
+                            <button
+                              title="Rename connection"
+                              onClick={() => { setEditingSchemas(null); setEditingName({ connId: c.id, value: c.name }); }}
+                              style={{ display: "inline-flex", alignItems: "center", justifyContent: "center",
+                                width: 22, height: 22, border: "none", background: "transparent",
+                                cursor: "pointer", color: "var(--fg-3)", borderRadius: 4,
+                                transition: "color 120ms" }}
+                              onMouseEnter={e => e.currentTarget.style.color = "var(--brand)"}
+                              onMouseLeave={e => e.currentTarget.style.color = "var(--fg-3)"}>
+                              <i data-lucide="pencil" style={{ width: 12, height: 12 }}></i>
+                            </button>
+                          </span>
+                        )}
                         <Chip intent={c.env === "Production" ? "brand" : "neutral"} size="sm">{c.env}</Chip>
                         <StatusTag c={c} />
                         {isActive && <Chip intent="success" size="sm" dot>Active</Chip>}
@@ -186,6 +407,9 @@
                       )}
                       <Button size="sm" variant={editOpen ? "soft" : "ghost"} icon="layers" onClick={() => openSchemaEdit(c)}>
                         {editOpen ? "Close" : "Edit schemas"}
+                      </Button>
+                      <Button size="sm" variant={credOpen ? "soft" : "ghost"} icon="key-round" onClick={() => openCredEdit(c)}>
+                        {credOpen ? "Close" : "Edit credentials"}
                       </Button>
                       <Button size="sm" variant="soft" icon={syncing === c.id ? "loader" : "refresh-cw"} disabled={syncing === c.id || c.status === "error"}
                         onClick={() => handleSync(c)}>
@@ -210,6 +434,82 @@
                       ))}
                     </div>
                   )}
+
+                  {/* Credential editor */}
+                  {credOpen && (() => {
+                    const platCfg = CRED_FIELDS[c.platform] || { authTypes: [], fields: () => [] };
+                    const authType = editingCreds.authType || platCfg.authTypes?.[0]?.id || "sql";
+                    const fields = platCfg.fields(authType);
+                    return (
+                      <div style={{ marginTop: 14, padding: "14px 16px", background: "var(--grey-50)", borderRadius: 10, border: "1px solid var(--grey-200)" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                          <i data-lucide="key-round" style={{ width: 15, height: 15, color: "var(--brand)" }}></i>
+                          <span style={{ fontSize: 13, fontWeight: 600, color: "var(--brand)" }}>Edit credentials</span>
+                          <span style={{ fontSize: 11.5, color: "var(--fg-3)" }}>Passwords are not shown — leave blank to keep current</span>
+                        </div>
+                        {platCfg.authTypes.length > 1 && (
+                          <div style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
+                            {platCfg.authTypes.map(at => (
+                              <button key={at.id} onClick={() => setEditingCreds(prev => ({ ...prev, authType: at.id, testResult: null }))}
+                                style={{ padding: "5px 12px", borderRadius: 8, fontSize: 12.5, cursor: "pointer",
+                                  fontWeight: authType === at.id ? 600 : 400,
+                                  border: `1.5px solid ${authType === at.id ? "var(--brand)" : "var(--grey-200)"}`,
+                                  background: authType === at.id ? "var(--brand-soft)" : "#fff",
+                                  color: authType === at.id ? "var(--brand)" : "var(--fg-2)", transition: "all 100ms" }}>
+                                {at.label}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 12px", marginBottom: 12 }}>
+                          {fields.map(f => (
+                            <div key={f.key} style={{ gridColumn: f.full ? "1 / -1" : "auto" }}>
+                              <label style={{ fontSize: 11, fontWeight: 700, color: "var(--fg-2)", letterSpacing: ".04em",
+                                textTransform: "uppercase", display: "block", marginBottom: 3 }}>
+                                {f.label}
+                                {f.optional && <span style={{ color: "var(--fg-3)", fontWeight: 400, textTransform: "none", marginLeft: 4 }}>(optional)</span>}
+                              </label>
+                              <input
+                                type={f.type || "text"}
+                                value={editingCreds.form[f.key] || ""}
+                                onChange={e => setEditingCreds(prev => ({ ...prev, form: { ...prev.form, [f.key]: e.target.value }, testResult: null }))}
+                                placeholder={f.placeholder}
+                                style={{ width: "100%", padding: "6px 10px", borderRadius: 7,
+                                  border: "1.5px solid var(--grey-200)", fontSize: 12.5, outline: "none",
+                                  boxSizing: "border-box", background: "#fff",
+                                  fontFamily: f.type === "password" ? "monospace" : "inherit" }}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                        {editingCreds.testResult && (
+                          <div style={{ marginBottom: 10, padding: "8px 12px", borderRadius: 8,
+                            background: editingCreds.testResult.success ? "var(--green-50)" : "var(--red-50)",
+                            border: `1px solid ${editingCreds.testResult.success ? "var(--green-200)" : "var(--red-200)"}` }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, fontWeight: 600,
+                              color: editingCreds.testResult.success ? "var(--green-700)" : "var(--red-600)" }}>
+                              <i data-lucide={editingCreds.testResult.success ? "check-circle" : "alert-circle"} style={{ width: 14, height: 14 }}></i>
+                              {editingCreds.testResult.message}
+                              {editingCreds.testResult.latency_ms && (
+                                <span style={{ fontWeight: 400, color: "var(--fg-3)", marginLeft: 4 }}>({editingCreds.testResult.latency_ms} ms)</span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        <div style={{ display: "flex", gap: 8, marginTop: 4, flexWrap: "wrap" }}>
+                          <Button size="sm" variant="soft" icon={editingCreds.testing ? "loader" : "zap"}
+                            disabled={editingCreds.testing || editingCreds.saving} onClick={testCreds}>
+                            {editingCreds.testing ? "Testing…" : "Test connection"}
+                          </Button>
+                          <Button size="sm" variant="primary" icon="save"
+                            disabled={editingCreds.testing || editingCreds.saving} onClick={saveCreds}>
+                            {editingCreds.saving ? "Saving…" : "Save credentials"}
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => setEditingCreds(null)}>Cancel</Button>
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   {/* Schema editor */}
                   {editOpen && (

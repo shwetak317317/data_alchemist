@@ -23,12 +23,10 @@ services:
       - "8000:8000"
     environment:
       DATABASE_URL: postgresql://datatrust:datatrust_pass@postgres:5432/datatrust_meta
-      LLM_CONFIG_PATH: /app/llm_config.yaml
     env_file:
       - .env
     volumes:
       - ./backend:/app
-      - ./llm_config.yaml:/app/llm_config.yaml:ro
     depends_on:
       postgres:
         condition: service_healthy

@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 
 from app.core.metadata_db import get_db
+from app.core.auth_deps import get_current_user, CurrentUser
 from app.api.connections import get_active_connector
 from app.agents.profiling_agent import run_profiling
 from app.models.profiling import ProfilingRunRequest, ProfilingReport, ProfilingProgressEvent
@@ -21,25 +22,48 @@ router = APIRouter(prefix="/api/profiling", tags=["profiling"])
 
 
 @router.get("/datasets")
-def list_datasets(connection_id: str, db: Session = Depends(get_db)):
-    """List all tables visible through a connection, grouped by layer/schema."""
-    # For demo connection or when connector is unavailable, serve from profiling_reports
+def list_datasets(connection_id: str, use_cache: bool = False,
+                  db: Session = Depends(get_db),
+                  current_user: CurrentUser = Depends(get_current_user)):
+    """List all tables visible through a connection, grouped by layer/schema.
+
+    use_cache=True — read from connection_tables cache (fast, no live connector hit).
+                     Falls through to the live connector if the cache is empty.
+    use_cache=False (default) — always hit the live connector and refresh the cache.
+    """
     conn_row = db.execute(
-        text("SELECT platform, is_demo FROM connections WHERE id=:id"),
+        text("SELECT platform, is_demo, schemas_scope, layer_map FROM connections WHERE id=:id"),
         {"id": connection_id},
     ).fetchone()
     is_demo = conn_row and (conn_row[0] == "demo" or conn_row[1])
 
+    # Scope filter: schemas the user explicitly selected during connection setup
+    scope_set: set[str] = set(conn_row[2] or []) if conn_row else set()
+
+    # Layer map: { schema_name → layer_id } built from wizard drag-and-drop assignment
+    schema_to_layer: dict[str, str] = {}
+    if conn_row and conn_row[3] and isinstance(conn_row[3], dict):
+        assignment = conn_row[3].get("assignment", {})
+        for layer_id, schema_list in assignment.items():
+            for s in (schema_list or []):
+                # "monitor" and "ignore" are not real layers — treat as UNKNOWN
+                schema_to_layer[s] = layer_id if layer_id not in ("monitor", "ignore") else "UNKNOWN"
+
+    def _resolve_layer(schema: str, fallback: str) -> str:
+        """Return wizard-assigned layer first, then connector-detected layer."""
+        return schema_to_layer.get(schema) or fallback
+
     if is_demo:
         rows = db.execute(text("""
-            SELECT table_fqn, layer, schema_name, table_name, row_count, quality_score, run_at
+            SELECT DISTINCT ON (table_fqn)
+                table_fqn, layer, schema_name, table_name, row_count, quality_score, run_at
             FROM profiling_reports
             WHERE connection_id=:conn
-            ORDER BY layer, table_fqn
+            ORDER BY table_fqn, run_at DESC
         """), {"conn": connection_id}).fetchall()
-        grouped = {}
+        grouped: dict = {}
         for r in rows:
-            layer = (r[1] or r[2] or "UNKNOWN").upper()
+            layer = _resolve_layer(r[2] or "", (r[1] or r[2] or "UNKNOWN").upper())
             if layer not in grouped:
                 grouped[layer] = {"layer": layer, "tables": []}
             score = float(r[5] or 0)
@@ -50,43 +74,207 @@ def list_datasets(connection_id: str, db: Session = Depends(get_db)):
             })
         return list(grouped.values())
 
+    # ── Cache read path ──────────────────────────────────────────────────────
+    if use_cache:
+        try:
+            cache_rows = db.execute(text("""
+                SELECT t.schema_name, t.table_fqn, t.table_name, t.layer, t.row_count,
+                       pr.quality_score, pr.run_at
+                FROM connection_tables t
+                LEFT JOIN LATERAL (
+                    SELECT quality_score, run_at FROM profiling_reports
+                    WHERE connection_id = t.connection_id AND table_fqn = t.table_fqn
+                    ORDER BY run_at DESC LIMIT 1
+                ) pr ON TRUE
+                WHERE t.connection_id = :conn
+                ORDER BY t.layer, t.schema_name, t.table_name
+            """), {"conn": connection_id}).fetchall()
+            if cache_rows:
+                cached_grouped: dict = {}
+                for r in cache_rows:
+                    schema = r[0]
+                    layer = _resolve_layer(schema, r[3] or "UNKNOWN")
+                    if schema not in cached_grouped:
+                        cached_grouped[schema] = {"schema": schema, "layer": layer, "tables": []}
+                    score = round(float(r[5] or 0)) if r[5] else 0
+                    profiled = str(r[6])[:10] if r[6] else "—"
+                    cached_grouped[schema]["tables"].append({
+                        "name": r[2], "layer": layer, "rows": r[4] or 0,
+                        "score": score, "profiled": profiled,
+                        "hot": score > 0 and score < 70,
+                    })
+                return list(cached_grouped.values())
+            # Cache empty — fall through to live connector below
+        except Exception as cache_exc:
+            logger.warning("Cache read failed for connection=%s: %s", connection_id, cache_exc)
+            # Fall through to live connector
+
+    # ── Live connector path ──────────────────────────────────────────────────
+    conn_error: str | None = None
     try:
         connector = get_active_connector(connection_id, db)
-        schemas = connector.list_schemas()
+        all_schemas = connector.list_schemas()
+        # Apply scope filter — if no scope is set, show all schemas
+        schemas = [s for s in all_schemas if not scope_set or s in scope_set]
+
+        # Pre-fetch the latest report per table for this connection so we can
+        # show score, row_count and last-profiled date without a per-table query.
+        report_rows = db.execute(text("""
+            SELECT DISTINCT ON (table_fqn)
+                table_fqn, quality_score, row_count, run_at
+            FROM profiling_reports
+            WHERE connection_id = :conn
+            ORDER BY table_fqn, run_at DESC
+        """), {"conn": connection_id}).fetchall()
+        # Build a lookup keyed by "schema.table" FQN
+        report_map: dict = {r[0]: r for r in report_rows}
+
         result = []
         for schema in schemas:
-            tables = connector.list_tables(schema)
-            result.append({
-                "schema": schema,
-                "layer": tables[0].layer if tables else "UNKNOWN",
-                "tables": [
-                    {"name": t.table_name, "layer": t.layer, "row_count": t.row_count}
-                    for t in tables
-                ],
-            })
+            try:
+                tables = connector.list_tables(schema)
+            except Exception as tbl_exc:
+                logger.error("list_tables schema=%s connection=%s: %s", schema, connection_id, tbl_exc)
+                tables = []
+            connector_layer = tables[0].layer if tables else "UNKNOWN"
+            layer = _resolve_layer(schema, connector_layer)
+            table_list = []
+            for t in tables:
+                fqn = f"{schema}.{t.table_name}"
+                rep = report_map.get(fqn)
+                score = round(float(rep[1] or 0)) if rep else 0
+                rows = rep[2] or 0 if rep else (getattr(t, "row_count", 0) or 0)
+                profiled = str(rep[3])[:10] if rep and rep[3] else "—"
+                table_list.append({
+                    "name": t.table_name,
+                    "layer": _resolve_layer(schema, t.layer),
+                    "rows": rows,
+                    "score": score,
+                    "profiled": profiled,
+                    "hot": score > 0 and score < 70,
+                })
+            if not table_list:
+                logger.warning("list_datasets schema=%s returned 0 tables for connection=%s",
+                               schema, connection_id)
+            result.append({"schema": schema, "layer": layer, "tables": table_list})
         connector.close()
+        total_tables = sum(len(g["tables"]) for g in result)
+        if result and total_tables == 0:
+            logger.warning(
+                "list_datasets found %d schema(s) but 0 tables for connection=%s — "
+                "check SQL login permissions on INFORMATION_SCHEMA.TABLES",
+                len(result), connection_id,
+            )
+
+        # ── Upsert topology into cache ────────────────────────────────────────
+        try:
+            for group in result:
+                db.execute(text("""
+                    INSERT INTO connection_schemas (id, connection_id, schema_name, layer, discovered_at, updated_at)
+                    VALUES (gen_random_uuid()::TEXT, :conn, :schema, :layer, NOW(), NOW())
+                    ON CONFLICT (connection_id, schema_name) DO UPDATE
+                        SET layer=EXCLUDED.layer, updated_at=NOW()
+                """), {"conn": connection_id, "schema": group["schema"], "layer": group["layer"]})
+                for t in group["tables"]:
+                    db.execute(text("""
+                        INSERT INTO connection_tables
+                            (id, connection_id, schema_id, schema_name, table_name, table_fqn,
+                             layer, row_count, discovered_at, updated_at)
+                        VALUES (
+                            gen_random_uuid()::TEXT, :conn,
+                            (SELECT id FROM connection_schemas
+                             WHERE connection_id=:conn AND schema_name=:schema LIMIT 1),
+                            :schema, :tname, :fqn, :layer, :rows, NOW(), NOW()
+                        )
+                        ON CONFLICT (connection_id, table_fqn) DO UPDATE
+                            SET layer=EXCLUDED.layer, row_count=EXCLUDED.row_count, updated_at=NOW()
+                    """), {
+                        "conn": connection_id,
+                        "schema": group["schema"],
+                        "tname": t["name"],
+                        "fqn": f"{group['schema']}.{t['name']}",
+                        "layer": t["layer"],
+                        "rows": t.get("rows", 0),
+                    })
+            db.commit()
+        except Exception as cache_write_exc:
+            logger.warning("Cache upsert failed for connection=%s: %s", connection_id, cache_write_exc)
+            try:
+                db.rollback()
+            except Exception:
+                pass
+
         return result
     except Exception as exc:
-        logger.warning("list_datasets fallback to DB: %s", exc)
-        # Fallback — return whatever is in profiling_reports
-        rows = db.execute(text("""
-            SELECT table_fqn, layer, row_count, quality_score, run_at
-            FROM profiling_reports WHERE connection_id=:conn ORDER BY layer, table_fqn
+        conn_error = str(exc)
+        logger.error("list_datasets connector failed for connection=%s: %s", connection_id, exc, exc_info=True)
+        try:
+            db.rollback()
+        except Exception:
+            pass
+
+    # Fallback: serve last-known tables from connection_tables cache, then profiling_reports
+    try:
+        fallback_rows = db.execute(text("""
+            SELECT t.schema_name, t.table_fqn, t.table_name, t.layer, t.row_count,
+                   pr.quality_score, pr.run_at
+            FROM connection_tables t
+            LEFT JOIN LATERAL (
+                SELECT quality_score, run_at FROM profiling_reports
+                WHERE connection_id = t.connection_id AND table_fqn = t.table_fqn
+                ORDER BY run_at DESC LIMIT 1
+            ) pr ON TRUE
+            WHERE t.connection_id = :conn
+            ORDER BY t.layer, t.schema_name, t.table_name
         """), {"conn": connection_id}).fetchall()
-        grouped: dict = {}
-        for r in rows:
-            layer = (r[1] or "UNKNOWN").upper()
-            if layer not in grouped:
-                grouped[layer] = {"layer": layer, "tables": []}
-            grouped[layer]["tables"].append({
-                "name": r[0], "layer": layer, "rows": r[2] or 0,
-                "score": round(float(r[3] or 0)), "profiled": str(r[4])[:10] if r[4] else "—", "hot": False,
-            })
-        return list(grouped.values())
+        if fallback_rows:
+            fallback_grouped: dict = {}
+            for r in fallback_rows:
+                schema = r[0]
+                layer = _resolve_layer(schema, r[3] or "UNKNOWN")
+                if schema not in fallback_grouped:
+                    fallback_grouped[schema] = {"schema": schema, "layer": layer, "tables": []}
+                score = round(float(r[5] or 0)) if r[5] else 0
+                profiled = str(r[6])[:10] if r[6] else "—"
+                fallback_grouped[schema]["tables"].append({
+                    "name": r[2], "layer": layer, "rows": r[4] or 0,
+                    "score": score, "profiled": profiled, "hot": False,
+                })
+            return list(fallback_grouped.values())
+    except Exception:
+        pass
+
+    # Last resort: profiling_reports table
+    try:
+        rows = db.execute(text("""
+            SELECT DISTINCT ON (table_fqn) table_fqn, layer, schema_name, row_count, quality_score, run_at
+            FROM profiling_reports WHERE connection_id=:conn
+            ORDER BY table_fqn, run_at DESC
+        """), {"conn": connection_id}).fetchall()
+    except Exception:
+        rows = []
+
+    grouped = {}
+    for r in rows:
+        layer = _resolve_layer(r[2] or "", (r[1] or "UNKNOWN").upper())
+        if layer not in grouped:
+            grouped[layer] = {"layer": layer, "tables": []}
+        grouped[layer]["tables"].append({
+            "name": r[0], "layer": layer, "rows": r[3] or 0,
+            "score": round(float(r[4] or 0)), "profiled": str(r[5])[:10] if r[5] else "—", "hot": False,
+        })
+
+    if not grouped:
+        # No cached data — surface the real error so the user can act on it
+        raise HTTPException(503, detail=conn_error or "Could not reach the data source and no cached data is available.")
+
+    return list(grouped.values())
 
 
 @router.get("/report/by-table/{table_fqn:path}")
-def get_report_by_table(table_fqn: str, connection_id: str | None = None, db: Session = Depends(get_db)):
+def get_report_by_table(table_fqn: str, connection_id: str | None = None,
+                        db: Session = Depends(get_db),
+                        current_user: CurrentUser = Depends(get_current_user)):
     """Return the latest profiling report for a given table_fqn, using field names the frontend expects."""
     params: dict = {"table": table_fqn}
     conn_filter = "AND connection_id=:conn" if connection_id else ""
@@ -112,10 +300,12 @@ def get_report_by_table(table_fqn: str, connection_id: str | None = None, db: Se
     consistency = float(row[9] or 0)
     freshness = float(row[10] or 100)
 
-    # Always use normalized tables for consistent field names (column_name, title, etc.)
+    # Prefer the normalized column_stats table; fall back to the JSONB blob for
+    # older/seeded reports that were never normalized (e.g. demo seed data).
     cs_rows = db.execute(text("""
         SELECT column_name, data_type, null_pct, distinct_count, detected_format,
-               is_cde, is_pii, quality_score, health
+               is_cde, is_pii, quality_score, health,
+               min_value, max_value, mean_value, std_dev, pii_type, note, sample_values
         FROM column_stats WHERE report_id=:rid ORDER BY column_name
     """), {"rid": rid}).fetchall()
     column_stats = [
@@ -123,9 +313,33 @@ def get_report_by_table(table_fqn: str, connection_id: str | None = None, db: Se
          "null_pct": float(r[2] or 0), "distinct_count": r[3] or 0,
          "detected_format": r[4] or "—", "is_cde": bool(r[5]),
          "is_pii": bool(r[6]), "quality_score": float(r[7] or 0),
-         "health": r[8] or "HEALTHY"}
+         "health": r[8] or "HEALTHY",
+         "min_value": r[9], "max_value": r[10],
+         "mean_value": float(r[11]) if r[11] is not None else None,
+         "std_dev": float(r[12]) if r[12] is not None else None,
+         "pii_type": r[13], "note": r[14],
+         "sample_values": r[15] or []}
         for r in cs_rows
     ]
+    if not column_stats:
+        # Fall back to JSONB blob stored on the report row itself
+        blob_row = db.execute(text(
+            "SELECT column_stats FROM profiling_reports WHERE report_id=:rid"
+        ), {"rid": rid}).fetchone()
+        if blob_row and blob_row[0]:
+            raw = blob_row[0] if isinstance(blob_row[0], list) else []
+            column_stats = [
+                {"column_name": c.get("name", c.get("column_name", "?")),
+                 "data_type": c.get("data_type", "TEXT"),
+                 "null_pct": float(c.get("null_pct", 0)),
+                 "distinct_count": c.get("distinct_count", 0),
+                 "detected_format": c.get("format_pattern") or c.get("detected_format") or "—",
+                 "is_cde": bool(c.get("is_cde", False)),
+                 "is_pii": bool(c.get("is_pii", False)),
+                 "quality_score": float(c.get("quality_score", 0)),
+                 "health": c.get("health", "HEALTHY")}
+                for c in raw
+            ]
 
     risk_rows = db.execute(text("""
         SELECT risk_code, severity, title, description, column_name, risk_type
@@ -161,27 +375,46 @@ def get_report_by_table(table_fqn: str, connection_id: str | None = None, db: Se
 
 
 @router.post("/run")
-def run_profiling_stream(req: ProfilingRunRequest, db: Session = Depends(get_db)):
+def run_profiling_stream(req: ProfilingRunRequest, db: Session = Depends(get_db),
+                         current_user: CurrentUser = Depends(get_current_user)):
     """
     Stream profiling progress as Server-Sent Events.
     Each event is JSON: {"type": "progress", "data": {...}} or {"type": "report", "data": {...}}
     """
     connector = get_active_connector(req.connection_id, db)
+    schema_name = req.schema_name or "dbo"
+
+    # Resolve layer from wizard layer_map stored in DB
+    layer_override: str | None = None
+    try:
+        conn_meta = db.execute(
+            text("SELECT layer_map FROM connections WHERE id=:id"),
+            {"id": req.connection_id},
+        ).fetchone()
+        if conn_meta and conn_meta[0] and isinstance(conn_meta[0], dict):
+            assignment = conn_meta[0].get("assignment", {})
+            for layer_id, schema_list in assignment.items():
+                if layer_id not in ("monitor", "ignore") and schema_name in (schema_list or []):
+                    layer_override = layer_id
+                    break
+    except Exception:
+        pass
 
     def event_stream():
         try:
             for item in run_profiling(
                 connector=connector,
                 connection_id=req.connection_id,
-                schema_name=req.schema_name,
+                schema_name=schema_name,
                 table_name=req.table_name,
+                layer_override=layer_override,
             ):
                 if isinstance(item, ProfilingProgressEvent):
-                    payload = json.dumps({"type": "progress", "data": item.model_dump()})
+                    payload = _json_safe({"type": "progress", "data": item.model_dump()})
                 elif isinstance(item, ProfilingReport):
-                    # Persist report to DB
-                    _save_report(db, item)
-                    payload = json.dumps({"type": "report", "data": item.model_dump(mode="json")})
+                    # Persist report to DB (also normalizes into column_stats + profiling_risks)
+                    _save_report(db, item, triggered_by=current_user.email)
+                    payload = _json_safe({"type": "report", "data": _report_to_frontend_shape(item)})
                 else:
                     continue
                 yield f"data: {payload}\n\n"
@@ -195,7 +428,8 @@ def run_profiling_stream(req: ProfilingRunRequest, db: Session = Depends(get_db)
 
 
 @router.get("/report/{report_id}", response_model=ProfilingReport)
-def get_report(report_id: str, db: Session = Depends(get_db)):
+def get_report(report_id: str, db: Session = Depends(get_db),
+               current_user: CurrentUser = Depends(get_current_user)):
     row = db.execute(text(
         "SELECT report_id, connection_id, table_fqn, layer, run_at, row_count, "
         "quality_score, completeness_score, uniqueness_score, consistency_score, "
@@ -216,19 +450,128 @@ def get_report(report_id: str, db: Session = Depends(get_db)):
     )
 
 
-def _save_report(db: Session, report: ProfilingReport) -> None:
+def _report_to_frontend_shape(report: ProfilingReport) -> dict:
+    """Convert ProfilingReport to the same field names that get_report_by_table returns."""
+    row_count = report.row_count or 0
+    column_stats = [
+        {
+            "column_name": c.name,
+            "data_type": c.data_type,
+            "null_pct": round(c.null_pct, 2),
+            "distinct_count": c.distinct_count,
+            "detected_format": c.format_pattern or "—",
+            "is_cde": c.is_cde,
+            "is_pii": False,
+            "quality_score": round(max(0.0, 100.0 - c.null_pct * 2), 1),
+            "health": c.health,
+        }
+        for c in report.columns
+    ]
+    risks_flagged = [
+        {
+            "risk_code": f"R{i + 1}",
+            "severity": r.severity,
+            "title": r.risk_type.replace("_", " ").title() if r.risk_type else "Data Quality Risk",
+            "description": r.description or "",
+            "column_name": r.column or "—",
+            "risk_type": r.risk_type,
+        }
+        for i, r in enumerate(report.risks)
+    ]
+    summary_stats = {
+        "quality_score": round(report.quality_score),
+        "completeness": f"{round(report.completeness_score)}%",
+        "uniqueness": f"{round(report.uniqueness_score)}%",
+        "consistency": f"{round(report.consistency_score)}%",
+        "freshness": f"{round(report.freshness_score)}%",
+        "total_columns": len(report.columns),
+        "row_count": f"{row_count:,}",
+    }
+    return {
+        "report_id": report.report_id,
+        "connection_id": report.connection_id,
+        "table_fqn": report.table_fqn,
+        "layer": report.layer,
+        "run_at": report.run_at.isoformat() if report.run_at else None,
+        "row_count": row_count,
+        "quality_score": report.quality_score,
+        "completeness_score": report.completeness_score,
+        "uniqueness_score": report.uniqueness_score,
+        "consistency_score": report.consistency_score,
+        "freshness_score": report.freshness_score,
+        "summary_text": report.summary_text,
+        "summary_stats": summary_stats,
+        "column_stats": column_stats,
+        "risks_flagged": risks_flagged,
+    }
+
+
+class _SafeEncoder(json.JSONEncoder):
+    """Handles date/datetime/Decimal that pyodbc may return as column values."""
+    def default(self, obj):
+        import datetime, decimal
+        if isinstance(obj, (datetime.date, datetime.datetime)):
+            return obj.isoformat()
+        if isinstance(obj, decimal.Decimal):
+            return float(obj)
+        return super().default(obj)
+
+
+def _json_safe(data) -> str:
+    return json.dumps(data, cls=_SafeEncoder)
+
+
+def _save_report(db: Session, report: ProfilingReport, triggered_by: str | None = None) -> None:
     try:
+        # Ensure schema + table entries exist in the topology cache, then capture their IDs
+        # so every report row carries the FK chain: connection → schema → table → report
+        schema_name = report.table_fqn.split(".")[0] if "." in report.table_fqn else ""
+        table_name  = report.table_fqn.split(".", 1)[1] if "." in report.table_fqn else report.table_fqn
+
+        if schema_name:
+            db.execute(text("""
+                INSERT INTO connection_schemas (id, connection_id, schema_name, layer, discovered_at, updated_at)
+                VALUES (gen_random_uuid()::TEXT, :conn, :schema, :layer, NOW(), NOW())
+                ON CONFLICT (connection_id, schema_name) DO UPDATE SET layer=EXCLUDED.layer, updated_at=NOW()
+            """), {"conn": report.connection_id, "schema": schema_name, "layer": report.layer})
+
+            db.execute(text("""
+                INSERT INTO connection_tables
+                    (id, connection_id, schema_id, schema_name, table_name, table_fqn, layer, discovered_at, updated_at)
+                VALUES (
+                    gen_random_uuid()::TEXT, :conn,
+                    (SELECT id FROM connection_schemas WHERE connection_id=:conn AND schema_name=:schema LIMIT 1),
+                    :schema, :tname, :fqn, :layer, NOW(), NOW()
+                )
+                ON CONFLICT (connection_id, table_fqn) DO UPDATE
+                    SET layer=EXCLUDED.layer, updated_at=NOW()
+            """), {
+                "conn": report.connection_id, "schema": schema_name,
+                "tname": table_name, "fqn": report.table_fqn, "layer": report.layer,
+            })
+
+        table_id_row = db.execute(text(
+            "SELECT id FROM connection_tables WHERE connection_id=:conn AND table_fqn=:fqn LIMIT 1"
+        ), {"conn": report.connection_id, "fqn": report.table_fqn}).fetchone()
+        table_id = table_id_row[0] if table_id_row else None
+
+        schema_id_row = db.execute(text(
+            "SELECT id FROM connection_schemas WHERE connection_id=:conn AND schema_name=:schema LIMIT 1"
+        ), {"conn": report.connection_id, "schema": schema_name}).fetchone() if schema_name else None
+        schema_id = schema_id_row[0] if schema_id_row else None
+
         db.execute(text("""
             INSERT INTO profiling_reports
                 (report_id, connection_id, table_fqn, layer, run_at, row_count,
                  quality_score, completeness_score, uniqueness_score,
                  consistency_score, freshness_score, risks_flagged,
-                 column_stats, summary_text)
+                 column_stats, summary_text, triggered_by, table_id, schema_id)
             VALUES
                 (:report_id, :connection_id, :table_fqn, :layer, :run_at, :row_count,
                  :quality_score, :completeness_score, :uniqueness_score,
-                 :consistency_score, :freshness_score, :risks_flagged::jsonb,
-                 :column_stats::jsonb, :summary_text)
+                 :consistency_score, :freshness_score, CAST(:risks_flagged AS jsonb),
+                 CAST(:column_stats AS jsonb), :summary_text, :triggered_by,
+                 :table_id, :schema_id)
         """), {
             "report_id": report.report_id,
             "connection_id": report.connection_id,
@@ -241,10 +584,67 @@ def _save_report(db: Session, report: ProfilingReport) -> None:
             "uniqueness_score": report.uniqueness_score,
             "consistency_score": report.consistency_score,
             "freshness_score": report.freshness_score,
-            "risks_flagged": json.dumps([r.model_dump() for r in report.risks]),
-            "column_stats": json.dumps([c.model_dump() for c in report.columns]),
+            "risks_flagged": _json_safe([r.model_dump() for r in report.risks]),
+            "column_stats": _json_safe([c.model_dump() for c in report.columns]),
             "summary_text": report.summary_text,
+            "triggered_by": triggered_by,
+            "table_id": table_id,
+            "schema_id": schema_id,
         })
+
+        # Normalize column stats into the column_stats table for per-column queries
+        for c in report.columns:
+            db.execute(text("""
+                INSERT INTO column_stats
+                    (report_id, connection_id, table_fqn, column_name, data_type,
+                     null_pct, distinct_count, min_value, max_value, mean_value, std_dev,
+                     detected_format, is_cde, quality_score, health, sample_values,
+                     table_id, created_at)
+                VALUES
+                    (:report_id, :conn, :table_fqn, :col_name, :dtype,
+                     :null_pct, :distinct_count, :min_val, :max_val, :mean_val, :std_dev,
+                     :detected_format, :is_cde, :quality_score, :health,
+                     CAST(:samples AS jsonb), :table_id, NOW())
+            """), {
+                "report_id": report.report_id,
+                "conn": report.connection_id,
+                "table_fqn": report.table_fqn,
+                "col_name": c.name,
+                "dtype": c.data_type,
+                "null_pct": c.null_pct,
+                "distinct_count": c.distinct_count,
+                "min_val": str(c.min_val) if c.min_val is not None else None,
+                "max_val": str(c.max_val) if c.max_val is not None else None,
+                "mean_val": c.mean_val,
+                "std_dev": c.std_dev,
+                "detected_format": c.format_pattern,
+                "is_cde": c.is_cde,
+                "quality_score": round(max(0.0, 100.0 - c.null_pct * 2), 1),
+                "health": c.health,
+                "samples": _json_safe(c.top_values),
+                "table_id": table_id,
+            })
+
+        # Normalize risks into the profiling_risks table for per-risk queries
+        for i, r in enumerate(report.risks):
+            db.execute(text("""
+                INSERT INTO profiling_risks
+                    (report_id, connection_id, risk_code, severity, title,
+                     description, column_name, risk_type, created_at)
+                VALUES
+                    (:report_id, :conn, :code, :severity, :title,
+                     :desc, :col, :rtype, NOW())
+            """), {
+                "report_id": report.report_id,
+                "conn": report.connection_id,
+                "code": f"R{i + 1}",
+                "severity": r.severity,
+                "title": (r.description or r.risk_type)[:512],
+                "desc": r.description or "",
+                "col": r.column or None,
+                "rtype": r.risk_type,
+            })
+
         db.commit()
     except Exception as e:
         logger.warning("Failed to save profiling report: %s", e)

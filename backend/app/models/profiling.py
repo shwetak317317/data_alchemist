@@ -47,7 +47,7 @@ class ProfilingReport(BaseModel):
 
 class ProfilingRunRequest(BaseModel):
     connection_id: str
-    schema_name: str
+    schema_name: Optional[str] = None
     table_name: str
 
 

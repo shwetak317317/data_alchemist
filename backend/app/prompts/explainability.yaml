@@ -1,0 +1,45 @@
+# Shared system message used by both explainability prompts
+_system: &system |
+  You are a senior data engineer explaining data quality issues to business stakeholders.
+  Be concise, specific, and actionable.
+  Avoid technical jargon — write as if explaining to a non-technical manager.
+  Plain text only, no markdown.
+
+
+anomaly:
+  system: *system
+
+  user: |
+    A data anomaly was detected. Explain it clearly to a business stakeholder.
+
+    Type: {{ anomaly_type }}
+    Table: {{ table_fqn }}  Layer: {{ layer }}
+    Column: {{ column_name }}
+    Description: {{ description }}
+    Severity: {{ severity }}
+    Metric value: {{ metric_value }}  Baseline: {{ baseline_value }}  Deviation: {{ deviation_pct }}%
+
+    Return JSON matching this schema exactly:
+    {
+      "what_happened": "one sentence describing the anomaly in plain language",
+      "where": "layer and table name",
+      "when_first_seen": "timestamp or relative description",
+      "why_it_matters": "business impact — what breaks or is at risk",
+      "how_bad": "severity assessment in plain language",
+      "recommended_actions": ["action 1", "action 2"]
+    }
+
+
+rule_failure:
+  system: *system
+
+  user: |
+    A data quality rule failed. Write a 2–3 sentence explanation for the business team.
+
+    Rule: {{ rule_name }}
+    Table: {{ table_fqn }}  Layer: {{ layer }}
+    Failed records: {{ failed_records }} ({{ fail_pct }}%)
+    Severity: {{ severity }}  Is CDE rule: {{ is_cde_rule }}
+
+    Explain: what happened, why it matters for the business, and what the data team should do first.
+    No bullet points — plain prose only.

@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 
 from app.core.metadata_db import get_db
+from app.core.auth_deps import get_current_user, CurrentUser
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/lineage", tags=["lineage"])
@@ -40,7 +41,9 @@ class LineageGraph(BaseModel):
 
 
 @router.get("/{table_fqn:path}", response_model=LineageGraph)
-def get_lineage(table_fqn: str, connection_id: Optional[str] = None, db: Session = Depends(get_db)):
+def get_lineage(table_fqn: str, connection_id: Optional[str] = None,
+                db: Session = Depends(get_db),
+                current_user: CurrentUser = Depends(get_current_user)):
     """Return the lineage graph rooted at the given table for a connection."""
     params: dict = {}
     conn_filter = "AND n.connection_id=:conn" if connection_id else ""

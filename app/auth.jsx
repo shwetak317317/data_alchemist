@@ -55,6 +55,7 @@
         })
           .then(r => r.ok ? r.json() : r.json().then(e => Promise.reject(e.detail || "Token exchange failed")))
           .then(user => {
+            if (user.token) sessionStorage.setItem("dt_token", user.token);
             sessionStorage.setItem("dt_user", JSON.stringify(user));
             onAuth(user);
           })
@@ -111,7 +112,11 @@
         body: JSON.stringify({ email, password: pw }),
       })
         .then(r => r.ok ? r.json() : r.json().then(e => Promise.reject(e.detail || "Login failed")))
-        .then(user => { sessionStorage.setItem("dt_user", JSON.stringify(user)); onAuth(user); })
+        .then(user => {
+          if (user.token) sessionStorage.setItem("dt_token", user.token);
+          sessionStorage.setItem("dt_user", JSON.stringify(user));
+          onAuth(user);
+        })
         .catch(err => { setAuthError(String(err)); setLoading(null); });
     };
 
@@ -357,6 +362,8 @@
 
   const TEST_STEPS = ["Resolving host / endpoint", "Establishing secure connection", "Authenticating credentials", "Verifying database access", "Listing accessible schemas", "Validating read permissions"];
 
+  const LAYER_COLORS_CYCLE = ["#8b5cf6", "#06b6d4", "#10b981", "#ec4899", "#14b8a6"];
+
   const ConnectWizard = ({ onDone, onSkip, inApp }) => {
     const [step, setStep] = React.useState(0); // 0 platform 1 creds 2 test 3 schema 4 done
     const [plat, setPlat] = React.useState("sqlserver");
@@ -373,20 +380,51 @@
     const [savedConnId, setSavedConnId] = React.useState(null);
     const [savedSchemasCount, setSavedSchemasCount] = React.useState(0);
     const [form, setForm] = React.useState({});
+    // Layer assignment state
+    const [useLayers, setUseLayers] = React.useState(null);   // null | true | false
+    const [layerDefs, setLayerDefs] = React.useState([
+      { id: "RAW",    name: "RAW",    color: "#ef4444" },
+      { id: "BRONZE", name: "BRONZE", color: "#d97706" },
+      { id: "SILVER", name: "SILVER", color: "#3b82f6" },
+      { id: "GOLD",   name: "GOLD",   color: "#f59e0b" },
+    ]);
+    const [schemaAssign, setSchemaAssign] = React.useState({});  // schema_key → layerId | "monitor" | "ignore"
+    const [dbExpanded, setDbExpanded] = React.useState({});
+    const [dragSchema, setDragSchema] = React.useState(null);
+    const [dragOverBucket, setDragOverBucket] = React.useState(null);
+    const [assignDd, setAssignDd] = React.useState(null);        // schema key with open dropdown
+    const [renamingLyr, setRenamingLyr] = React.useState(null);
+    const [renameVal, setRenameVal] = React.useState("");
+    const [addingLyr, setAddingLyr] = React.useState(false);
+    const [newLyrName, setNewLyrName] = React.useState("");
     useIcons();
     const P = PLATFORMS.find(p => p.id === plat);
     const platCfg = PLATFORM_FIELDS[plat] || PLATFORM_FIELDS.snowflake;
 
-    // Reset auth method when platform changes
+    // Derive DB → schema tree from discovered schemas
+    const dbTree = React.useMemo(() => {
+      if (!apiSchemas.length) return [{ db: form.database || form.catalog || P?.name || "Database", schemas: [] }];
+      const hasDots = apiSchemas.some(s => s.includes("."));
+      if (hasDots) {
+        const grp = {};
+        apiSchemas.forEach(s => { const i = s.indexOf("."); const db = s.slice(0, i), sc = s.slice(i + 1); (grp[db] = grp[db] || []).push(sc); });
+        return Object.entries(grp).map(([db, schemas]) => ({ db, schemas }));
+      }
+      return [{ db: form.database || form.catalog || P?.name || "Database", schemas: apiSchemas }];
+    }, [apiSchemas, form.database, form.catalog, P]);
+
+    // Reset auth method + scope state when platform changes
     React.useEffect(() => {
       const first = (PLATFORM_FIELDS[plat]?.authTypes || [])[0];
       setAuthMethod(first?.id || "password");
       setForm({});
+      setUseLayers(null); setSchemaAssign({}); setApiSchemas([]);
     }, [plat]);
 
     // Wire "Test connection" step to real API
     React.useEffect(() => {
       if (step !== 2) return;
+      let cancelled = false;
       setTestIdx(0); setTestSuccess(null); setTestError(""); setTestStepsLive([]);
       const credentials = { ...form, auth_type: authMethod };
       const payload = { platform: plat, credentials };
@@ -397,15 +435,21 @@
         setTestStepsLive(TEST_STEPS);
         let i = 0;
         const t = setInterval(() => {
+          if (cancelled) { clearInterval(t); return; }
           i++;
           setTestIdx(i);
-          if (i >= TEST_STEPS.length) { clearInterval(t); setTestSuccess(true); setTimeout(() => setStep(3), 500); }
+          if (i >= TEST_STEPS.length) {
+            clearInterval(t);
+            setTestSuccess(true);
+            setTimeout(() => { if (!cancelled) setStep(3); }, 500);
+          }
         }, 480);
-        return () => clearInterval(t);
+        return () => { cancelled = true; clearInterval(t); };
       }
 
       testFn(payload)
         .then(result => {
+          if (cancelled) return;
           const steps = result.details?.length ? result.details : TEST_STEPS;
           setTestStepsLive(steps);
           setTestIdx(steps.length);
@@ -417,15 +461,17 @@
               setApiSchemas(disc);
               setSchemas(disc.map(() => true));
             }
-            setTimeout(() => setStep(3), 700);
+            setTimeout(() => { if (!cancelled) setStep(3); }, 700);
           }
         })
         .catch(err => {
+          if (cancelled) return;
           setTestStepsLive(TEST_STEPS);
           setTestIdx(TEST_STEPS.length);
           setTestSuccess(false);
           setTestError("Could not reach backend: " + (err?.message || String(err)));
         });
+      return () => { cancelled = true; };
     }, [step, retryKey]);
 
     const STEPS = ["Platform", "Credentials", "Test", "Scope", "Done"];
@@ -571,7 +617,17 @@
                   {testError}
                 </div>
                 <div style={{ marginTop: 10, fontSize: 12, color: "var(--fg-2)" }}>
-                  Common fixes: check server name/port, verify credentials, ensure SQL Server allows remote connections and the firewall allows port 1433.
+                  {/docker/i.test(testError)
+                    ? "Docker networking: use 'host.docker.internal' instead of 'localhost' to reach SQL Server on your Windows host."
+                    : /cannot reach/i.test(testError)
+                    ? "TCP connection failed. Check: (1) SQL Server service is running, (2) TCP/IP enabled in SQL Server Configuration Manager, (3) firewall allows port 1433."
+                    : /timeout|HYT00/i.test(testError)
+                    ? "The server did not respond in time. Check that the host/port is reachable and the SQL Server firewall allows port 1433."
+                    : /login|28000|password|credential/i.test(testError)
+                    ? "Authentication failed. Verify your username and password, and that the login has CONNECT permission on the database."
+                    : /driver|08001/i.test(testError)
+                    ? "ODBC driver issue. Ensure 'ODBC Driver 18 for SQL Server' is installed in the backend container."
+                    : "Check server name / port, verify credentials, and confirm SQL Server allows remote connections."}
                 </div>
               </div>
             )}
@@ -586,73 +642,357 @@
           </div>
         )}
 
-        {/* Step 3 — schema scope (real schemas from test result, or example fallback) */}
+        {/* Step 3 — layer architecture question + schema scope */}
         {step === 3 && (() => {
-          const allSchemas = apiSchemas.length > 0 ? apiSchemas : ["raw", "bronze", "silver", "gold"];
-          const selectedCount = allSchemas.filter((_, i) => schemas[i] !== false).length;
-          return (
+          const allKeys = dbTree.flatMap(({ db, schemas: sc }) =>
+            sc.map(s => dbTree.length > 1 ? `${db}.${s}` : s)
+          );
+          const banner = (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", background: "var(--green-50)", borderRadius: 10, marginBottom: 12 }}>
+              <i data-lucide="check-circle-2" style={{ width: 17, height: 17, color: "var(--green-500)" }}></i>
+              <span style={{ fontSize: 13, fontWeight: 600, color: "var(--green-700)" }}>Connection verified</span>
+              {apiSchemas.length > 0
+                ? <span style={{ fontSize: 12, color: "var(--fg-2)", marginLeft: 4 }}>— {apiSchemas.length} schema{apiSchemas.length !== 1 ? "s" : ""} discovered</span>
+                : <span style={{ fontSize: 12, color: "var(--fg-3)", marginLeft: 4 }}>— demo mode</span>}
+              {useLayers !== null && (
+                <button onClick={() => { setUseLayers(null); setSchemaAssign({}); }}
+                  style={{ marginLeft: "auto", fontSize: 11.5, color: "var(--brand)", fontWeight: 600, background: "none", border: "none", cursor: "pointer" }}>
+                  Change scope
+                </button>
+              )}
+            </div>
+          );
+
+          // ── Phase A: layer architecture question ─────────────────────────────
+          if (useLayers === null) return (
             <div className="dt-fade-up">
-              {/* Success + count banner */}
-              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", background: "var(--green-50)", borderRadius: 10, marginBottom: 12 }}>
-                <i data-lucide="check-circle-2" style={{ width: 17, height: 17, color: "var(--green-500)" }}></i>
-                <span style={{ fontSize: 13, fontWeight: 600, color: "var(--green-700)" }}>Connection verified</span>
-                {apiSchemas.length > 0
-                  ? <span style={{ fontSize: 12, color: "var(--fg-2)", marginLeft: 4 }}>— {apiSchemas.length} schemas discovered in your database</span>
-                  : <span style={{ fontSize: 12, color: "var(--fg-3)", marginLeft: 4 }}>— demo mode</span>}
-              </div>
-
-              {/* Info note */}
-              <div style={{ display: "flex", gap: 8, padding: "9px 13px", background: "var(--blue-50)", borderRadius: 10, marginBottom: 14, fontSize: 12.5, color: "var(--fg-2)", lineHeight: 1.5 }}>
-                <i data-lucide="info" style={{ width: 14, height: 14, color: "var(--brand)", flexShrink: 0, marginTop: 1 }}></i>
-                <span>
-                  {apiSchemas.length > 0
-                    ? <>These are the actual schemas found in your database — the names can be anything (<strong>dbo</strong>, <strong>sales</strong>, <strong>raw</strong>, etc.). Select which ones DataTrust should profile and monitor.</>
-                    : <>Showing example schema names. DataTrust works with any schema name — <strong>raw / bronze / silver / gold</strong> are just common medallion-architecture examples. You can edit the scope later from the Connections page.</>}
-                </span>
-              </div>
-
-              {/* Select all / deselect all */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                <label style={{ fontSize: 13, fontWeight: 600 }}>Select schemas to monitor</label>
-                <div style={{ display: "flex", gap: 12 }}>
-                  <button onClick={() => setSchemas(allSchemas.map(() => true))}
-                    style={{ fontSize: 12, color: "var(--brand)", fontWeight: 600, background: "none", border: "none", cursor: "pointer", padding: 0 }}>Select all</button>
-                  <span style={{ fontSize: 12, color: "var(--grey-300)" }}>|</span>
-                  <button onClick={() => setSchemas(allSchemas.map(() => false))}
-                    style={{ fontSize: 12, color: "var(--fg-3)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>Deselect all</button>
+              {banner}
+              <div style={{ padding: "12px 0 4px", textAlign: "center" }}>
+                <div style={{ width: 46, height: 46, borderRadius: "50%", background: "var(--brand-soft)", display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 14 }}>
+                  <i data-lucide="layers" style={{ width: 22, height: 22, color: "var(--brand)" }}></i>
+                </div>
+                <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 7 }}>Does your data use a layered architecture?</div>
+                <div style={{ fontSize: 12.5, color: "var(--fg-2)", maxWidth: 400, margin: "0 auto 22px", lineHeight: 1.55 }}>
+                  Medallion (RAW → BRONZE → SILVER → GOLD), custom tiers, or any pattern where schemas represent processing stages.
+                </div>
+                <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+                  <button onClick={() => {
+                    const exp = {}; dbTree.forEach(({ db }) => { exp[db] = true; }); setDbExpanded(exp);
+                    const kw = { RAW: ["raw","landing","src","source","ingest"], BRONZE: ["bronze","staged","base","stg"], SILVER: ["silver","clean","refined","int","intermediate"], GOLD: ["gold","mart","presentation","curated","reporting"] };
+                    const det = {};
+                    dbTree.forEach(({ db, schemas: sc }) => sc.forEach(s => {
+                      const key = dbTree.length > 1 ? `${db}.${s}` : s;
+                      const low = s.toLowerCase();
+                      const found = Object.entries(kw).find(([, ws]) => ws.some(w => low === w || low.startsWith(w + "_") || low.endsWith("_" + w)));
+                      det[key] = found ? found[0] : "ignore";
+                    }));
+                    setSchemaAssign(det); setUseLayers(true);
+                  }} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, padding: "16px 28px", borderRadius: 14, border: "2px solid var(--brand)", background: "var(--brand-soft)", cursor: "pointer", minWidth: 170, transition: "all 150ms" }}>
+                    <i data-lucide="layers" style={{ width: 22, height: 22, color: "var(--brand)" }}></i>
+                    <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--brand)" }}>Yes, I use layers</div>
+                    <div style={{ fontSize: 11, color: "var(--fg-2)", textAlign: "center", lineHeight: 1.4 }}>RAW · BRONZE · SILVER · GOLD or custom</div>
+                  </button>
+                  <button onClick={() => {
+                    const exp = {}; dbTree.forEach(({ db }) => { exp[db] = true; }); setDbExpanded(exp);
+                    const init = {};
+                    dbTree.forEach(({ db, schemas: sc }) => sc.forEach(s => { const key = dbTree.length > 1 ? `${db}.${s}` : s; init[key] = "ignore"; }));
+                    setSchemaAssign(init); setUseLayers(false);
+                  }} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, padding: "16px 28px", borderRadius: 14, border: "2px solid var(--grey-200)", background: "#fff", cursor: "pointer", minWidth: 170, transition: "all 150ms" }}>
+                    <i data-lucide="grid" style={{ width: 22, height: 22, color: "var(--fg-2)" }}></i>
+                    <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--fg-1)" }}>No, flat / custom</div>
+                    <div style={{ fontSize: 11, color: "var(--fg-2)", textAlign: "center", lineHeight: 1.4 }}>Just select which schemas to monitor</div>
+                  </button>
                 </div>
               </div>
+            </div>
+          );
 
-              {/* Schema pills */}
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 9, marginBottom: 16 }}>
-                {allSchemas.map((schemaName, i) => {
-                  const selected = schemas[i] !== undefined ? schemas[i] : true;
-                  return (
-                    <button key={schemaName} onClick={() => setSchemas(arr => {
-                      const next = [...arr];
-                      while (next.length <= i) next.push(true);
-                      next[i] = !next[i];
-                      return next;
-                    })} style={{
-                      display: "inline-flex", alignItems: "center", gap: 8, padding: "9px 15px",
-                      borderRadius: 10, cursor: "pointer",
-                      border: `1.5px solid ${selected ? "var(--brand)" : "var(--grey-200)"}`,
-                      background: selected ? "var(--brand-soft)" : "#fff",
-                      transition: "all 120ms",
-                    }}>
-                      <span style={{ width: 18, height: 18, borderRadius: 5, border: `2px solid ${selected ? "var(--brand)" : "var(--grey-300)"}`, background: selected ? "var(--brand)" : "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all 120ms" }}>
-                        {selected && <i data-lucide="check" style={{ width: 11, height: 11, color: "#fff" }}></i>}
-                      </span>
-                      <Mono style={{ fontWeight: 600, fontSize: 13.5, color: selected ? "var(--brand)" : "var(--fg-1)" }}>{schemaName}</Mono>
-                    </button>
-                  );
-                })}
+          // ── Phase B: flat schema picker ──────────────────────────────────────
+          if (!useLayers) {
+            const totalSel = allKeys.filter(k => schemaAssign[k] !== "ignore").length;
+            return (
+              <div className="dt-fade-up">
+                {banner}
+                {allKeys.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "28px 20px", background: "var(--grey-50)", borderRadius: 12, border: "1px dashed var(--grey-300)" }}>
+                    <i data-lucide="database" style={{ width: 28, height: 28, color: "var(--grey-300)", marginBottom: 10, display: "block", margin: "0 auto 10px" }}></i>
+                    <div style={{ fontSize: 13.5, fontWeight: 600, color: "var(--fg-2)", marginBottom: 6 }}>No schemas discovered</div>
+                    <div style={{ fontSize: 12, color: "var(--fg-3)", lineHeight: 1.5 }}>
+                      The connection succeeded but returned no schemas. This can happen when no database name was specified, or the login has no schema access.<br />
+                      <button onClick={() => { setUseLayers(null); setSchemaAssign({}); setStep(1); }}
+                        style={{ marginTop: 10, display: "inline-block", fontSize: 12, fontWeight: 600, color: "var(--brand)", background: "none", border: "none", cursor: "pointer" }}>
+                        ← Go back and check credentials
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                      <label style={{ fontSize: 13, fontWeight: 600 }}>Select schemas to monitor</label>
+                      <div style={{ display: "flex", gap: 12 }}>
+                        <button onClick={() => { const n = {}; allKeys.forEach(k => n[k] = "monitor"); setSchemaAssign(n); }}
+                          style={{ fontSize: 12, color: "var(--brand)", fontWeight: 600, background: "none", border: "none", cursor: "pointer" }}>Select all</button>
+                        <span style={{ fontSize: 12, color: "var(--grey-300)" }}>|</span>
+                        <button onClick={() => { const n = {}; allKeys.forEach(k => n[k] = "ignore"); setSchemaAssign(n); }}
+                          style={{ fontSize: 12, color: "var(--fg-3)", background: "none", border: "none", cursor: "pointer" }}>Deselect all</button>
+                      </div>
+                    </div>
+                    {dbTree.map(({ db, schemas: sc }) => (
+                      <div key={db} style={{ marginBottom: 10 }}>
+                        {dbTree.length > 1 && (
+                          <button onClick={() => setDbExpanded(e => ({ ...e, [db]: !e[db] }))}
+                            style={{ display: "flex", alignItems: "center", gap: 7, background: "none", border: "none", cursor: "pointer", padding: "5px 4px", fontSize: 12.5, fontWeight: 700, color: "var(--fg-1)" }}>
+                            <i data-lucide={dbExpanded[db] ? "chevron-down" : "chevron-right"} style={{ width: 13, height: 13 }}></i>
+                            <i data-lucide="database" style={{ width: 13, height: 13, color: "var(--fg-3)" }}></i>
+                            {db}
+                          </button>
+                        )}
+                        {(dbTree.length === 1 || dbExpanded[db]) && (
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 9, paddingLeft: dbTree.length > 1 ? 18 : 0 }}>
+                            {sc.map(s => {
+                              const key = dbTree.length > 1 ? `${db}.${s}` : s;
+                              const sel = schemaAssign[key] !== "ignore";
+                              return (
+                                <button key={key} onClick={() => setSchemaAssign(a => ({ ...a, [key]: sel ? "ignore" : "monitor" }))}
+                                  style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "9px 15px", borderRadius: 10, cursor: "pointer",
+                                    border: `1.5px solid ${sel ? "var(--brand)" : "var(--grey-200)"}`, background: sel ? "var(--brand-soft)" : "#fff", transition: "all 120ms" }}>
+                                  <span style={{ width: 16, height: 16, borderRadius: 4, border: `2px solid ${sel ? "var(--brand)" : "var(--grey-300)"}`, background: sel ? "var(--brand)" : "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                                    {sel && <i data-lucide="check" style={{ width: 10, height: 10, color: "#fff" }}></i>}
+                                  </span>
+                                  <Mono style={{ fontWeight: 600, fontSize: 13, color: sel ? "var(--brand)" : "var(--fg-1)" }}>{s}</Mono>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    <div style={{ fontSize: 12.5, color: "var(--fg-2)", marginTop: 4 }}>
+                      <strong style={{ color: totalSel > 0 ? "var(--brand)" : "var(--red-500)" }}>{totalSel}</strong> of {allKeys.length} schema{allKeys.length !== 1 ? "s" : ""} selected
+                      {totalSel === 0 && <span style={{ color: "var(--fg-3)", marginLeft: 8 }}>— select at least one</span>}
+                    </div>
+                  </>
+                )}
               </div>
+            );
+          }
 
-              {/* Selected count summary */}
-              <div style={{ fontSize: 12.5, color: "var(--fg-2)" }}>
-                <strong style={{ color: selectedCount > 0 ? "var(--brand)" : "var(--red-500)" }}>{selectedCount}</strong> of {allSchemas.length} schema{allSchemas.length !== 1 ? "s" : ""} selected for monitoring
-                {selectedCount === 0 && <span style={{ color: "var(--fg-3)", marginLeft: 8 }}>— select at least one schema to continue</span>}
+          // ── Phase C: layer assignment (drag & drop) ──────────────────────────
+          const SPECIAL = [{ id: "monitor", name: "Monitor (no layer)", color: "#64748b", special: true }, { id: "ignore", name: "Ignore", color: "#9ca3af", special: true }];
+          const allLayers = [...layerDefs, ...SPECIAL];
+          const unassigned = allKeys.filter(k => !schemaAssign[k]);
+
+          const renderBucket = (layer) => {
+            const assigned = allKeys.filter(k => schemaAssign[k] === layer.id);
+            const over = dragOverBucket === layer.id;
+            return (
+              <div key={layer.id}
+                onDragOver={e => { e.preventDefault(); setDragOverBucket(layer.id); }}
+                onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOverBucket(null); }}
+                onDrop={e => { e.preventDefault(); if (dragSchema) { setSchemaAssign(a => ({ ...a, [dragSchema]: layer.id })); setDragSchema(null); } setDragOverBucket(null); }}
+                style={{ border: `1.5px ${over ? "solid" : "dashed"} ${over ? layer.color : "var(--grey-200)"}`, background: over ? `${layer.color}12` : "#fafafa", borderRadius: 10, padding: "9px 11px", marginBottom: 7, minHeight: 50, transition: "all 120ms" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: assigned.length ? 7 : 0 }}>
+                  <span style={{ width: 9, height: 9, borderRadius: "50%", background: layer.color, flexShrink: 0 }}></span>
+                  {renamingLyr === layer.id && !layer.special
+                    ? <input autoFocus value={renameVal} onChange={e => setRenameVal(e.target.value)}
+                        onBlur={() => { if (renameVal.trim()) setLayerDefs(ld => ld.map(l => l.id === layer.id ? { ...l, name: renameVal.trim().toUpperCase() } : l)); setRenamingLyr(null); }}
+                        onKeyDown={e => { if (e.key === "Enter" || e.key === "Escape") e.target.blur(); }}
+                        style={{ fontSize: 11, fontWeight: 700, background: "none", border: "none", borderBottom: "1px solid var(--brand)", outline: "none", padding: 0, width: 80, color: "var(--fg-1)", textTransform: "uppercase", letterSpacing: ".04em" }} />
+                    : <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".04em", color: layer.special ? "var(--fg-3)" : "var(--fg-1)" }}>{layer.name}</span>
+                  }
+                  {assigned.length > 0 && <span style={{ fontSize: 10, color: "var(--fg-3)" }}>({assigned.length})</span>}
+                  {!layer.special && (
+                    <div style={{ marginLeft: "auto", display: "flex", gap: 3 }}>
+                      <button title="Rename" onClick={() => { setRenamingLyr(layer.id); setRenameVal(layer.name); }}
+                        style={{ background: "none", border: "none", cursor: "pointer", padding: 2, color: "var(--fg-3)", display: "inline-flex" }}>
+                        <i data-lucide="pencil" style={{ width: 10, height: 10 }}></i>
+                      </button>
+                      {layerDefs.length > 1 && (
+                        <button title="Delete layer" onClick={() => { setLayerDefs(ld => ld.filter(l => l.id !== layer.id)); setSchemaAssign(a => { const n = { ...a }; Object.keys(n).forEach(k => { if (n[k] === layer.id) delete n[k]; }); return n; }); }}
+                          style={{ background: "none", border: "none", cursor: "pointer", padding: 2, color: "var(--fg-3)", display: "inline-flex" }}>
+                          <i data-lucide="trash-2" style={{ width: 10, height: 10 }}></i>
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+                {assigned.length > 0 ? (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                    {assigned.map(key => (
+                      <span key={key} style={{ display: "inline-flex", alignItems: "center", gap: 3, background: `${layer.color}1a`, border: `1px solid ${layer.color}40`, borderRadius: 6, padding: "2px 7px", fontSize: 11, fontWeight: 600, fontFamily: "var(--font-mono)", color: "var(--fg-1)" }}>
+                        {key}
+                        <button onClick={() => setSchemaAssign(a => { const n = { ...a }; delete n[key]; return n; })}
+                          style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "inline-flex", color: "var(--fg-3)", marginLeft: 2 }}>
+                          <i data-lucide="x" style={{ width: 9, height: 9 }}></i>
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 10.5, color: "var(--grey-400)", fontStyle: "italic" }}>
+                    {over ? "↓ Drop here" : "Drag schemas here, or use ▾ on a schema"}
+                  </div>
+                )}
+              </div>
+            );
+          };
+
+          if (allKeys.length === 0) return (
+            <div className="dt-fade-up">
+              {banner}
+              <div style={{ textAlign: "center", padding: "28px 20px", background: "var(--grey-50)", borderRadius: 12, border: "1px dashed var(--grey-300)" }}>
+                <i data-lucide="layers" style={{ width: 28, height: 28, color: "var(--grey-300)", display: "block", margin: "0 auto 10px" }}></i>
+                <div style={{ fontSize: 13.5, fontWeight: 600, color: "var(--fg-2)", marginBottom: 6 }}>No schemas to assign</div>
+                <div style={{ fontSize: 12, color: "var(--fg-3)", lineHeight: 1.5 }}>
+                  The connection succeeded but no schemas were discovered. Specify a database name in your credentials so DataTrust can enumerate schemas.<br />
+                  <button onClick={() => { setUseLayers(null); setSchemaAssign({}); setStep(1); }}
+                    style={{ marginTop: 10, display: "inline-block", fontSize: 12, fontWeight: 600, color: "var(--brand)", background: "none", border: "none", cursor: "pointer" }}>
+                    ← Go back and add a database name
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+
+          return (
+            <div className="dt-fade-up" onClick={() => setAssignDd(null)}>
+              {banner}
+              {/* Controls row */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+                <div style={{ display: "flex", gap: 6, alignItems: "center", padding: "5px 9px", background: "var(--blue-50)", borderRadius: 8, fontSize: 12, color: "var(--fg-2)", flex: 1 }}>
+                  <i data-lucide="sparkles" style={{ width: 13, height: 13, color: "var(--brand)", flexShrink: 0 }}></i>
+                  Layer assignments auto-detected from schema names. Drag to reassign, or use ▾ for a dropdown.
+                </div>
+                <button onClick={() => {
+                  const kw = { RAW: ["raw","landing","src","source","ingest"], BRONZE: ["bronze","staged","base","stg"], SILVER: ["silver","clean","refined","int","intermediate"], GOLD: ["gold","mart","presentation","curated","reporting"] };
+                  const det = {};
+                  dbTree.forEach(({ db, schemas: sc }) => sc.forEach(s => {
+                    const key = dbTree.length > 1 ? `${db}.${s}` : s;
+                    const low = s.toLowerCase();
+                    const found = Object.entries(kw).find(([, ws]) => ws.some(w => low === w || low.startsWith(w + "_") || low.endsWith("_" + w)));
+                    det[key] = found ? found[0] : schemaAssign[key];
+                  }));
+                  setSchemaAssign(det);
+                }} style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "5px 10px", borderRadius: 8, border: "1px solid var(--grey-200)", background: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 600, color: "var(--fg-1)", flexShrink: 0, whiteSpace: "nowrap" }}>
+                  <i data-lucide="wand" style={{ width: 13, height: 13, color: "var(--brand)" }}></i>
+                  Re-detect
+                </button>
+              </div>
+              {/* Two-panel layout */}
+              <div style={{ display: "flex", gap: 12 }}>
+                {/* Left: source schemas tree */}
+                <div style={{ width: 182, flexShrink: 0, border: "1px solid var(--grey-200)", borderRadius: 10, overflow: "hidden" }}>
+                  <div style={{ padding: "7px 10px", background: "var(--grey-50)", borderBottom: "1px solid var(--grey-100)", fontSize: 10.5, fontWeight: 700, color: "var(--fg-3)", textTransform: "uppercase", letterSpacing: ".05em", display: "flex", alignItems: "center", gap: 6 }}>
+                    <i data-lucide="database" style={{ width: 11, height: 11 }}></i>Source schemas
+                  </div>
+                  <div style={{ padding: "6px 4px", maxHeight: 312, overflowY: "auto" }}>
+                    {dbTree.map(({ db, schemas: sc }) => (
+                      <div key={db}>
+                        {dbTree.length > 1 && (
+                          <button onClick={e => { e.stopPropagation(); setDbExpanded(ex => ({ ...ex, [db]: !ex[db] })); }}
+                            style={{ display: "flex", alignItems: "center", gap: 6, width: "100%", padding: "5px 8px", background: "none", border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, color: "var(--fg-1)", borderRadius: 6 }}>
+                            <i data-lucide={dbExpanded[db] ? "chevron-down" : "chevron-right"} style={{ width: 12, height: 12, color: "var(--fg-3)", flexShrink: 0 }}></i>
+                            <i data-lucide="cylinder" style={{ width: 12, height: 12, color: "var(--fg-3)", flexShrink: 0 }}></i>
+                            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{db}</span>
+                          </button>
+                        )}
+                        {(dbTree.length === 1 || dbExpanded[db]) && sc.map(s => {
+                          const key = dbTree.length > 1 ? `${db}.${s}` : s;
+                          const asgn = schemaAssign[key];
+                          const lyrColor = asgn ? (allLayers.find(l => l.id === asgn)?.color) : null;
+                          const showDd = assignDd === key;
+                          return (
+                            <div key={key} onClick={e => e.stopPropagation()}
+                              style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 6px 4px 12px", borderRadius: 6, opacity: asgn === "ignore" ? 0.4 : 1,
+                                background: dragSchema === key ? "var(--brand-soft)" : "transparent", transition: "all 120ms" }}>
+                              <span draggable
+                                onDragStart={e => { e.stopPropagation(); setDragSchema(key); e.dataTransfer.effectAllowed = "move"; }}
+                                onDragEnd={() => setDragSchema(null)}
+                                style={{ display: "inline-flex", color: "var(--grey-300)", cursor: "grab", flexShrink: 0 }}>
+                                <i data-lucide="grip-vertical" style={{ width: 11, height: 11 }}></i>
+                              </span>
+                              <Mono style={{ flex: 1, fontSize: 11.5, color: "var(--fg-1)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s}</Mono>
+                              {lyrColor && <span style={{ width: 6, height: 6, borderRadius: "50%", background: lyrColor, flexShrink: 0 }}></span>}
+                              <div style={{ position: "relative", flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+                                <button onClick={e => { e.stopPropagation(); setAssignDd(showDd ? null : key); }}
+                                  style={{ background: "none", border: "none", cursor: "pointer", padding: "1px 3px", color: "var(--fg-3)", display: "inline-flex", borderRadius: 3, ...(showDd ? { background: "var(--grey-100)" } : {}) }}>
+                                  <i data-lucide="chevron-down" style={{ width: 11, height: 11 }}></i>
+                                </button>
+                                {showDd && (
+                                  <div style={{ position: "absolute", left: 0, top: "100%", zIndex: 200, background: "#fff", border: "1px solid var(--grey-200)", borderRadius: 8, padding: "4px 0", boxShadow: "0 4px 16px rgba(0,0,0,.12)", minWidth: 145, marginTop: 2 }}>
+                                    {allLayers.map(l => (
+                                      <button key={l.id} onClick={() => { setSchemaAssign(a => ({ ...a, [key]: l.id })); setAssignDd(null); }}
+                                        style={{ display: "flex", alignItems: "center", gap: 7, width: "100%", padding: "6px 12px", background: asgn === l.id ? "var(--grey-50)" : "none", border: "none", cursor: "pointer", fontSize: 12, textAlign: "left" }}>
+                                        <span style={{ width: 8, height: 8, borderRadius: "50%", background: l.color, flexShrink: 0 }}></span>
+                                        <span style={{ flex: 1, color: "var(--fg-1)" }}>{l.name}</span>
+                                        {asgn === l.id && <i data-lucide="check" style={{ width: 11, height: 11, color: "var(--brand)" }}></i>}
+                                      </button>
+                                    ))}
+                                    {asgn && (
+                                      <div>
+                                        <div style={{ borderTop: "1px solid var(--grey-100)", margin: "4px 0" }}></div>
+                                        <button onClick={() => { setSchemaAssign(a => { const n = { ...a }; delete n[key]; return n; }); setAssignDd(null); }}
+                                          style={{ display: "flex", alignItems: "center", gap: 7, width: "100%", padding: "6px 12px", background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "var(--fg-3)" }}>
+                                          <i data-lucide="minus-circle" style={{ width: 11, height: 11 }}></i>Clear
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                {/* Right: layer map */}
+                <div style={{ flex: 1, overflow: "hidden" }}>
+                  <div style={{ fontSize: 10.5, fontWeight: 700, color: "var(--fg-3)", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 7, display: "flex", alignItems: "center", gap: 6 }}>
+                    <i data-lucide="layers" style={{ width: 11, height: 11 }}></i>Layer map
+                    {unassigned.length > 0 && (
+                      <span title="Unassigned schemas are still accessible and included in this connection — they just won't appear in layer-specific views until assigned." style={{ marginLeft: "auto", fontSize: 10, fontWeight: 500, color: "var(--orange-500)", textTransform: "none", letterSpacing: 0, cursor: "help" }}>
+                        {unassigned.length} unassigned — accessible, no layer
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ maxHeight: 330, overflowY: "auto", paddingRight: 2 }}>
+                    {allLayers.map(renderBucket)}
+                  </div>
+                  {addingLyr ? (
+                    <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+                      <input autoFocus value={newLyrName} onChange={e => setNewLyrName(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === "Enter" && newLyrName.trim()) {
+                            setLayerDefs(ld => [...ld, { id: newLyrName.trim().toUpperCase().replace(/\s+/g, "_"), name: newLyrName.trim().toUpperCase(), color: LAYER_COLORS_CYCLE[ld.length % LAYER_COLORS_CYCLE.length] }]);
+                            setNewLyrName(""); setAddingLyr(false);
+                          }
+                          if (e.key === "Escape") { setAddingLyr(false); setNewLyrName(""); }
+                        }}
+                        placeholder="New layer name…"
+                        style={{ flex: 1, border: "1px solid var(--brand)", borderRadius: 7, padding: "5px 10px", fontSize: 12.5, outline: "none", fontFamily: "var(--font-ui)" }} />
+                      <button onClick={() => {
+                        if (newLyrName.trim()) setLayerDefs(ld => [...ld, { id: newLyrName.trim().toUpperCase().replace(/\s+/g, "_"), name: newLyrName.trim().toUpperCase(), color: LAYER_COLORS_CYCLE[layerDefs.length % LAYER_COLORS_CYCLE.length] }]);
+                        setNewLyrName(""); setAddingLyr(false);
+                      }} style={{ padding: "5px 12px", borderRadius: 7, background: "var(--brand)", color: "#fff", border: "none", cursor: "pointer", fontSize: 12.5, fontWeight: 600 }}>Add</button>
+                      <button onClick={() => { setAddingLyr(false); setNewLyrName(""); }}
+                        style={{ padding: "5px 10px", borderRadius: 7, background: "var(--grey-100)", color: "var(--fg-1)", border: "none", cursor: "pointer" }}>✕</button>
+                    </div>
+                  ) : (
+                    <button onClick={e => { e.stopPropagation(); setAddingLyr(true); setNewLyrName(""); }}
+                      style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 10px", background: "none", border: "1px dashed var(--grey-300)", borderRadius: 7, cursor: "pointer", fontSize: 12, color: "var(--fg-3)", marginTop: 6, width: "100%", justifyContent: "center", transition: "all 120ms" }}>
+                      <i data-lucide="plus" style={{ width: 13, height: 13 }}></i>Add custom layer
+                    </button>
+                  )}
+                </div>
+              </div>
+              {/* Summary row */}
+              <div style={{ marginTop: 10, padding: "7px 12px", background: "var(--grey-50)", borderRadius: 8, fontSize: 12, color: "var(--fg-2)", display: "flex", gap: 14, flexWrap: "wrap", alignItems: "center" }}>
+                {layerDefs.map(l => { const cnt = allKeys.filter(k => schemaAssign[k] === l.id).length; return cnt > 0 ? (<span key={l.id} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><span style={{ width: 7, height: 7, borderRadius: "50%", background: l.color }}></span><strong style={{ color: "var(--fg-1)" }}>{l.name}</strong>: {cnt}</span>) : null; })}
+                {(() => { const mCnt = allKeys.filter(k => schemaAssign[k] === "monitor").length; return mCnt > 0 ? <span style={{ color: "var(--fg-3)" }}>+{mCnt} flat</span> : null; })()}
+                {(() => { const iCnt = allKeys.filter(k => schemaAssign[k] === "ignore").length; return iCnt > 0 ? <span style={{ color: "var(--fg-3)" }}>{iCnt} ignored</span> : null; })()}
+                {unassigned.length > 0 && <span style={{ color: "var(--orange-500)", fontWeight: 600 }}>⚠ {unassigned.length} unassigned — will be monitored flat</span>}
               </div>
             </div>
           );
@@ -670,30 +1010,51 @@
 
         {/* Footer */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 26, paddingTop: 18, borderTop: "1px solid var(--grey-100)" }}>
-          {step > 0 && step < 4 && step !== 2 && <Button variant="ghost" icon="arrow-left" onClick={() => setStep(s => s - 1)}>Back</Button>}
+          {step > 0 && step < 4 && step !== 2 && <Button variant="ghost" icon="arrow-left" onClick={() => { if (step === 3) { setUseLayers(null); setSchemaAssign({}); } setStep(s => s - 1); }}>Back</Button>}
           {step === 2 && testSuccess === false && <Button variant="ghost" icon="arrow-left" onClick={() => { setTestSuccess(null); setTestError(""); setStep(1); }}>Back to credentials</Button>}
           <div style={{ flex: 1 }}></div>
           {!inApp && step === 0 && onSkip && <Button variant="ghost" onClick={onSkip}>Skip — explore demo</Button>}
           {step === 0 && <Button variant="primary" iconRight="arrow-right" onClick={() => setStep(1)}>Continue</Button>}
           {step === 1 && <Button variant="primary" icon="plug-zap" onClick={() => setStep(2)}>Test connection</Button>}
+          {step === 2 && testSuccess === null && <Button variant="ghost" icon="arrow-left" onClick={() => { setTestSuccess(null); setTestError(""); setStep(1); }}>Cancel</Button>}
           {step === 2 && testSuccess === null && <Button variant="soft" disabled>Testing…</Button>}
-          {step === 2 && testSuccess === false && <Button variant="primary" icon="refresh-cw" onClick={() => { setTestSuccess(null); setTestError(""); setRetryKey(k => k + 1); }}>Retry</Button>}
-          {step === 3 && <Button variant="primary" iconRight="arrow-right" disabled={saving} onClick={async () => {
+          {step === 2 && testSuccess === false && <Button variant="primary" icon="refresh-cw" onClick={() => { setTestStepsLive([]); setTestIdx(0); setTestSuccess(null); setTestError(""); setRetryKey(k => k + 1); }}>Retry</Button>}
+          {step === 3 && useLayers !== null && <Button variant="primary" iconRight="arrow-right" disabled={saving} onClick={async () => {
             setSaving(true);
-            const allSchemas = apiSchemas.length > 0 ? apiSchemas : ["raw", "bronze", "silver", "gold"];
-            const selectedNames = allSchemas.filter((_, i) => schemas[i] !== false);
+            const allKeys = dbTree.flatMap(({ db, schemas: sc }) => sc.map(s => dbTree.length > 1 ? `${db}.${s}` : s));
+            const keys = allKeys.length > 0 ? allKeys : (apiSchemas.length > 0 ? apiSchemas : ["raw", "bronze", "silver", "gold"]);
+            let selectedNames, layerMapData;
+            if (!useLayers) {
+              selectedNames = keys.filter(k => schemaAssign[k] !== "ignore");
+              layerMapData = null;
+            } else {
+              // Include all non-ignored schemas in scope (even unassigned ones are accessible)
+              selectedNames = keys.filter(k => schemaAssign[k] !== "ignore");
+              const assign = {};
+              [...layerDefs.map(l => l.id), "monitor"].forEach(lid => {
+                assign[lid] = keys.filter(k => schemaAssign[k] === lid);
+              });
+              // Unassigned schemas stay unassigned — no auto-placement into any layer
+              layerMapData = { layers: layerDefs, assignment: assign };
+            }
             setSavedSchemasCount(selectedNames.length);
             try {
-              const conn = await window.DTApi?.createConnection?.({
-                name: connName || `${P.name} Connection`,
-                platform: plat,
-                environment: "production",
-                credentials: { ...form, auth_type: authMethod },
-                schemas_scope: selectedNames,
-              });
-              if (conn?.id) setSavedConnId(conn.id);
-            } catch (_) {} // proceed even if API not ready
-            setSaving(false); setStep(4);
+              if (window.DTApi?.createConnection) {
+                const conn = await window.DTApi.createConnection({
+                  name: connName || `${P.name} Connection`,
+                  platform: plat,
+                  environment: "production",
+                  credentials: { ...form, auth_type: authMethod },
+                  schemas_scope: selectedNames,
+                  layer_map: layerMapData,
+                });
+                if (conn?.id) setSavedConnId(conn.id);
+              }
+              setSaving(false); setStep(4);
+            } catch (err) {
+              setSaving(false);
+              toast("Failed to save connection: " + (err?.message || "Unknown error"), { kind: "error" });
+            }
           }}>{saving ? "Saving…" : "Save & continue"}</Button>}
           {step === 4 && <Button variant="primary" icon="layout-dashboard" onClick={() => onDone(savedConnId, connName || `${P.name} Connection`, plat)}>{inApp ? "Done" : "Enter workspace"}</Button>}
         </div>

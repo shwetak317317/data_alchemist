@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.core.metadata_db import get_db
+from app.core.auth_deps import get_current_user, CurrentUser
 from app.services.audit_service import log_event
 
 logger = logging.getLogger(__name__)
@@ -159,7 +160,8 @@ async def _event_generator(scn_key: str, scenario_text: str) -> AsyncGenerator[s
 
 
 @router.post("/inject")
-async def inject_scenario(req: InjectRequest, db: Session = Depends(get_db)):
+async def inject_scenario(req: InjectRequest, db: Session = Depends(get_db),
+                          current_user: CurrentUser = Depends(get_current_user)):
     """
     Classify and stream simulation events for the given scenario text.
     Returns an SSE stream: meta → event × N → done.
@@ -170,7 +172,7 @@ async def inject_scenario(req: InjectRequest, db: Session = Depends(get_db)):
     try:
         log_event(
             db,
-            user_name="simulator",
+            user_email=current_user.email,
             event_type="simulation.inject",
             entity_type="scenario",
             entity_id=scn_key,
@@ -193,7 +195,8 @@ async def inject_scenario(req: InjectRequest, db: Session = Depends(get_db)):
 
 
 @router.get("/scenarios")
-def list_scenarios(db: Session = Depends(get_db)):
+def list_scenarios(db: Session = Depends(get_db),
+                   current_user: CurrentUser = Depends(get_current_user)):
     """Return the list of available scenario templates, preferring DB-stored scenarios."""
     from sqlalchemy import text as sqlt
     rows = db.execute(sqlt("""

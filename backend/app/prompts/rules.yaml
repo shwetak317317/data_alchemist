@@ -1,0 +1,59 @@
+# Shared system message used by both rule prompts
+_system: &system |
+  You are a senior data engineer specialising in data quality.
+  Write precise, executable SQL-based DQ rules.
+  Always return valid JSON with no markdown fences or code blocks.
+
+
+recommend_rules:
+  system: *system
+
+  user: |
+    Table: {{ table_fqn }}  Layer: {{ layer }}  Rows: {{ row_count }}
+
+    Column statistics:
+    {{ col_summary_json }}
+
+    Top risks detected:
+    {{ risk_lines }}
+
+    Generate 5–15 DQ rules prioritised by severity.
+    Write SQL expressions that run directly on the table — rule_expression must return TRUE for
+    passing rows and FALSE for failing rows.
+    CDE columns must each get at least one rule.
+
+    Return JSON matching this schema exactly:
+    {"rules": [
+      {
+        "rule_name": "snake_case_name",
+        "rule_description": "plain English description",
+        "column_name": "col_name or null for table-level rules",
+        "rule_expression": "SQL returning TRUE=pass FALSE=fail",
+        "rule_type": "NULL_CHECK|RANGE|FORMAT|FK|VOLUME|CUSTOM",
+        "severity": "CRITICAL|HIGH|MEDIUM|LOW",
+        "is_cde_rule": true
+      }
+    ]}
+
+
+nl_to_rule:
+  system: *system
+
+  user: |
+    Table: {{ table_fqn }}  Layer: {{ layer }}
+
+    Business requirement: "{{ natural_language }}"
+
+    Convert this requirement into a single DQ rule with a runnable SQL expression.
+    The expression must return TRUE for passing rows and FALSE for failing rows.
+
+    Return JSON matching this schema exactly:
+    {
+      "rule_name": "snake_case_name",
+      "rule_expression": "SQL returning TRUE=pass FALSE=fail",
+      "rule_type": "NULL_CHECK|RANGE|FORMAT|FK|VOLUME|CUSTOM",
+      "severity": "CRITICAL|HIGH|MEDIUM|LOW",
+      "description": "plain English description",
+      "is_cde_rule": true,
+      "explanation": "why this rule matters for data trust"
+    }

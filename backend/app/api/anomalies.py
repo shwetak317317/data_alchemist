@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 
 from app.core.metadata_db import get_db
+from app.core.auth_deps import get_current_user, CurrentUser
 from app.models.anomaly import AnomalyRecord, AnomalyAcknowledgeRequest, AnomalyExplanationResponse, AnomalyScanRequest
 from app.agents.explainability_agent import explain_anomaly
 from app.services.audit_service import log_event
@@ -29,7 +30,8 @@ def _row_to_anomaly(row) -> AnomalyRecord:
 
 
 @router.get("/inbox", response_model=list[AnomalyRecord])
-def get_inbox(connection_id: str | None = None, db: Session = Depends(get_db)):
+def get_inbox(connection_id: str | None = None, db: Session = Depends(get_db),
+              current_user: CurrentUser = Depends(get_current_user)):
     """Return all open anomalies, newest first."""
     filters, params = ["status='open'"], {}
     if connection_id:
@@ -61,7 +63,8 @@ def get_inbox(connection_id: str | None = None, db: Session = Depends(get_db)):
 
 
 @router.post("/scan")
-def scan_anomalies(req: AnomalyScanRequest, db: Session = Depends(get_db)):
+def scan_anomalies(req: AnomalyScanRequest, db: Session = Depends(get_db),
+                   current_user: CurrentUser = Depends(get_current_user)):
     """
     Trigger an anomaly scan for a connection.
     Compares current profiling run stats against the last 7 days of history.
@@ -106,7 +109,8 @@ def scan_anomalies(req: AnomalyScanRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/{anomaly_id}/acknowledge")
-def acknowledge(anomaly_id: str, req: AnomalyAcknowledgeRequest, db: Session = Depends(get_db)):
+def acknowledge(anomaly_id: str, req: AnomalyAcknowledgeRequest, db: Session = Depends(get_db),
+                current_user: CurrentUser = Depends(get_current_user)):
     row = db.execute(text("SELECT anomaly_id, connection_id FROM anomaly_log WHERE anomaly_id=:id"),
                      {"id": anomaly_id}).fetchone()
     if not row:
@@ -115,10 +119,10 @@ def acknowledge(anomaly_id: str, req: AnomalyAcknowledgeRequest, db: Session = D
     db.execute(text(
         "UPDATE anomaly_log SET status='acknowledged', acknowledged_by=:by, "
         "acknowledged_at=NOW(), ack_note=:note WHERE anomaly_id=:id"
-    ), {"by": req.acknowledged_by, "note": req.note, "id": anomaly_id})
+    ), {"by": current_user.email, "note": req.note, "id": anomaly_id})
     db.commit()
 
-    log_event(db, user_name=req.acknowledged_by, event_type="ACK",
+    log_event(db, user_email=current_user.email, event_type="ACK",
               entity_type="ANOMALY", entity_id=anomaly_id,
               new_value={"note": req.note}, connection_id=row[1])
     db.commit()
@@ -126,7 +130,8 @@ def acknowledge(anomaly_id: str, req: AnomalyAcknowledgeRequest, db: Session = D
 
 
 @router.post("/{anomaly_id}/explain", response_model=AnomalyExplanationResponse)
-def get_explanation(anomaly_id: str, db: Session = Depends(get_db)):
+def get_explanation(anomaly_id: str, db: Session = Depends(get_db),
+                    current_user: CurrentUser = Depends(get_current_user)):
     row = db.execute(text(
         "SELECT anomaly_id, connection_id, detected_at, layer, table_fqn, column_name, "
         "anomaly_type, description, severity, metric_value, baseline_value, deviation_pct, "
@@ -171,7 +176,8 @@ def _save_anomaly(db: Session, anomaly: AnomalyRecord) -> None:
 
 
 @router.get("/fingerprints")
-def get_fingerprints(connection_id: str | None = None, db: Session = Depends(get_db)):
+def get_fingerprints(connection_id: str | None = None, db: Session = Depends(get_db),
+                     current_user: CurrentUser = Depends(get_current_user)):
     """Return anomaly fingerprints (past incident matches) for a connection."""
     params: dict = {}
     where = ""

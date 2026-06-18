@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 
 from app.core.metadata_db import get_db
+from app.core.auth_deps import get_current_user, CurrentUser
 from app.api.connections import get_active_connector
 from app.agents.rule_agent import recommend_rules, nl_to_rule
 from app.models.rule import DQRule, RuleDecisionRequest, NLConvertRequest, NLConvertResponse, RuleRecommendRequest
@@ -32,7 +33,8 @@ def _row_to_rule(row) -> DQRule:
 
 @router.get("", response_model=list[DQRule])
 def list_rules(connection_id: str | None = None, status: str | None = None,
-               db: Session = Depends(get_db)):
+               db: Session = Depends(get_db),
+               current_user: CurrentUser = Depends(get_current_user)):
     filters = []
     params: dict = {}
     if connection_id:
@@ -52,7 +54,8 @@ def list_rules(connection_id: str | None = None, status: str | None = None,
 
 
 @router.post("/recommend", response_model=list[DQRule])
-def recommend(req: RuleRecommendRequest, db: Session = Depends(get_db)):
+def recommend(req: RuleRecommendRequest, db: Session = Depends(get_db),
+              current_user: CurrentUser = Depends(get_current_user)):
     """Generate rule recommendations based on a profiling report."""
     row = db.execute(text(
         "SELECT report_id, connection_id, table_fqn, layer, run_at, row_count, "
@@ -80,39 +83,55 @@ def recommend(req: RuleRecommendRequest, db: Session = Depends(get_db)):
 
     rules = recommend_rules(report, req.connection_id, cde_cols)
 
-    # Persist as draft rules
+    # Resolve table_id FK from the connection_tables cache (if populated)
+    table_id_row = db.execute(text(
+        "SELECT id FROM connection_tables WHERE connection_id=:conn AND table_fqn=:fqn LIMIT 1"
+    ), {"conn": req.connection_id, "fqn": report.table_fqn}).fetchone()
+    table_id = table_id_row[0] if table_id_row else None
+
+    # Persist as draft rules — ON CONFLICT deduplicates by (connection_id, table_fqn, rule_name)
+    # so re-generating rules for the same table is always idempotent.
     saved = []
     for rule in rules:
         rid = str(uuid.uuid4())
-        db.execute(text("""
+        result = db.execute(text("""
             INSERT INTO dq_rules
                 (rule_id, connection_id, rule_name, rule_description, table_fqn,
                  layer, column_name, rule_expression, rule_type, severity,
-                 is_cde_rule, status, created_by, created_at, updated_at)
+                 is_cde_rule, status, created_by, table_id, created_at, updated_at)
             VALUES
                 (:rule_id, :conn, :name, :desc, :table_fqn,
                  :layer, :col, :expr, :type, :sev,
-                 :cde, 'draft', 'AI_AGENT', NOW(), NOW())
+                 :cde, 'draft', 'AI_AGENT', :table_id, NOW(), NOW())
+            ON CONFLICT (connection_id, table_fqn, rule_name) DO UPDATE
+                SET rule_description = EXCLUDED.rule_description,
+                    rule_expression  = EXCLUDED.rule_expression,
+                    table_id         = COALESCE(EXCLUDED.table_id, dq_rules.table_id),
+                    updated_at       = NOW()
+            RETURNING rule_id
         """), {
             "rule_id": rid, "conn": rule.connection_id, "name": rule.rule_name,
             "desc": rule.rule_description, "table_fqn": rule.table_fqn,
             "layer": rule.layer, "col": rule.column_name, "expr": rule.rule_expression,
             "type": rule.rule_type, "sev": rule.severity, "cde": rule.is_cde_rule,
+            "table_id": table_id,
         })
-        rule.rule_id = rid
+        rule.rule_id = result.fetchone()[0]  # use existing rule_id on conflict
         saved.append(rule)
     db.commit()
     return saved
 
 
 @router.post("/nl", response_model=NLConvertResponse)
-def nl_convert(req: NLConvertRequest, db: Session = Depends(get_db)):
+def nl_convert(req: NLConvertRequest, db: Session = Depends(get_db),
+               current_user: CurrentUser = Depends(get_current_user)):
     """Convert plain-English expectation to a structured DQ rule."""
     return nl_to_rule(req.table_fqn, req.natural_language, req.connection_id)
 
 
 @router.patch("/{rule_id}", response_model=DQRule)
-def decide_rule(rule_id: str, req: RuleDecisionRequest, db: Session = Depends(get_db)):
+def decide_rule(rule_id: str, req: RuleDecisionRequest, db: Session = Depends(get_db),
+                current_user: CurrentUser = Depends(get_current_user)):
     """Human approves / edits / rejects / snoozes a rule."""
     row = db.execute(text(
         "SELECT rule_id, status, rule_expression, connection_id FROM dq_rules WHERE rule_id=:id"
@@ -128,7 +147,7 @@ def decide_rule(rule_id: str, req: RuleDecisionRequest, db: Session = Depends(ge
         db.execute(text(
             "UPDATE dq_rules SET status='approved', approved_by=:by, approved_at=:at, updated_at=:at "
             "WHERE rule_id=:id"
-        ), {"by": req.decided_by, "at": now, "id": rule_id})
+        ), {"by": current_user.email, "at": now, "id": rule_id})
 
     elif req.decision == "reject":
         new_status = "retired"
@@ -154,7 +173,7 @@ def decide_rule(rule_id: str, req: RuleDecisionRequest, db: Session = Depends(ge
 
     db.commit()
 
-    log_event(db, user_name=req.decided_by, event_type=req.decision.upper(),
+    log_event(db, user_email=current_user.email, event_type=req.decision.upper(),
               entity_type="RULE", entity_id=rule_id,
               old_value={"status": old_status}, new_value={"status": new_status},
               reason=req.reason, connection_id=row[3])
@@ -170,7 +189,8 @@ def decide_rule(rule_id: str, req: RuleDecisionRequest, db: Session = Depends(ge
 
 
 @router.post("", response_model=DQRule, status_code=201)
-def create_rule(rule: DQRule, db: Session = Depends(get_db)):
+def create_rule(rule: DQRule, db: Session = Depends(get_db),
+                current_user: CurrentUser = Depends(get_current_user)):
     """Manually add a custom rule."""
     rid = str(uuid.uuid4())
     db.execute(text("""
@@ -187,7 +207,7 @@ def create_rule(rule: DQRule, db: Session = Depends(get_db)):
         "desc": rule.rule_description, "table_fqn": rule.table_fqn,
         "layer": rule.layer, "col": rule.column_name, "expr": rule.rule_expression,
         "type": rule.rule_type, "sev": rule.severity, "cde": rule.is_cde_rule,
-        "created_by": rule.created_by or "user", "nl_source": rule.nl_source,
+        "created_by": current_user.email, "nl_source": rule.nl_source,
     })
     db.commit()
     rule.rule_id = rid

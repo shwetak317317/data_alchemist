@@ -10,29 +10,34 @@ logger = logging.getLogger(__name__)
 
 
 def get_row_count(connector: BaseConnector, schema: str, table: str) -> int:
+    tref = connector.table_ref(schema, table)
     try:
-        return int(connector.query_scalar(f'SELECT COUNT(*) FROM "{schema}"."{table}"') or 0)
+        return int(connector.query_scalar(f"SELECT COUNT(*) FROM {tref}") or 0)
     except Exception:
-        return int(connector.query_scalar(f"SELECT COUNT(*) FROM [{schema}].[{table}]") or 0)
+        return 0
 
 
 def get_column_null_stats(connector: BaseConnector, schema: str, table: str, columns: list[dict]) -> dict:
     """Return {col_name: null_count} for all columns."""
     if not columns:
         return {}
+    tref = connector.table_ref(schema, table)
     null_exprs = ", ".join(
-        f"SUM(CASE WHEN \"{c['name']}\" IS NULL THEN 1 ELSE 0 END) AS \"{c['name']}\""
+        f"SUM(CASE WHEN [{c['name']}] IS NULL THEN 1 ELSE 0 END) AS [{c['name']}]"
         for c in columns
     )
     try:
-        result = connector.query(f'SELECT {null_exprs} FROM "{schema}"."{table}"')
+        result = connector.query(f"SELECT {null_exprs} FROM {tref}")
     except Exception:
-        # SQL Server bracket syntax
-        null_exprs_sq = ", ".join(
-            f"SUM(CASE WHEN [{c['name']}] IS NULL THEN 1 ELSE 0 END) AS [{c['name']}]"
+        # Fallback: ANSI double-quote columns
+        null_exprs_dq = ", ".join(
+            f'SUM(CASE WHEN "{c["name"]}" IS NULL THEN 1 ELSE 0 END) AS "{c["name"]}"'
             for c in columns
         )
-        result = connector.query(f"SELECT {null_exprs_sq} FROM [{schema}].[{table}]")
+        try:
+            result = connector.query(f'SELECT {null_exprs_dq} FROM {tref}')
+        except Exception:
+            return {}
 
     if not result.rows:
         return {}
@@ -40,39 +45,46 @@ def get_column_null_stats(connector: BaseConnector, schema: str, table: str, col
 
 
 def get_column_distinct_count(connector: BaseConnector, schema: str, table: str, col: str) -> int:
+    tref = connector.table_ref(schema, table)
     try:
-        return int(connector.query_scalar(
-            f'SELECT COUNT(DISTINCT "{col}") FROM "{schema}"."{table}"') or 0)
+        return int(connector.query_scalar(f"SELECT COUNT(DISTINCT [{col}]) FROM {tref}") or 0)
     except Exception:
-        return int(connector.query_scalar(
-            f"SELECT COUNT(DISTINCT [{col}]) FROM [{schema}].[{table}]") or 0)
+        try:
+            return int(connector.query_scalar(f'SELECT COUNT(DISTINCT "{col}") FROM {tref}') or 0)
+        except Exception:
+            return 0
 
 
 def get_top_values(connector: BaseConnector, schema: str, table: str, col: str, n: int = 10) -> list:
+    tref = connector.table_ref(schema, table)
     try:
         result = connector.query(
-            f'SELECT "{col}", COUNT(*) AS cnt FROM "{schema}"."{table}" '
-            f'GROUP BY "{col}" ORDER BY cnt DESC'
-        )
-    except Exception:
-        result = connector.query(
-            f"SELECT TOP {n} [{col}], COUNT(*) AS cnt FROM [{schema}].[{table}] "
+            f"SELECT TOP {n} [{col}], COUNT(*) AS cnt FROM {tref} "
             f"GROUP BY [{col}] ORDER BY cnt DESC"
-        )
-    return [row[0] for row in result.rows[:n]]
-
-
-def get_numeric_stats(connector: BaseConnector, schema: str, table: str, col: str) -> dict:
-    try:
-        result = connector.query(
-            f'SELECT MIN("{col}"), MAX("{col}"), AVG(CAST("{col}" AS FLOAT)), '
-            f'STDDEV(CAST("{col}" AS FLOAT)) FROM "{schema}"."{table}"'
         )
     except Exception:
         try:
             result = connector.query(
-                f"SELECT MIN([{col}]), MAX([{col}]), AVG(CAST([{col}] AS FLOAT)), "
-                f"STDEV(CAST([{col}] AS FLOAT)) FROM [{schema}].[{table}]"
+                f'SELECT "{col}", COUNT(*) AS cnt FROM {tref} '
+                f'GROUP BY "{col}" ORDER BY cnt DESC LIMIT {n}'
+            )
+        except Exception:
+            return []
+    return [row[0] for row in result.rows[:n]]
+
+
+def get_numeric_stats(connector: BaseConnector, schema: str, table: str, col: str) -> dict:
+    tref = connector.table_ref(schema, table)
+    try:
+        result = connector.query(
+            f"SELECT MIN([{col}]), MAX([{col}]), AVG(CAST([{col}] AS FLOAT)), "
+            f"STDEV(CAST([{col}] AS FLOAT)) FROM {tref}"
+        )
+    except Exception:
+        try:
+            result = connector.query(
+                f'SELECT MIN("{col}"), MAX("{col}"), AVG(CAST("{col}" AS FLOAT)), '
+                f'STDDEV(CAST("{col}" AS FLOAT)) FROM {tref}'
             )
         except Exception:
             return {}

@@ -2,39 +2,21 @@
 Explainability Agent — converts technical rule failures and anomalies into
 plain-English business narratives that non-technical stakeholders can act on.
 """
+import json
 import logging
-from app.core.llm import chat
+from app.core.llm import chat, parse_llm_json
 from app.models.anomaly import AnomalyRecord, AnomalyExplanationResponse
 from app.models.execution import RuleResult
+from app.prompts.explainability import build_anomaly_explanation_prompt, build_rule_failure_prompt
 
 logger = logging.getLogger(__name__)
 
-_SYSTEM = (
-    "You are a senior data engineer explaining data quality issues to business stakeholders. "
-    "Be concise, specific, and actionable. No jargon. No markdown. Plain text only."
-)
-
 
 def explain_anomaly(anomaly: AnomalyRecord) -> AnomalyExplanationResponse:
-    prompt = [
-        {"role": "system", "content": _SYSTEM},
-        {"role": "user", "content": (
-            f"Anomaly detected:\n"
-            f"  Type: {anomaly.anomaly_type}\n"
-            f"  Table: {anomaly.table_fqn}  Layer: {anomaly.layer}  Column: {anomaly.column_name or 'N/A'}\n"
-            f"  Description: {anomaly.description}\n"
-            f"  Severity: {anomaly.severity}\n"
-            f"  Metric value: {anomaly.metric_value}  Baseline: {anomaly.baseline_value}  "
-            f"Deviation: {anomaly.deviation_pct}%\n\n"
-            "Return JSON with these exact keys (all strings/arrays of strings):\n"
-            '{"what_happened": "", "where": "", "when_first_seen": "", '
-            '"why_it_matters": "", "how_bad": "", "recommended_actions": ["step1", "step2"]}'
-        )},
-    ]
+    prompt = build_anomaly_explanation_prompt(anomaly)
     try:
-        import json
         raw = chat(prompt)
-        data = json.loads(raw)
+        data = parse_llm_json(raw)
         return AnomalyExplanationResponse(
             anomaly_id=anomaly.anomaly_id,
             what_happened=data.get("what_happened", anomaly.description),
@@ -58,18 +40,7 @@ def explain_anomaly(anomaly: AnomalyRecord) -> AnomalyExplanationResponse:
 
 
 def explain_rule_failure(result: RuleResult) -> str:
-    """Return a short plain-English explanation for a rule failure (used in execution results)."""
-    prompt = [
-        {"role": "system", "content": _SYSTEM},
-        {"role": "user", "content": (
-            f"DQ rule failed:\n"
-            f"  Rule: {result.rule_name}\n"
-            f"  Table: {result.table_fqn}  Layer: {result.layer or 'N/A'}\n"
-            f"  Failed records: {result.failed_records:,} ({result.fail_pct:.1f}%)\n"
-            f"  Severity: {result.severity}  CDE: {result.is_cde_rule}\n\n"
-            "Write 2–3 sentences: what happened, why it matters, what to do. No bullet points."
-        )},
-    ]
+    prompt = build_rule_failure_prompt(result)
     try:
         return chat(prompt, max_tokens=150)
     except Exception as e:

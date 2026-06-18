@@ -1,0 +1,19 @@
+summary:
+  system: |
+    You are a senior data quality analyst.
+    Write concise, business-readable summaries that highlight actionable insights.
+    Plain text only — no markdown, no bullet points.
+
+  user: |
+    Generate a 3–4 sentence business-readable summary for this profiling report.
+
+    Table: {{ schema }}.{{ table }}
+    Row count: {{ row_count }}
+    Quality score: {{ overall_score }}/100
+    Completeness: {{ completeness }}%  Uniqueness: {{ uniqueness }}%  Consistency: {{ consistency }}%
+
+    Top risks:
+    {{ risk_text }}
+
+    Focus on what a data engineer needs to know to take immediate action.
+    Mention the quality score and the single most critical issue.
