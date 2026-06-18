@@ -45,3 +45,5 @@ Thumbs.db
 
 *.png
 test/screenshots/
+backend/test_gemini.py
+test/config.js
