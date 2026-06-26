@@ -2,14 +2,14 @@
 (function () {
   const D = window.DT;
 
-  // ---- Scenario classification engine ----
-  function classify(text) {
+  // ---- Local classification fallback (mirrors backend _classify_regex) ----
+  function classifyLocal(text) {
     const t = text.toLowerCase();
-    if (t.includes("northeast") || (t.includes("region") && (t.includes("stop") || t.includes("entirely") || t.includes("loss")))) return SCN.segment;
-    if (t.includes("revenue") || (t.includes("not") && t.includes("load")) || t.includes("null")) return SCN.nullcol;
-    if (t.includes("drop") || t.includes("60%") || t.includes("overnight") || t.includes("volume")) return SCN.volume;
-    if (t.includes("ghost") || t.includes("status") || t.includes("invalid") || t.includes("code")) return SCN.whitelist;
-    if (t.includes("crm") || t.includes("feed") || t.includes("arriv") || t.includes("source")) return SCN.source;
+    if (t.includes("northeast") || (t.includes("region") && (t.includes("stop") || t.includes("entirely") || t.includes("loss") || t.includes("offline") || t.includes("down")))) return SCN.segment;
+    if (t.includes("revenue") || (t.includes("not") && t.includes("load")) || t.includes("null") || t.includes("missing")) return SCN.nullcol;
+    if (t.includes("drop") || t.includes("60%") || t.includes("overnight") || t.includes("volume") || t.includes("batch") || t.includes("warehouse")) return SCN.volume;
+    if (t.includes("ghost") || t.includes("status") || t.includes("invalid") || t.includes("code") || t.includes("whitelist")) return SCN.whitelist;
+    if (t.includes("crm") || t.includes("feed") || t.includes("arriv") || t.includes("source") || t.includes("file")) return SCN.source;
     return SCN.nullcol;
   }
 
@@ -111,8 +111,51 @@
     },
   };
 
-  const EVI = { inject: ["zap", "var(--grey-600)"], scan: ["radar", "var(--brand)"], fail: ["alert-octagon", "var(--red-500)"], warn: ["alert-triangle", "var(--yellow-600)"], explain: ["file-text", "var(--navy-500)"] };
+  // Event kind → [lucide icon, color]. classify = AI classification step.
+  const EVI = {
+    classify: ["sparkles", "var(--purple-500, #a855f7)"],
+    inject:   ["zap",           "var(--grey-600)"],
+    scan:     ["radar",         "var(--brand)"],
+    fail:     ["alert-octagon", "var(--red-500)"],
+    warn:     ["alert-triangle","var(--yellow-600)"],
+    explain:  ["file-text",     "var(--navy-500)"],
+  };
   const fmtT = (ms) => { const s = Math.round(ms / 1000); return `00:${String(s).padStart(2, "0")}`; };
+
+  // ---- Simulation history strip ----
+  const SimHistory = ({ connectionId }) => {
+    const [history, setHistory] = React.useState([]);
+    const [open, setOpen] = React.useState(false);
+    useIcons();
+    React.useEffect(() => {
+      if (!open || !window.DTApi?.getSimulationHistory) return;
+      window.DTApi.getSimulationHistory(connectionId)
+        .then(rows => { if (rows && rows.length) setHistory(rows); })
+        .catch(() => {});
+    }, [open, connectionId]);
+    if (!window.DTApi?.getSimulationHistory) return null;
+    return (
+      <Card style={{ marginBottom: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }} onClick={() => setOpen(o => !o)}>
+          <SectionTitle icon="history">Recent simulations</SectionTitle>
+          <i data-lucide={open ? "chevron-up" : "chevron-down"} style={{ width: 16, height: 16, color: "var(--fg-3)" }}></i>
+        </div>
+        {open && (
+          <div style={{ marginTop: 10 }}>
+            {history.length === 0
+              ? <div style={{ fontSize: 12.5, color: "var(--fg-3)", padding: "8px 0" }}>No simulations run yet.</div>
+              : history.slice(0, 5).map((r, i) => (
+                <div key={r.run_id || i} style={{ display: "flex", gap: 10, padding: "8px 0", borderTop: i ? "1px solid var(--grey-100)" : "none", alignItems: "center" }}>
+                  <Chip intent={r.status === "remediated" ? "success" : r.status === "completed" ? "brand" : "neutral"} size="sm">{r.status}</Chip>
+                  <div style={{ flex: 1, fontSize: 12.5, color: "var(--fg-1)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.scenario_text}</div>
+                  <Mono style={{ fontSize: 11, color: "var(--fg-3)", flexShrink: 0 }}>{r.started_at ? r.started_at.slice(0, 16).replace("T", " ") : "—"}</Mono>
+                </div>
+              ))}
+          </div>
+        )}
+      </Card>
+    );
+  };
 
   const Simulator = () => {
     const { go, setTrustScore, setPipeline, trustScore, activeConnectionId } = useApp();
@@ -125,8 +168,10 @@
         .then(rows => { if (rows && rows.length) setScenarios(rows); })
         .catch(() => {});
     }, []);
-    const [phase, setPhase] = React.useState("idle"); // idle | reacting | done
+
+    const [phase, setPhase] = React.useState("idle"); // idle | classifying | reacting | done
     const [scn, setScn] = React.useState(null);
+    const [runId, setRunId] = React.useState(null);
     const [events, setEvents] = React.useState([]);
     const [healed, setHealed] = React.useState(false);
     const timers = React.useRef([]);
@@ -147,49 +192,71 @@
     };
 
     const inject = () => {
+      if (!text.trim()) return;
       clearTimers();
       abortRef.current?.();
-      setEvents([]); setHealed(false); setPhase("reacting");
+      setEvents([]); setHealed(false); setRunId(null);
+      setPhase("classifying"); // show AI classifying state immediately
       setPipeline("ISSUES");
 
       if (window.DTApi?.streamSimulation) {
-        let scnMeta = null;
         let drop = 52;
         abortRef.current = window.DTApi.streamSimulation({
           scenarioText: text,
           connectionId: activeConnectionId,
           onMeta: (meta) => {
             drop = meta.drop;
-            scnMeta = {
+            if (meta.run_id) setRunId(meta.run_id);
+            setScn({
               type: meta.scenario_type, drop: meta.drop, undercount: meta.undercount,
               inject: meta.inject_sql, title: meta.title, body: meta.body,
               events: [],
-            };
-            setScn(scnMeta);
+            });
+            setPhase("reacting");
           },
           onEvent: (e) => {
             setEvents(prev => [...prev, e]);
             if (e.kind === "fail" || e.kind === "warn") setTrustScore(ts => Math.max(drop, ts - 5));
           },
+          onNarrative: (d) => {
+            if (!d || !d.text) return;
+            // Parse "- bullet" lines into array; keep existing body as fallback
+            const lines = d.text.split('\n')
+              .map(l => l.replace(/^[-•*]\s*/, '').trim())
+              .filter(l => l.length > 0);
+            if (lines.length > 0) {
+              setScn(s => s ? { ...s, body: lines } : s);
+            }
+          },
           onDone: () => { setTrustScore(drop); setTimeout(() => setPhase("done"), 400); },
           onError: () => {
-            // Fall back to local simulation
-            const s = classify(text);
+            const s = classifyLocal(text);
             setScn(s);
+            setPhase("reacting");
             injectLocal(s);
           },
         });
       } else {
-        const s = classify(text);
+        const s = classifyLocal(text);
         setScn(s);
+        setPhase("reacting");
         injectLocal(s);
       }
     };
 
-    const reset = () => { clearTimers(); abortRef.current?.(); setPhase("idle"); setScn(null); setEvents([]); setHealed(false); setTrustScore(69); setPipeline("ISSUES"); };
+    const reset = () => {
+      clearTimers(); abortRef.current?.();
+      setPhase("idle"); setScn(null); setEvents([]); setHealed(false);
+      setRunId(null); setTrustScore(69); setPipeline("ISSUES");
+    };
+
     const heal = () => {
       if (!scn) return;
       setHealed(true); setPipeline("RECOVERING");
+      // Call backend remediation (fire-and-forget)
+      if (runId && window.DTApi?.remediateSimulation) {
+        window.DTApi.remediateSimulation(runId, activeConnectionId).catch(() => {});
+      }
       const from = scn.drop ?? trustScore, to = 91, dur = 1300, t0 = Date.now();
       const id = setInterval(() => {
         const p = Math.min((Date.now() - t0) / dur, 1);
@@ -201,8 +268,11 @@
       toast("Remediation applied · pipeline re-running · trust score recovering", { kind: "success" });
     };
 
+    const alertColor = scn && (scn.type === "Segment loss" || scn.type === "Column NULL" || scn.type === "Volume drop") ? "var(--red-500)" : "var(--orange-500)";
+
     return (
       <div className="dt-fade-up">
+        {/* Header banner */}
         <Card style={{ marginBottom: 16, background: "linear-gradient(135deg, var(--grey-900), var(--navy-700))", border: "none" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <span style={{ width: 42, height: 42, borderRadius: 11, background: "rgba(255,255,255,.12)", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
@@ -210,28 +280,69 @@
             </span>
             <div style={{ flex: 1 }}>
               <div style={{ fontFamily: "var(--font-doc-head)", fontWeight: 700, fontSize: 18, color: "#fff" }}>Live Scenario Simulator</div>
-              <div style={{ fontSize: 13, color: "rgba(255,255,255,.7)", marginTop: 2 }}>Give the system any scenario. It classifies, injects, detects, and explains — live, in under 90 seconds.</div>
+              <div style={{ fontSize: 13, color: "rgba(255,255,255,.7)", marginTop: 2 }}>Give the system any scenario. AI classifies, injects, detects, and explains — live, in under 90 seconds.</div>
             </div>
-            <Chip intent="warning" variant="fill" dot>Must-have demo</Chip>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              {activeConnectionId && <Chip intent="success" size="sm" dot>Connection active</Chip>}
+              <Chip intent="warning" variant="fill" dot>Must-have demo</Chip>
+            </div>
           </div>
         </Card>
+
+        {/* No-connection warning */}
+        {!activeConnectionId && (
+          <Card style={{ marginBottom: 16, background: "var(--yellow-50)", border: "1px solid var(--yellow-200)" }}>
+            <div style={{ display: "flex", gap: 10, alignItems: "center", fontSize: 13, color: "var(--yellow-800)" }}>
+              <i data-lucide="alert-triangle" style={{ width: 16, height: 16, flexShrink: 0 }}></i>
+              <span>No active connection — simulation will run in demo mode. Anomaly records require an active data connection.</span>
+            </div>
+          </Card>
+        )}
 
         {/* Input */}
         <Card style={{ marginBottom: 16 }}>
           <Eyebrow style={{ marginBottom: 10 }}>Reviewer scenario</Eyebrow>
           <div style={{ display: "flex", gap: 10 }}>
-            <Input icon="message-square" value={text} onChange={setText} placeholder="Describe any data issue…" style={{ flex: 1 }}
-              onKeyDown={(e) => { if (e.key === "Enter" && phase !== "reacting") inject(); }} />
-            <Button variant="primary" icon="zap" disabled={phase === "reacting"} onClick={inject}>Inject scenario</Button>
+            <Input icon="message-square" value={text} onChange={setText} placeholder="Describe any data issue in plain English…" style={{ flex: 1 }}
+              onKeyDown={(e) => { if (e.key === "Enter" && phase !== "reacting" && phase !== "classifying") inject(); }} />
+            <Button variant="primary" icon="zap" disabled={phase === "reacting" || phase === "classifying"} onClick={inject}>
+              {phase === "classifying" ? "Classifying…" : "Inject scenario"}
+            </Button>
           </div>
-          <div style={{ display: "flex", gap: 7, marginTop: 10, flexWrap: "wrap" }}>
-            {scenarios.map((s, i) => (
-              <button key={i} onClick={() => setText(s.title || s.q || "")} style={{ fontSize: 11.5, color: "var(--fg-2)", background: "var(--grey-50)", border: "1px solid var(--grey-200)", borderRadius: 999, padding: "4px 11px", cursor: "pointer" }}>{s.scenario_type || s.type}</button>
-            ))}
-          </div>
+          {/* Quick-pick chips — use s.title for setting text, s.scenario_type as label */}
+          {scenarios.length > 0 && (
+            <div style={{ display: "flex", gap: 7, marginTop: 10, flexWrap: "wrap" }}>
+              {scenarios.map((s, i) => {
+                const label = s.scenario_type || s.type || "Scenario";
+                const question = s.title || s.description || label;
+                return (
+                  <button key={i} title={question}
+                    onClick={() => setText(question)}
+                    style={{ fontSize: 11.5, color: "var(--brand)", background: "var(--blue-50)", border: "1px solid var(--blue-200)", borderRadius: 999, padding: "4px 11px", cursor: "pointer" }}>
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </Card>
 
-        {/* Reaction */}
+        {/* AI classifying state (before meta arrives) */}
+        {phase === "classifying" && !scn && (
+          <Card style={{ marginBottom: 16 }}>
+            <div style={{ display: "flex", gap: 12, alignItems: "center", padding: "8px 0" }}>
+              <span style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--purple-50, #faf5ff)", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <i data-lucide="sparkles" style={{ width: 16, height: 16, color: "var(--purple-500, #a855f7)" }} className="dt-pulse"></i>
+              </span>
+              <div>
+                <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--fg-1)" }}>AI is analyzing your scenario…</div>
+                <div style={{ fontSize: 12.5, color: "var(--fg-2)", marginTop: 2 }}>LLM classifying intent — identifying scenario type</div>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {/* Reaction timeline */}
         {scn && (
           <Card style={{ marginBottom: 16 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
@@ -243,6 +354,7 @@
               {events.map((e, i) => {
                 const [icon, color] = EVI[e.kind] || ["activity", "var(--fg-2)"];
                 const isLast = i === events.length - 1 && phase === "reacting";
+                const titleColor = e.kind === "fail" ? "var(--red-500)" : e.kind === "warn" ? "var(--yellow-700)" : e.kind === "classify" ? "var(--purple-600, #7c3aed)" : "var(--fg-1)";
                 return (
                   <div key={i} className="dt-fade-up" style={{ display: "flex", gap: 12, paddingBottom: 16, position: "relative" }}>
                     {(phase === "reacting" || i < events.length - 1) && <span style={{ position: "absolute", left: 15, top: 30, bottom: 0, width: 2, background: "var(--grey-100)" }}></span>}
@@ -252,7 +364,7 @@
                     <div style={{ flex: 1, paddingTop: 2 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <Mono style={{ fontSize: 11, color: "var(--fg-3)" }}>⏱ {fmtT(e.at)}</Mono>
-                        <span style={{ fontSize: 13.5, fontWeight: 700, color: e.kind === "fail" ? "var(--red-500)" : e.kind === "warn" ? "var(--yellow-700)" : "var(--fg-1)" }}>{e.title}</span>
+                        <span style={{ fontSize: 13.5, fontWeight: 700, color: titleColor }}>{e.title}</span>
                       </div>
                       <div style={{ fontSize: 12.5, color: "var(--fg-2)", marginTop: 2 }}>{e.detail}</div>
                     </div>
@@ -261,11 +373,13 @@
               })}
             </div>
 
+            {/* Business explanation card — shows after simulation completes */}
             {phase === "done" && (
-              <div className="dt-fade-up" style={{ marginTop: 6, border: "1.5px solid var(--red-300)", borderRadius: 12, overflow: "hidden" }}>
-                <div style={{ background: "var(--red-500)", color: "#fff", padding: "12px 16px", display: "flex", alignItems: "center", gap: 8 }}>
+              <div className="dt-fade-up" style={{ marginTop: 6, border: `1.5px solid ${alertColor}33`, borderRadius: 12, overflow: "hidden" }}>
+                <div style={{ background: alertColor, color: "#fff", padding: "12px 16px", display: "flex", alignItems: "center", gap: 8 }}>
                   <i data-lucide="file-text" style={{ width: 16, height: 16 }}></i>
                   <span style={{ fontWeight: 700, fontSize: 13.5 }}>{scn.title}</span>
+                  <Chip size="sm" style={{ marginLeft: "auto", background: "rgba(255,255,255,.2)", color: "#fff", border: "none" }}>AI-generated</Chip>
                 </div>
                 <div style={{ padding: 16 }}>
                   <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: "var(--fg-1)", lineHeight: 1.7 }}>
@@ -277,7 +391,7 @@
           </Card>
         )}
 
-        {/* recovery / actions */}
+        {/* Recovery / actions panel */}
         {phase === "done" && (
           <Card style={{ marginBottom: 16 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap" }}>
@@ -287,19 +401,30 @@
                   <div style={{ fontSize: 10, color: "var(--fg-3)" }}>trust score</div>
                 </div>
                 {healed && <i data-lucide="arrow-right" style={{ width: 18, height: 18, color: "var(--fg-3)" }}></i>}
-                {healed && <div style={{ textAlign: "center" }}><div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 30, color: "var(--green-500)" }}>91</div><div style={{ fontSize: 10, color: "var(--fg-3)" }}>after fix</div></div>}
+                {healed && (
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 30, color: "var(--green-500)" }}>91</div>
+                    <div style={{ fontSize: 10, color: "var(--fg-3)" }}>after fix</div>
+                  </div>
+                )}
               </div>
               <div style={{ flex: 1, minWidth: 200, fontSize: 13, color: "var(--fg-2)" }}>
-                {healed ? "Closed loop: the system detected, explained, and recovered. Trust score healing in real time." : "Detected and explained. Now close the loop — apply remediation and watch the trust score heal."}
+                {healed
+                  ? "Closed loop: the system detected, explained, and recovered. Trust score healing in real time."
+                  : "Detected and explained. Now close the loop — apply remediation and watch the trust score heal."}
               </div>
-              <div style={{ display: "flex", gap: 8 }}>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 {!healed && <Button variant="primary" icon="wrench" onClick={heal}>Apply remediation</Button>}
+                {healed && <Button variant="outline" icon="inbox" onClick={() => go("anomalies")}>View anomaly inbox</Button>}
                 {healed && <Button variant="outline" icon="network" onClick={() => go("impact")}>View impact graph</Button>}
                 <Button variant="soft" icon="rotate-ccw" onClick={reset}>Reset to clean state</Button>
               </div>
             </div>
           </Card>
         )}
+
+        {/* Simulation history (collapsible) */}
+        <SimHistory connectionId={activeConnectionId} />
       </div>
     );
   };

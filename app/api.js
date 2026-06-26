@@ -145,17 +145,20 @@ export const getReceipt        = (connId, table)  => _fetch(`/intel/receipt${con
 export const getLineage        = (tableFqn, connId) => _fetch(`/lineage/${encodeURIComponent(tableFqn)}${connId ? `?connection_id=${connId}` : ''}`);
 
 // ── Simulation ────────────────────────────────────────────────────────────────
-export const listScenarios     = ()               => _fetch('/simulation/scenarios');
+export const listScenarios         = ()              => _fetch('/simulation/scenarios');
+export const getSimulationHistory  = (connId)        => _fetch(`/simulation/history${connId ? `?connection_id=${connId}` : ''}`);
+export const remediateSimulation   = (runId, connId) => _fetch('/simulation/remediate', { method: 'POST', body: JSON.stringify({ run_id: runId, connection_id: connId || null }) });
 
 /**
  * Stream scenario injection events via SSE.
- * onMeta(meta)      → called once with {key, scenario_type, drop, undercount, title, body}
- * onEvent(evt)      → called per event {at, kind, title, detail}
- * onDone()          → called when stream ends
- * onError(msg)      → called on error
+ * onMeta(meta)          → called once with {key, run_id, scenario_type, drop, undercount, title, body}
+ * onEvent(evt)          → called per event {at, kind, title, detail}
+ * onNarrative(data)     → called with {text} when LLM narrative is ready
+ * onDone()              → called when stream ends
+ * onError(msg)          → called on error
  * Returns an abort function.
  */
-export function streamSimulation({ scenarioText, connectionId, onMeta, onEvent, onDone, onError }) {
+export function streamSimulation({ scenarioText, connectionId, onMeta, onEvent, onNarrative, onDone, onError }) {
   const ctrl = new AbortController();
   const body = JSON.stringify({ scenario_text: scenarioText, connection_id: connectionId || null });
   fetch(`${BASE}/simulation/inject`, {
@@ -178,10 +181,11 @@ export function streamSimulation({ scenarioText, connectionId, onMeta, onEvent, 
             if (!part.startsWith('data:')) continue;
             try {
               const evt = JSON.parse(part.slice(5).trim());
-              if (evt.type === 'meta')  onMeta?.(evt.data);
-              else if (evt.type === 'event') onEvent?.(evt.data);
-              else if (evt.type === 'done')  onDone?.();
-              else if (evt.type === 'error') onError?.(evt.message);
+              if (evt.type === 'meta')      onMeta?.(evt.data);
+              else if (evt.type === 'event')     onEvent?.(evt.data);
+              else if (evt.type === 'narrative') onNarrative?.(evt.data);
+              else if (evt.type === 'done')      onDone?.();
+              else if (evt.type === 'error')     onError?.(evt.message);
             } catch (_) {}
           }
           pump();
