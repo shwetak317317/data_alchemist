@@ -11,6 +11,7 @@ from app.api.connections import get_active_connector
 from app.agents.execution_agent import run_all_rules
 from app.models.execution import ExecutionRunResponse, AcknowledgeFailureRequest
 from app.services.audit_service import log_event
+from app.api.lineage import propagate_lineage_health_sync
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/execution", tags=["execution"])
@@ -70,6 +71,16 @@ def run_execution(connection_id: str, db: Session = Depends(get_db),
             "remediation": result.remediation_suggestion,
         })
     db.commit()
+
+    # Propagate health status to lineage nodes (non-blocking — failures are logged, not raised)
+    try:
+        updated = propagate_lineage_health_sync(db, connection_id, run_response.run_id)
+        if updated > 0:
+            db.commit()
+            logger.info("Lineage health updated for %d nodes after execution run %s", updated, run_response.run_id)
+    except Exception as exc:
+        logger.warning("Lineage health propagation skipped: %s", exc)
+
     return run_response
 
 

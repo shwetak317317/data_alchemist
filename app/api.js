@@ -142,7 +142,15 @@ export const getAdvisory       = (connId)         => _fetch(`/intel/advisory${co
 export const getReceipt        = (connId, table)  => _fetch(`/intel/receipt${connId ? `?connection_id=${connId}` : ''}${table ? `&table_fqn=${encodeURIComponent(table)}` : ''}`);
 
 // ── Lineage ───────────────────────────────────────────────────────────────────
-export const getLineage        = (tableFqn, connId) => _fetch(`/lineage/${encodeURIComponent(tableFqn)}${connId ? `?connection_id=${connId}` : ''}`);
+export const getLineage            = (tableFqn, connId) => _fetch(`/lineage/${encodeURIComponent(tableFqn)}${connId ? `?connection_id=${connId}` : ''}`);
+export const getConnectionLineage  = (connId)           => _fetch(`/lineage/graph/${connId}`);
+export const seedLineage           = (connId)           => _fetch(`/lineage/seed/${connId}`, { method: 'POST' });
+export const propagateLineage      = (connId)           => _fetch(`/lineage/propagate/${connId}`, { method: 'POST' });
+export const createLineageNode     = (body)             => _fetch('/lineage/nodes', { method: 'POST', body: JSON.stringify(body) });
+export const updateLineageNode     = (nodeId, body)     => _fetch(`/lineage/nodes/${nodeId}`, { method: 'PATCH', body: JSON.stringify(body) });
+export const deleteLineageNode     = (nodeId)           => _fetch(`/lineage/nodes/${nodeId}`, { method: 'DELETE' });
+export const createLineageEdge     = (body)             => _fetch('/lineage/edges', { method: 'POST', body: JSON.stringify(body) });
+export const deleteLineageEdge     = (edgeId)           => _fetch(`/lineage/edges/${edgeId}`, { method: 'DELETE' });
 
 // ── Simulation ────────────────────────────────────────────────────────────────
 export const listScenarios         = ()              => _fetch('/simulation/scenarios');

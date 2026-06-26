@@ -81,7 +81,13 @@ def recommend(req: RuleRecommendRequest, db: Session = Depends(get_db),
     ), {"conn": req.connection_id}).fetchall()
     cde_cols = [r[0] for r in cde_rows]
 
-    rules = recommend_rules(report, req.connection_id, cde_cols)
+    # Get connection platform so the LLM generates dialect-correct SQL
+    platform_row = db.execute(text(
+        "SELECT platform FROM connections WHERE id=:conn"
+    ), {"conn": req.connection_id}).fetchone()
+    sql_dialect = (platform_row[0] or "postgresql").lower() if platform_row else "postgresql"
+
+    rules = recommend_rules(report, req.connection_id, cde_cols, sql_dialect=sql_dialect)
 
     # Resolve table_id FK from the connection_tables cache (if populated)
     table_id_row = db.execute(text(
@@ -126,7 +132,11 @@ def recommend(req: RuleRecommendRequest, db: Session = Depends(get_db),
 def nl_convert(req: NLConvertRequest, db: Session = Depends(get_db),
                current_user: CurrentUser = Depends(get_current_user)):
     """Convert plain-English expectation to a structured DQ rule."""
-    return nl_to_rule(req.table_fqn, req.natural_language, req.connection_id)
+    platform_row = db.execute(text(
+        "SELECT platform FROM connections WHERE id=:conn"
+    ), {"conn": req.connection_id}).fetchone()
+    sql_dialect = (platform_row[0] or "postgresql").lower() if platform_row else "postgresql"
+    return nl_to_rule(req.table_fqn, req.natural_language, req.connection_id, sql_dialect=sql_dialect)
 
 
 @router.patch("/{rule_id}", response_model=DQRule)
@@ -200,7 +210,8 @@ def create_rule(rule: DQRule, db: Session = Depends(get_db),
              is_cde_rule, status, created_by, nl_source, created_at, updated_at)
         VALUES
             (:rule_id, :conn, :name, :desc, :table_fqn,
-             :layer, :col, :expr, :type, :sev, :cde, 'draft',
+             :layer, :col, :expr, :type, :sev, :cde,
+             CASE WHEN :status IN ('approved','active') THEN :status ELSE 'draft' END,
              :created_by, :nl_source, NOW(), NOW())
     """), {
         "rule_id": rid, "conn": rule.connection_id, "name": rule.rule_name,
@@ -208,6 +219,7 @@ def create_rule(rule: DQRule, db: Session = Depends(get_db),
         "layer": rule.layer, "col": rule.column_name, "expr": rule.rule_expression,
         "type": rule.rule_type, "sev": rule.severity, "cde": rule.is_cde_rule,
         "created_by": current_user.email, "nl_source": rule.nl_source,
+        "status": rule.status or "draft",
     })
     db.commit()
     rule.rule_id = rid

@@ -1,11 +1,11 @@
 {
   "sessionStorage": {
-    "dt_user": "{\"name\":\"shweta katkar\",\"email\":\"shweta.katkar@pal.tech\",\"org_id\":\"pal.tech\",\"role\":\"data_engineer\",\"token\":\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzaHdldGEua2F0a2FyQHBhbC50ZWNoIiwibmFtZSI6InNod2V0YSBrYXRrYXIiLCJvcmdfaWQiOiJwYWwudGVjaCIsInJvbGUiOiJkYXRhX2VuZ2luZWVyIiwiZXhwIjoxNzgxODA2Mjk2fQ.WWBa8JSDvwCNyAFD_xu955CEq073B8g3Sn-F5ouMDYk\",\"given_name\":null,\"tenant\":null,\"oid\":null}",
-    "dt_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzaHdldGEua2F0a2FyQHBhbC50ZWNoIiwibmFtZSI6InNod2V0YSBrYXRrYXIiLCJvcmdfaWQiOiJwYWwudGVjaCIsInJvbGUiOiJkYXRhX2VuZ2luZWVyIiwiZXhwIjoxNzgxODA2Mjk2fQ.WWBa8JSDvwCNyAFD_xu955CEq073B8g3Sn-F5ouMDYk"
+    "dt_user": "{\"name\":\"shweta katkar\",\"email\":\"shweta.katkar@pal.tech\",\"org_id\":\"pal.tech\",\"role\":\"data_engineer\",\"token\":\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzaHdldGEua2F0a2FyQHBhbC50ZWNoIiwibmFtZSI6InNod2V0YSBrYXRrYXIiLCJvcmdfaWQiOiJwYWwudGVjaCIsInJvbGUiOiJkYXRhX2VuZ2luZWVyIiwiZXhwIjoxNzgyMzczNzY1fQ.C8-CR6lkRgWLpC2Gv7edfT5obnwEXjJOXgWBOc6DUyk\",\"given_name\":null,\"tenant\":null,\"oid\":null}",
+    "dt_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzaHdldGEua2F0a2FyQHBhbC50ZWNoIiwibmFtZSI6InNod2V0YSBrYXRrYXIiLCJvcmdfaWQiOiJwYWwudGVjaCIsInJvbGUiOiJkYXRhX2VuZ2luZWVyIiwiZXhwIjoxNzgyMzczNzY1fQ.C8-CR6lkRgWLpC2Gv7edfT5obnwEXjJOXgWBOc6DUyk"
   },
   "localStorage": {
-    "dt_conn_id": "62ea0f9d-ad1f-4cea-a5a6-054d2b04fe39",
-    "dt_conn_name": "My Connection 2",
+    "dt_conn_id": "6d657fd4-d8f8-4bee-bd89-666e1abf74c1",
+    "dt_conn_name": "My Connection demo",
     "dt_conn_platform": "sqlserver"
   }
 }

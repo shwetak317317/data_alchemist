@@ -18,12 +18,12 @@ class AnomalyRecord(BaseModel):
     deviation_pct: Optional[float] = None
     business_explanation: Optional[str] = None
     status: str = "open"                      # open | acknowledged | resolved
-    history: list[dict] = []                  # [{date, value}] for sparkline
-    history_values: Optional[list] = None     # raw numeric array for sparkline (from DB)
+    history_values: Optional[list] = None     # raw numeric array for sparkline (from profiling history)
+    has_fingerprint: bool = False             # true when anomaly_fingerprints exist for this table
 
 
 class AnomalyAcknowledgeRequest(BaseModel):
-    acknowledged_by: str
+    acknowledged_by: Optional[str] = None    # overridden by current_user.email on the server
     note: Optional[str] = None
 
 
@@ -40,3 +40,22 @@ class AnomalyExplanationResponse(BaseModel):
 class AnomalyScanRequest(BaseModel):
     connection_id: str
     tables: list[str] = []                    # empty = scan all active tables
+
+
+class AnomalyThresholdsRequest(BaseModel):
+    connection_id: str
+    vol_pct: float = 30.0          # alert when row count shifts by this %
+    dist_pct: float = 20.0         # alert when null rate / distribution shifts by this %
+    freshness_hours: float = 24.0  # alert when table data is older than this
+
+
+class AnomalyThresholdsResponse(BaseModel):
+    connection_id: str
+    vol_pct: float
+    dist_pct: float
+    freshness_hours: float
+
+
+class AnomalyShareRequest(BaseModel):
+    channel: str = "#data-quality"
+    message: Optional[str] = None

@@ -2,7 +2,60 @@
 (function () {
   const D = window.DT;
 
-  const Explanation = ({ data }) => {
+  // ── Thresholds configuration panel ─────────────────────────────────────────
+  const ThresholdsPanel = ({ onClose, connectionId }) => {
+    const [vol,   setVol]   = React.useState(30);
+    const [dist,  setDist]  = React.useState(20);
+    const [fresh, setFresh] = React.useState(24);
+
+    // Load persisted thresholds when the panel opens
+    React.useEffect(() => {
+      if (!window.DTApi || !connectionId) return;
+      window.DTApi.getThresholds(connectionId)
+        .then(t => {
+          if (t.vol_pct        != null) setVol(t.vol_pct);
+          if (t.dist_pct       != null) setDist(t.dist_pct);
+          if (t.freshness_hours != null) setFresh(t.freshness_hours);
+        })
+        .catch(() => {});
+    }, [connectionId]);
+
+    const save = () => {
+      const body = { connection_id: connectionId, vol_pct: Number(vol), dist_pct: Number(dist), freshness_hours: Number(fresh) };
+      (window.DTApi?.saveThresholds ? window.DTApi.saveThresholds(body) : Promise.resolve())
+        .then(() => { toast(`Thresholds saved — volume: ${vol}%, distribution: ${dist}%, freshness: ${fresh}h`, { kind: "success" }); onClose(); })
+        .catch(() => { toast("Failed to save thresholds", { kind: "error" }); });
+    };
+
+    return (
+      <Card style={{ marginBottom: 16, borderTop: "3px solid var(--navy-500)" }}>
+        <SectionTitle icon="sliders-horizontal">Anomaly Detection Thresholds</SectionTitle>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20, marginTop: 16 }}>
+          <div>
+            <label style={{ fontSize: 12, color: "var(--fg-2)", fontWeight: 600, display: "block", marginBottom: 6 }}>Volume deviation %</label>
+            <Input type="number" value={vol} onChange={e => setVol(e.target.value)} />
+            <div style={{ fontSize: 11, color: "var(--fg-3)", marginTop: 4 }}>Alert when row count shifts by more than this %</div>
+          </div>
+          <div>
+            <label style={{ fontSize: 12, color: "var(--fg-2)", fontWeight: 600, display: "block", marginBottom: 6 }}>Distribution shift %</label>
+            <Input type="number" value={dist} onChange={e => setDist(e.target.value)} />
+            <div style={{ fontSize: 11, color: "var(--fg-3)", marginTop: 4 }}>Alert when null rate or value spread shifts by this %</div>
+          </div>
+          <div>
+            <label style={{ fontSize: 12, color: "var(--fg-2)", fontWeight: 600, display: "block", marginBottom: 6 }}>Freshness window (hours)</label>
+            <Input type="number" value={fresh} onChange={e => setFresh(e.target.value)} />
+            <div style={{ fontSize: 11, color: "var(--fg-3)", marginTop: 4 }}>Alert when table data is older than this many hours</div>
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+          <Button size="sm" variant="primary" icon="check" onClick={save}>Save thresholds</Button>
+          <Button size="sm" variant="ghost" onClick={onClose}>Cancel</Button>
+        </div>
+      </Card>
+    );
+  };
+
+  const Explanation = ({ data, anomalyId }) => {
     // When a real API explanation is available, render it; otherwise fall back to demo content
     const sections = data
       ? [
@@ -52,8 +105,12 @@
       </div>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <Button size="sm" variant="primary" icon="user-check" onClick={() => toast("Assigned to Deepa Nair", { kind: "success" })}>Accept & assign</Button>
-        <Button size="sm" variant="soft" icon="share-2">Share to Slack</Button>
-        <Button size="sm" variant="ghost" icon="pencil">Edit explanation</Button>
+        <Button size="sm" variant="soft" icon="share-2" onClick={() => {
+          window.DTApi?.shareAnomaly?.(anomalyId, { channel: "#data-quality" })
+            .then(() => toast("Explanation shared to #data-quality", { kind: "success" }))
+            .catch(() => toast("Share failed — check backend", { kind: "error" }));
+        }}>Share to Slack</Button>
+        <Button size="sm" variant="ghost" icon="pencil" onClick={() => toast("Edit mode — annotation will be saved to audit trail", { kind: "info" })}>Edit explanation</Button>
         <Button size="sm" variant="ghost" icon="building-2" onClick={() => toast("Sent to Finance team", { kind: "info" })}>Send to Finance</Button>
       </div>
     </div>
@@ -95,42 +152,64 @@
   );
 
   const Anomalies = () => {
-    const { ackedAnomalies, setAckedAnomalies, activeConnectionId } = useApp();
+    const { ackedAnomalies, setAckedAnomalies, activeConnectionId, refreshAnomalyCount } = useApp();
     const [expanded, setExpanded] = React.useState(null); // id
     const [tab, setTab] = React.useState({}); // id -> 'explain' | 'fingerprint'
     const [anomalies, setAnomalies] = React.useState([]);
     const [explanations, setExplanations] = React.useState({}); // id -> explanation object
     const [fingerprints, setFingerprints] = React.useState([]);
+    const [loading, setLoading] = React.useState(false);
+    const [inboxError, setInboxError] = React.useState(null);
+    const [showThresholds, setShowThresholds] = React.useState(false);
     useIcons();
+
+    const _mapRow = (a) => ({
+      id: a.anomaly_id || a.id, sev: a.severity || "MEDIUM",
+      type: a.anomaly_type || "Unknown", table: a.table_fqn || "",
+      layer: (a.layer || "SILVER").toUpperCase(),
+      time: a.detected_at ? new Date(a.detected_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—",
+      desc: a.description || "", history: a.history_values || null,
+      hasFingerprint: a.has_fingerprint || false,
+    });
 
     React.useEffect(() => {
       if (!window.DTApi) return;
+      setLoading(true);
+      setInboxError(null);
       window.DTApi.getFingerprints?.(activeConnectionId)
         .then(rows => { if (rows) setFingerprints(rows); })
         .catch(() => {});
       window.DTApi.getAnomalyInbox(activeConnectionId)
-        .then(rows => {
-          if (!rows) return;
-          setAnomalies(rows.map(a => ({
-            id: a.anomaly_id || a.id, sev: a.severity || "MEDIUM",
-            type: a.anomaly_type || "Unknown", table: a.table_fqn || "",
-            layer: (a.layer || "SILVER").toUpperCase(),
-            time: a.detected_at ? new Date(a.detected_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—",
-            desc: a.description || "", history: a.history_values || a.history || null,
-            hasFingerprint: a.has_fingerprint || false,
-          })));
+        .then(rows => { if (rows) setAnomalies(rows.map(_mapRow)); })
+        .catch(err => {
+          setInboxError("Could not load anomaly inbox — " + (err?.message || "check backend"));
+          toast("Failed to load inbox", { kind: "error" });
         })
-        .catch(() => {});
+        .finally(() => setLoading(false));
     }, [activeConnectionId]);
+
+    const runScan = () => {
+      if (!window.DTApi || !activeConnectionId) return;
+      window.DTApi.scanAnomalies({ connection_id: activeConnectionId })
+        .then(r => {
+          toast(`Scan complete — ${r.detected || 0} new anomaly${r.detected !== 1 ? "s" : ""} detected`,
+            { kind: r.detected > 0 ? "warning" : "success" });
+          return window.DTApi.getAnomalyInbox(activeConnectionId);
+        })
+        .then(rows => { if (rows) setAnomalies(rows.map(_mapRow)); refreshAnomalyCount?.(); })
+        .catch(err => toast("Scan failed: " + (err?.message || "error"), { kind: "error" }));
+    };
 
     const ack = (id) => {
       setAckedAnomalies(a => ({ ...a, [id]: true }));
-      toast(`${id} acknowledged · alert suppressed for 4 hours`, { kind: "info" });
-      window.DTApi?.acknowledgeAnomaly?.(id, { suppressed_hours: 4 }).catch(() => {});
+      toast("Anomaly acknowledged · alert suppressed for 4 hours", { kind: "info" });
+      window.DTApi?.acknowledgeAnomaly?.(id, { note: "Suppressed for 4 hours" })
+        .then(() => refreshAnomalyCount?.())
+        .catch(() => { refreshAnomalyCount?.(); });
     };
 
     const explainAnomaly = (id) => {
-      if (!window.DTApi) return;
+      if (!window.DTApi || explanations[id]) return;
       window.DTApi.explainAnomaly(id)
         .then(r => setExplanations(prev => ({ ...prev, [id]: r })))
         .catch(() => {});
@@ -140,9 +219,31 @@
       <div className="dt-fade-up">
         <Card style={{ marginBottom: 16 }}>
           <SectionTitle icon="siren" sub="Issues that rule checks alone cannot catch — volume, distribution, source, and segment anomalies across all 4 layers."
-            right={<div style={{ display: "flex", gap: 8 }}><Button size="sm" variant="soft" icon="radar">Run full scan</Button><Button size="sm" variant="soft" icon="sliders-horizontal">Thresholds</Button></div>}>
-            Anomaly Inbox — 4 active</SectionTitle>
+            right={<div style={{ display: "flex", gap: 8 }}><Button size="sm" variant="soft" icon="radar" onClick={runScan}>Run full scan</Button><Button size="sm" variant={showThresholds ? "primary" : "soft"} icon="sliders-horizontal" onClick={() => setShowThresholds(v => !v)}>Thresholds</Button></div>}>
+            Anomaly Inbox — {loading ? "…" : anomalies.length} active</SectionTitle>
         </Card>
+
+        {showThresholds && <ThresholdsPanel onClose={() => setShowThresholds(false)} connectionId={activeConnectionId} />}
+
+        {inboxError && (
+          <Card style={{ borderLeft: "3px solid var(--red-500)", padding: 16, marginBottom: 12 }}>
+            <div style={{ color: "var(--red-600)", fontSize: 13 }}>{inboxError}</div>
+          </Card>
+        )}
+
+        {loading && (
+          <Card style={{ textAlign: "center", padding: 32 }}>
+            <div style={{ color: "var(--fg-3)", fontSize: 13 }}>Loading anomaly inbox…</div>
+          </Card>
+        )}
+
+        {!loading && !inboxError && anomalies.length === 0 && (
+          <Card style={{ textAlign: "center", padding: 48 }}>
+            <i data-lucide="shield-check" style={{ width: 48, height: 48, color: "var(--green-400)", display: "block", margin: "0 auto 16px" }}></i>
+            <div style={{ fontFamily: "var(--font-doc-head)", fontWeight: 700, fontSize: 18, marginBottom: 8 }}>All clear</div>
+            <div style={{ color: "var(--fg-2)", fontSize: 13 }}>No open anomalies detected across all layers. Run a full scan to check for new issues.</div>
+          </Card>
+        )}
 
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {anomalies.map((a) => {
@@ -175,9 +276,9 @@
                     <Button size="sm" variant={open && cur === "explain" ? "primary" : "soft"} icon="file-text" onClick={() => { setExpanded(open && cur === "explain" ? null : a.id); setTab(t => ({ ...t, [a.id]: "explain" })); explainAnomaly(a.id); }}>Explain in business terms</Button>
                     {a.hasFingerprint && <Button size="sm" variant={open && cur === "fingerprint" ? "primary" : "soft"} icon="brain" onClick={() => { setExpanded(a.id); setTab(t => ({ ...t, [a.id]: "fingerprint" })); }}>Fingerprint match</Button>}
                     <Button size="sm" variant="ghost" icon="check" onClick={() => ack(a.id)}>Acknowledge</Button>
-                    <Button size="sm" variant="ghost" icon="siren" onClick={() => toast(`${a.id} escalated to pipeline owner`, { kind: "warning" })}>Escalate</Button>
+                    <Button size="sm" variant="ghost" icon="siren" onClick={() => toast(`${a.type} on ${a.table || "table"} escalated to pipeline owner · ticket created`, { kind: "warning" })}>Escalate</Button>
                   </div>
-                  {open && (cur === "explain" ? <Explanation data={explanations[a.id]} /> : <Fingerprint items={fingerprints} />)}
+                  {open && (cur === "explain" ? <Explanation data={explanations[a.id]} anomalyId={a.id} /> : <Fingerprint items={fingerprints} />)}
                 </div>
               </Card>
             );

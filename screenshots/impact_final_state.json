@@ -1,0 +1,105 @@
+{
+  "timestamp": "2026-06-24T10:58:21.596Z",
+  "url": "http://localhost/#/impact",
+  "pageData": {
+    "hasDTObject": true,
+    "hasImpactData": true,
+    "sourceNode": {
+      "id": "silver.orders_enriched",
+      "label": "silver.orders_enriched",
+      "sub": "net_revenue · 11.2% NULL",
+      "status": "fail"
+    },
+    "tiers": [
+      {
+        "label": "GOLD",
+        "nodeCount": 2
+      },
+      {
+        "label": "REPORTS / MODELS",
+        "nodeCount": 5
+      }
+    ],
+    "isShowingLoginUI": true,
+    "hasAppShell": false,
+    "hasImpactContent": false,
+    "cardsCount": 0,
+    "nodeElements": 7,
+    "svgCount": 9,
+    "visibleText": "Data Alchemist\nAGENTIC DQ PLATFORM · PAL.TECH\nMove data quality from reactive chaos to proactive trust.\n\nAutonomous profiling, AI-authored rules, anomaly explainability, and live trust scoring — across every layer of your warehouse.\n\n4\ndata layers monitored\n31\nactive DQ rules\n< 90s\ndetect → explain\nSOC 2 Type II\nISO 27001\nGDPR\nSSO / SAML\nPAL.TECH · INNOVATION CHALLENGE\nSign in to Data Alchemist\n\nUse your @pal.tech Microsoft account or a local account.\n\nSign in\nCreate account\nContinue with Microsoft (pal.tech)\nOR with email + password\nWork email\nPassword\nForgot password?\nSign in\n\nDon't have an account? Create one\n\nProtected by pal.tech's acceptable use and data governance policies."
+  },
+  "consoleLogs": [
+    {
+      "type": "warning",
+      "text": "You are using the in-browser Babel transformer. Be sure to precompile your scripts for production - https://babeljs.io/docs/setup/"
+    },
+    {
+      "type": "warning",
+      "text": "You are using the in-browser Babel transformer. Be sure to precompile your scripts for production - https://babeljs.io/docs/setup/"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    },
+    {
+      "type": "warning",
+      "text": "You are using the in-browser Babel transformer. Be sure to precompile your scripts for production - https://babeljs.io/docs/setup/"
+    }
+  ],
+  "networkActivity": [
+    {
+      "status": 200,
+      "url": "https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..900&family=Inter:wght@300..800&family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=Plus+Jakarta+Sans:ital,wght@0,300..800;1,300..800&display=swap",
+      "method": "GET"
+    },
+    {
+      "status": 200,
+      "url": "http://localhost/app/api.js",
+      "method": "GET"
+    },
+    {
+      "status": 200,
+      "url": "http://localhost/api/config",
+      "method": "GET"
+    },
+    {
+      "status": 200,
+      "url": "https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..900&family=Inter:wght@300..800&family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=Plus+Jakarta+Sans:ital,wght@0,300..800;1,300..800&display=swap",
+      "method": "GET"
+    },
+    {
+      "status": 200,
+      "url": "http://localhost/app/api.js",
+      "method": "GET"
+    },
+    {
+      "status": 401,
+      "url": "http://localhost/api/dashboard/summary",
+      "method": "GET"
+    },
+    {
+      "status": 401,
+      "url": "http://localhost/api/connections",
+      "method": "GET"
+    },
+    {
+      "status": 200,
+      "url": "https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..900&family=Inter:wght@300..800&family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=Plus+Jakarta+Sans:ital,wght@0,300..800;1,300..800&display=swap",
+      "method": "GET"
+    },
+    {
+      "status": 200,
+      "url": "http://localhost/app/api.js",
+      "method": "GET"
+    },
+    {
+      "status": 200,
+      "url": "http://localhost/api/config",
+      "method": "GET"
+    }
+  ]
+}

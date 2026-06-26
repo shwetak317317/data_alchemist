@@ -33,6 +33,8 @@ class ExecutionRunResponse(BaseModel):
     errors: int
     overall_quality_score: float
     results: list[RuleResult]
+    duration_seconds: Optional[float] = None
+    run_number: Optional[int] = None
 
 
 class AcknowledgeFailureRequest(BaseModel):

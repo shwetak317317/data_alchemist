@@ -74,13 +74,17 @@
     );
   };
 
-  const RunOverlay = ({ onDone }) => {
+  const RunOverlay = ({ onDone, apiDone, apiError, total }) => {
     const [n, setN] = React.useState(0);
+    const cap = Math.max(total || 10, 10);
     React.useEffect(() => {
-      if (n >= 31) { const t = setTimeout(onDone, 400); return () => clearTimeout(t); }
-      const t = setTimeout(() => setN(x => Math.min(31, x + Math.ceil(Math.random() * 3))), 70);
+      if (n >= cap) {
+        if (apiDone) { const t = setTimeout(() => onDone(apiError), 400); return () => clearTimeout(t); }
+        return; // API still running — hold at 100% until response arrives
+      }
+      const t = setTimeout(() => setN(x => Math.min(cap, x + Math.ceil(Math.random() * 3))), 70);
       return () => clearTimeout(t);
-    }, [n]);
+    }, [n, apiDone, apiError, cap]);
     return (
       <Card style={{ textAlign: "center", padding: 48 }}>
         <span className="dt-spin" style={{ width: 38, height: 38, border: "3px solid var(--brand-ring)",
@@ -89,8 +93,8 @@
           Executing rules across all layers
         </div>
         <div style={{ fontSize: 13, color: "var(--fg-2)", marginBottom: 18 }}>Raw → Bronze → Silver → Gold</div>
-        <div style={{ maxWidth: 360, margin: "0 auto" }}><Bar pct={(n / 31) * 100} height={8} /></div>
-        <Mono style={{ marginTop: 10, color: "var(--fg-2)", display: "block" }}>{n} / 31 rules</Mono>
+        <div style={{ maxWidth: 360, margin: "0 auto" }}><Bar pct={(n / cap) * 100} height={8} /></div>
+        <Mono style={{ marginTop: 10, color: "var(--fg-2)", display: "block" }}>{n} / {cap} rules</Mono>
       </Card>
     );
   };
@@ -128,16 +132,21 @@
     if (ls.length) setLayerScores(ls);
     if (r.run_id) setRunMeta({
       runId: r.run_id,
+      runNumber: r.run_number || null,
       rulesTotal: r.total_rules || mapped.length,
       failed: r.failed || 0,
       overallScore: r.overall_quality_score ?? null,
       runTimestamp: r.run_timestamp || null,
+      durationSecs: r.duration_seconds || null,
     });
   };
 
   const Execution = () => {
-    const { go, activeConnectionId, lastRunId, setLastRunId } = useApp();
+    const { go, activeConnectionId, lastRunId, setLastRunId, setPipeline, setTrustScore } = useApp();
     const [phase, setPhase]             = React.useState("results");
+    const [apiDone, setApiDone]         = React.useState(false);
+    const [apiError, setApiError]       = React.useState(null);
+    const [ruleCount, setRuleCount]     = React.useState(0);
     const [showRecords, setShowRecords] = React.useState(false);
     const [drillRecords, setDrillRecords] = React.useState({});
     const [layerRun, setLayerRun]       = React.useState({});
@@ -161,6 +170,9 @@
         .then(r => r?.run_id && window.DTApi.getRunResults(r.run_id))
         .then(r => _applyRunResults(r, setExecResults, setLayerScores, setRunMeta))
         .catch(() => {});
+      window.DTApi.listRules(activeConnectionId, "approved")
+        .then(r => setRuleCount(r?.length || 0))
+        .catch(() => {});
     }, [activeConnectionId]);
 
     React.useEffect(() => {
@@ -172,21 +184,56 @@
 
     const startRun = () => {
       if (!window.DTApi || !activeConnectionId) { setPhase("running"); return; }
+      setApiDone(false);
+      setApiError(null);
       setPhase("running");
       window.DTApi.runExecution(activeConnectionId)
-        .then(r => { if (r?.run_id) setLastRunId(r.run_id); setPhase("results"); })
-        .catch(err => { toast("Execution failed: " + (err?.message || "backend error"), { kind: "error" }); setPhase("results"); });
+        .then(r => {
+          if (r?.run_id) setLastRunId(r.run_id);
+          if (r?.overall_quality_score != null) setTrustScore(Math.round(r.overall_quality_score));
+          setPipeline(r?.failed > 0 ? "ISSUES" : "HEALTHY");
+          setApiDone(true);
+        })
+        .catch(err => {
+          const msg = err?.message || "backend error";
+          setApiError(msg.includes("No active rules")
+            ? "No approved rules — visit Rule Studio to approve rules first"
+            : "Execution failed: " + msg);
+          setApiDone(true);
+        });
+    };
+
+    const handleOverlayDone = (error) => {
+      if (error) toast(error, { kind: error.includes("No approved") ? "warning" : "error" });
+      setPhase("results");
     };
 
     const runLayer = (layer) => {
       setLayerRun(s => ({ ...s, [layer]: "running" }));
-      toast(`Re-running ${layer} layer checks…`, { kind: "info" });
-      setTimeout(() => { setLayerRun(s => ({ ...s, [layer]: "done" })); toast(`${layer} layer re-run complete`, { kind: "success" }); }, 1500);
+      window.DTApi.runExecution(activeConnectionId, layer)
+        .then(r => {
+          if (r?.run_id) setLastRunId(r.run_id);
+          setLayerRun(s => ({ ...s, [layer]: "done" }));
+          toast(`${layer} layer re-run complete`, { kind: "success" });
+        })
+        .catch(err => {
+          setLayerRun(s => ({ ...s, [layer]: null }));
+          toast(`${layer} re-run failed: ${err?.message || "error"}`, { kind: "error" });
+        });
     };
 
     const runRule = (id) => {
       setRuleRun(s => ({ ...s, [id]: "running" }));
-      setTimeout(() => { setRuleRun(s => ({ ...s, [id]: "done" })); toast("Rule re-run complete", { kind: "success" }); }, 1100);
+      window.DTApi.runExecution(activeConnectionId, null, id)
+        .then(r => {
+          if (r?.run_id) setLastRunId(r.run_id);
+          setRuleRun(s => ({ ...s, [id]: "done" }));
+          toast("Rule re-run complete", { kind: "success" });
+        })
+        .catch(err => {
+          setRuleRun(s => ({ ...s, [id]: null }));
+          toast("Rule re-run failed: " + (err?.message || "error"), { kind: "error" });
+        });
     };
 
     const confirmAck = (resultId) => {
@@ -240,7 +287,9 @@
       borderRadius: 999, padding: "3px 10px", fontSize: 11.5, fontWeight: 600, cursor: "pointer",
     });
 
-    if (phase === "running") return <RunOverlay onDone={() => setPhase("results")} />;
+    if (phase === "running") return (
+      <RunOverlay onDone={handleOverlayDone} apiDone={apiDone} apiError={apiError} total={ruleCount} />
+    );
 
     return (
       <div className="dt-fade-up">
@@ -253,14 +302,19 @@
               {runMeta?.runId ? (
                 <>
                   <div style={{ fontFamily: "var(--font-doc-head)", fontWeight: 700, fontSize: 17, margin: "5px 0 3px" }}>
-                    Run #{runMeta.runId.slice(0, 8)}… · all layers
+                    Run #{runMeta.runNumber || runMeta.runId.slice(0, 8)} · all layers
                   </div>
                   <div style={{ fontSize: 12.5, color: "var(--fg-2)" }}>
                     {runMeta.runTimestamp
                       ? new Date(runMeta.runTimestamp).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
                       : "—"}
-                    {" · "}{runMeta.rulesTotal || "—"} rules ·{" "}
-                    <strong style={{ color: "var(--red-500)" }}>{runMeta.failed ?? 0} failed</strong>
+                    {" · "}{runMeta.rulesTotal || "—"} rules
+                    {runMeta.durationSecs != null && (
+                      <> · {runMeta.durationSecs >= 60
+                        ? `${Math.floor(runMeta.durationSecs / 60)}m ${Math.round(runMeta.durationSecs % 60)}s`
+                        : runMeta.durationSecs < 1 ? `<1s` : `${Math.round(runMeta.durationSecs)}s`}</>
+                    )}
+                    {" · "}<strong style={{ color: "var(--red-500)" }}>{runMeta.failed ?? 0} failed</strong>
                   </div>
                   {runMeta.overallScore !== null && (
                     <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8 }}>
@@ -337,16 +391,16 @@
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
               <thead><tr style={{ background: "var(--grey-50)", textAlign: "left" }}>
-                {["Rule","Layer","Status","Fail count","Fail %","Score","Severity",""].map((h, i) => (
+                {["Rule","Layer","Status","Fail count","Fail %","Severity",""].map((h, i) => (
                   <th key={i} style={{ padding: "9px 18px", fontSize: 11, fontWeight: 700, color: "var(--fg-2)",
                     textTransform: "uppercase", letterSpacing: ".04em",
-                    textAlign: i === 3 || i === 4 || i === 5 ? "right" : "left",
+                    textAlign: i === 3 || i === 4 ? "right" : "left",
                     whiteSpace: "nowrap" }}>{h}</th>
                 ))}
               </tr></thead>
               <tbody>
                 {visibleResults.length === 0 && (
-                  <tr><td colSpan={8} style={{ padding: "32px 20px", textAlign: "center", color: "var(--fg-3)", fontSize: 13 }}>
+                  <tr><td colSpan={7} style={{ padding: "32px 20px", textAlign: "center", color: "var(--fg-3)", fontSize: 13 }}>
                     {execResults.length === 0
                       ? "No results yet — run checks to populate this table."
                       : "No results match the current filters."}
@@ -357,14 +411,14 @@
                   const isError = r.status === "ERROR";
                   const isAcked = r.isExpected || !!ackedIds[r.resultId];
                   return (
-                    <React.Fragment key={r.id || r.resultId}>
-                      <tr style={{ borderTop: "1px solid var(--grey-100)",
-                        background: isAcked ? "transparent" : fail && r.sev === "CRITICAL" ? "var(--red-50)" : "transparent",
-                        opacity: isAcked ? 0.55 : 1 }}>
-                        <td style={{ padding: "11px 18px" }}>
-                          <Mono style={{ fontWeight: 500 }}>{r.rule}</Mono>
-                          {(r.isCde || r.tableFqn) && (
-                            <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 3, flexWrap: "wrap" }}>
+                    <tr key={r.id || r.resultId} style={{ borderTop: "1px solid var(--grey-100)",
+                      background: isAcked ? "transparent" : fail ? "var(--red-50)" : "transparent",
+                      opacity: isAcked ? 0.55 : 1 }}>
+                      <td style={{ padding: "11px 18px" }}>
+                        <Mono style={{ fontWeight: 500 }}>{r.rule}</Mono>
+                        {(r.isCde || r.tableFqn || (fail && !isAcked && r.remediation)) && (
+                          <div style={{ marginTop: 3 }}>
+                            <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
                               {r.isCde && (
                                 <span style={{ fontSize: 10.5, fontWeight: 700, color: "var(--brand)",
                                   background: "var(--brand-soft)", borderRadius: 3, padding: "1px 5px" }}>CDE</span>
@@ -373,64 +427,47 @@
                                 <span style={{ fontSize: 11, color: "var(--fg-3)" }}>{r.tableFqn}</span>
                               )}
                             </div>
-                          )}
-                        </td>
-                        <td style={{ padding: "11px 18px" }}><LayerPill layer={r.layer} size="sm" /></td>
-                        <td style={{ padding: "11px 18px" }}>
-                          {isAcked
-                            ? <Chip intent="neutral" size="sm">Expected</Chip>
-                            : isError
-                              ? <Chip intent="warning" size="sm" icon="alert-triangle">ERROR</Chip>
-                              : fail
-                                ? <Chip intent="danger" size="sm" icon="x">FAIL</Chip>
-                                : <Chip intent="success" size="sm" icon="check">PASS</Chip>
-                          }
-                        </td>
-                        <td style={{ padding: "11px 18px", textAlign: "right", fontWeight: 600,
-                          color: fail && !isAcked ? "var(--red-500)" : "var(--fg-3)" }}>{r.failCnt}</td>
-                        <td style={{ padding: "11px 18px", textAlign: "right", color: "var(--fg-2)" }}>
-                          {r.failPct ? r.failPct + "%" : "—"}
-                        </td>
-                        <td style={{ padding: "11px 18px", textAlign: "right" }}>
-                          {r.qualityScore !== null && r.qualityScore !== undefined
-                            ? <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 13,
-                                color: scoreColor(r.qualityScore) }}>{r.qualityScore}</span>
-                            : <span style={{ color: "var(--fg-3)" }}>—</span>}
-                        </td>
-                        <td style={{ padding: "11px 18px" }}>
-                          {r.sev !== "—" ? <Severity level={r.sev} size="sm" /> : <span style={{ color: "var(--fg-3)" }}>—</span>}
-                        </td>
-                        <td style={{ padding: "11px 18px", textAlign: "right" }}>
-                          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, justifyContent: "flex-end" }}>
-                            {fail && !isAcked && (
-                              <Button size="sm" variant="soft" icon="search" onClick={() => {
-                                setDrillRecords({ records: r.sampleRecords || [], rule: r.rule, failCnt: r.failCnt, resultId: r.resultId });
-                                setShowRecords(true);
-                              }}>Records</Button>
+                            {fail && !isAcked && r.remediation && (
+                              <div style={{ fontSize: 11.5, color: "var(--fg-2)", marginTop: 2, lineHeight: 1.4 }}>
+                                {r.remediation}
+                              </div>
                             )}
-                            <IconBtn icon={ruleRun[r.id] === "running" ? "loader" : "play"} size={30}
-                              title="Re-run this rule" active={ruleRun[r.id] === "running"}
-                              onClick={() => runRule(r.id)} />
                           </div>
-                        </td>
-                      </tr>
-                      {fail && !isAcked && r.remediation && (
-                        <tr style={{ background: "var(--yellow-50)" }}>
-                          <td colSpan={8} style={{ padding: "8px 18px 10px 46px", borderBottom: "1px solid var(--yellow-100)" }}>
-                            <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
-                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
-                                stroke="var(--yellow-700)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-                                style={{ flexShrink: 0, marginTop: 2 }}>
-                                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-                              </svg>
-                              <span style={{ fontSize: 12, color: "var(--yellow-900)", lineHeight: 1.55 }}>
-                                <strong>AI suggestion · </strong>{r.remediation}
-                              </span>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </React.Fragment>
+                        )}
+                      </td>
+                      <td style={{ padding: "11px 18px" }}><LayerPill layer={r.layer} size="sm" /></td>
+                      <td style={{ padding: "11px 18px" }}>
+                        {isAcked
+                          ? <Chip intent="neutral" size="sm">Expected</Chip>
+                          : isError
+                            ? <Chip intent="warning" size="sm" icon="alert-triangle">ERROR</Chip>
+                            : fail
+                              ? <Chip intent="danger" size="sm" icon="x">FAIL</Chip>
+                              : <Chip intent="success" size="sm" icon="check">PASS</Chip>
+                        }
+                      </td>
+                      <td style={{ padding: "11px 18px", textAlign: "right", fontWeight: 600,
+                        color: fail && !isAcked ? "var(--red-500)" : "var(--fg-3)" }}>{r.failCnt}</td>
+                      <td style={{ padding: "11px 18px", textAlign: "right", color: "var(--fg-2)" }}>
+                        {r.failPct ? r.failPct + "%" : "—"}
+                      </td>
+                      <td style={{ padding: "11px 18px" }}>
+                        {r.sev !== "—" ? <Severity level={r.sev} size="sm" /> : <span style={{ color: "var(--fg-3)" }}>—</span>}
+                      </td>
+                      <td style={{ padding: "11px 18px", textAlign: "right" }}>
+                        <div style={{ display: "inline-flex", alignItems: "center", gap: 6, justifyContent: "flex-end" }}>
+                          {fail && !isAcked && (
+                            <Button size="sm" variant="soft" icon="search" onClick={() => {
+                              setDrillRecords({ records: r.sampleRecords || [], rule: r.rule, failCnt: r.failCnt, resultId: r.resultId });
+                              setShowRecords(true);
+                            }}>Records</Button>
+                          )}
+                          <IconBtn icon={ruleRun[r.id] === "running" ? "loader" : "play"} size={30}
+                            title="Re-run this rule" active={ruleRun[r.id] === "running"}
+                            onClick={() => runRule(r.id)} />
+                        </div>
+                      </td>
+                    </tr>
                   );
                 })}
               </tbody>
@@ -439,7 +476,10 @@
 
           <div style={{ display: "flex", gap: 10, padding: "14px 20px", background: "var(--grey-50)", flexWrap: "wrap" }}>
             <Button size="sm" variant="soft" icon="download" onClick={downloadCsv}>Download CSV</Button>
-            <Button size="sm" variant="soft" icon="share-2">Share to Slack</Button>
+            <Button size="sm" variant="soft" icon="share-2"
+              onClick={() => toast("Slack integration not configured — use Download CSV to share results", { kind: "info" })}>
+              Share to Slack
+            </Button>
             <div style={{ flex: 1 }}></div>
             <Button size="sm" variant="primary" iconRight="arrow-right" onClick={() => go("anomalies")}>Review anomalies</Button>
           </div>

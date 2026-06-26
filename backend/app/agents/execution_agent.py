@@ -31,28 +31,32 @@ def execute_rule(
     We count: total rows, rows where expression = FALSE.
     """
     try:
-        # Wrap expression: count records where the rule FAILS
-        fail_sql = (
-            f"SELECT COUNT(*) FROM {table_fqn} WHERE NOT ({rule_expression})"
-        )
-        total_sql = f"SELECT COUNT(*) FROM {table_fqn}"
+        # Build a platform-safe table reference (handles cross-DB SQL Server, Snowflake quoting, etc.)
+        parts = table_fqn.rsplit(".", 1)
+        tref = connector.table_ref(parts[0], parts[1]) if len(parts) == 2 else f'"{table_fqn}"'
+
+        fail_sql  = f"SELECT COUNT(*) FROM {tref} WHERE NOT ({rule_expression})"
+        total_sql = f"SELECT COUNT(*) FROM {tref}"
 
         total = int(connector.query_scalar(total_sql) or 0)
         failed = int(connector.query_scalar(fail_sql) or 0)
         fail_pct = round(failed / max(total, 1) * 100, 2)
 
-        # Sample failed records (top 20)
-        sample_sql = (
-            f"SELECT * FROM {table_fqn} WHERE NOT ({rule_expression}) LIMIT 20"
-        )
-        try:
-            sample_result = connector.query(sample_sql)
-            sample_rows = [
-                dict(zip(sample_result.columns, row))
-                for row in sample_result.rows[:20]
-            ]
-        except Exception:
-            sample_rows = []
+        # Sample failed records — try ANSI LIMIT first, fall back to TOP (SQL Server)
+        sample_rows = []
+        for sample_sql in (
+            f"SELECT TOP 20 * FROM {tref} WHERE NOT ({rule_expression})",
+            f"SELECT * FROM {tref} WHERE NOT ({rule_expression}) LIMIT 20",
+        ):
+            try:
+                sample_result = connector.query(sample_sql)
+                sample_rows = [
+                    dict(zip(sample_result.columns, row))
+                    for row in sample_result.rows[:20]
+                ]
+                break
+            except Exception:
+                continue
 
         status = "FAIL" if failed > 0 else "PASS"
         quality_score = round(max(0, 100 - (fail_pct * (2 if is_cde_rule else 1))), 1)
@@ -103,11 +107,13 @@ def run_all_rules(
     connector: BaseConnector,
     connection_id: str,
     rules: list[dict],        # dicts with keys: rule_id, rule_name, table_fqn, layer, rule_expression, severity, is_cde_rule
+    run_id: str | None = None,
 ) -> ExecutionRunResponse:
     """
     Execute all provided rules and return a consolidated run response.
     """
-    run_id = str(uuid.uuid4())
+    if run_id is None:
+        run_id = str(uuid.uuid4())
     run_timestamp = datetime.now(timezone.utc)
     results = []
 

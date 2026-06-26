@@ -201,8 +201,10 @@ async def _classify_with_llm(text: str) -> str:
                 ],
                 temperature=0,
                 max_tokens=10,
+                num_retries=0,
+                request_timeout=4,
             ),
-            timeout=6.0,
+            timeout=5.0,
         )
         key = response.strip().lower().split()[0] if response.strip() else ""
         if key in _SCENARIOS:
@@ -328,6 +330,8 @@ async def _event_generator(
                 ],
                 temperature=0.2,
                 max_tokens=350,
+                num_retries=0,
+                request_timeout=6,
             ),
             timeout=8.0,
         )

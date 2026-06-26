@@ -32,7 +32,7 @@ const NAV = [
     { id: "execution", icon: "circle-play",      label: "DQ Execution", step: 4 },
   ]},
   { group: "Monitoring", items: [
-    { id: "anomalies", icon: "siren",            label: "Anomaly Inbox", badge: 4 },
+    { id: "anomalies", icon: "siren",            label: "Anomaly Inbox" },
     { id: "impact",    icon: "network",          label: "Impact Graph" },
     { id: "dashboard", icon: "gauge",            label: "Trust Dashboard" },
   ]},
@@ -53,7 +53,7 @@ window.DT_NAV = NAV;
 
 // ---------- Sidebar ----------
 const Sidebar = () => {
-  const { route, go, setStage, activeConnectionName, activeConnectionId, activeConnectionPlatform } = useApp();
+  const { route, go, setStage, activeConnectionName, activeConnectionId, activeConnectionPlatform, openAnomalyCount } = useApp();
   const dtUser = React.useMemo(() => {
     try { return JSON.parse(sessionStorage.getItem('dt_user') || '{}'); } catch (_) { return {}; }
   }, []);
@@ -64,6 +64,9 @@ const Sidebar = () => {
 
   const row = (it) => {
     const active = route === it.id;
+    const badge = it.id === "anomalies"
+      ? (openAnomalyCount > 0 ? openAnomalyCount : null)
+      : it.badge;
     return (
       <button key={it.id} onClick={() => go(it.id)} style={{
         display: "flex", alignItems: "center", gap: 11, padding: "8px 10px", borderRadius: 8,
@@ -80,8 +83,8 @@ const Sidebar = () => {
         {it.step && <span style={{ fontSize: 10, fontWeight: 700, color: active ? "var(--brand)" : "var(--fg-3)",
           width: 16, height: 16, borderRadius: 5, border: `1px solid ${active ? "var(--brand-ring)" : "var(--grey-200)"}`,
           display: "inline-flex", alignItems: "center", justifyContent: "center" }}>{it.step}</span>}
-        {it.badge && <span style={{ background: "var(--red-500)", color: "#fff", fontSize: 10, fontWeight: 700,
-          padding: "1px 6px", borderRadius: 999 }}>{it.badge}</span>}
+        {badge && <span style={{ background: "var(--red-500)", color: "#fff", fontSize: 10, fontWeight: 700,
+          padding: "1px 6px", borderRadius: 999 }}>{badge}</span>}
         {it.hot && <span style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--yellow-500)" }}></span>}
       </button>
     );
@@ -244,6 +247,7 @@ function App() {
   const [lastRunId, setLastRunId] = React.useState(null);
   const [datasets, setDatasets] = React.useState([]);
   const [datasetsLoading, setDatasetsLoading] = React.useState(false);
+  const [openAnomalyCount, setOpenAnomalyCount] = React.useState(null);
 
   const go = (r) => { setRoute(r); const s = document.getElementById("dt-scroll"); if (s) s.scrollTop = 0; };
 
@@ -299,6 +303,23 @@ function App() {
     refreshDatasets();
   }, [activeConnectionId, stage]);
 
+  // Fetch open (unacknowledged) anomaly count for the sidebar badge
+  const refreshAnomalyCount = React.useCallback(() => {
+    if (!window.DTApi?.getAnomalyInbox) return;
+    window.DTApi.getAnomalyInbox(activeConnectionId)
+      .then(items => {
+        const list = Array.isArray(items) ? items : (items?.anomalies || items?.items || []);
+        const open = list.filter(a => !a.acknowledged_at && !a.status?.toLowerCase().includes('ack'));
+        setOpenAnomalyCount(open.length);
+      })
+      .catch(() => {});
+  }, [activeConnectionId]);
+
+  React.useEffect(() => {
+    if (stage !== 'app') { setOpenAnomalyCount(null); return; }
+    refreshAnomalyCount();
+  }, [activeConnectionId, stage]);
+
   const store = {
     stage, setStage, route, go, trustScore, setTrustScore, pipeline, setPipeline,
     ruleDecisions, setRuleDecisions, customRules, setCustomRules,
@@ -309,6 +330,7 @@ function App() {
     activeTableFqn, setActiveTableFqn,
     lastRunId, setLastRunId,
     datasets, setDatasets, datasetsLoading, refreshDatasets,
+    openAnomalyCount, refreshAnomalyCount,
   };
 
   useIcons();
@@ -320,15 +342,13 @@ function App() {
 
   return (
     <window.DTContext.Provider value={store}>
-      <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg-app)" }}>
+      <div style={{ display: "flex", minHeight: "100vh", width: "100%", background: "var(--bg-app)" }}>
         <Sidebar />
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", height: "100vh" }}>
           <TopBar />
           <DemoBanner />
-          <main id="dt-scroll" style={{ flex: 1, overflowY: "auto", padding: "26px 30px 60px" }}>
-            <div style={{ maxWidth: 1180, margin: "0 auto" }}>
-              <Screen />
-            </div>
+          <main id="dt-scroll" style={{ flex: 1, overflowY: "auto", padding: "26px 30px 40px" }}>
+            <Screen />
           </main>
         </div>
         <ToastHost />

@@ -1,0 +1,99 @@
+{
+  "timestamp": "2026-06-24T10:49:50.768Z",
+  "url": "http://localhost/#/impact",
+  "title": "DataTrust — Agentic Data Quality Platform",
+  "pageData": {
+    "hasDTObject": true,
+    "hasImpactData": true,
+    "sourceNode": {
+      "id": "silver.orders_enriched",
+      "label": "silver.orders_enriched",
+      "sub": "net_revenue · 11.2% NULL",
+      "status": "fail"
+    },
+    "tiers": [
+      {
+        "label": "GOLD",
+        "nodeCount": 2,
+        "nodes": [
+          {
+            "id": "g1",
+            "label": "gold.daily_revenue_summary",
+            "status": "fail",
+            "note": "Revenue understated $221M"
+          },
+          {
+            "id": "g2",
+            "label": "gold.customer_segments",
+            "status": "warn",
+            "note": "LTV calculations affected"
+          }
+        ]
+      },
+      {
+        "label": "REPORTS / MODELS",
+        "nodeCount": 5,
+        "nodes": [
+          {
+            "id": "r1",
+            "label": "Finance Dashboard",
+            "status": "fail",
+            "note": "DO NOT PUBLISH",
+            "from": "g1"
+          },
+          {
+            "id": "r2",
+            "label": "CFO Weekly Report",
+            "status": "warn",
+            "note": "Queued — hold",
+            "from": "g1"
+          },
+          {
+            "id": "m1",
+            "label": "ml.revenue_forecast_v3",
+            "status": "fail",
+            "note": "Training data incomplete",
+            "from": "g1"
+          },
+          {
+            "id": "m2",
+            "label": "ml.churn_predictor_v2",
+            "status": "warn",
+            "note": "Feature incomplete",
+            "from": "g2"
+          },
+          {
+            "id": "o1",
+            "label": "ops.fulfilment_sla",
+            "status": "warn",
+            "note": "Revenue SLA threshold wrong",
+            "from": "g1"
+          }
+        ]
+      }
+    ],
+    "bodyText": "Data Alchemist\nAGENTIC DQ PLATFORM · PAL.TECH\nMove data quality from reactive chaos to proactive trust.\n\nAutonomous profiling, AI-authored rules, anomaly explainability, and live trust scoring — across every layer of your warehouse.\n\n4\ndata layers monitored\n31\nactive DQ rules\n< 90s\ndetect → explain\nSOC 2 Type II\nISO 27001\nGDPR\nSSO / SAML\nPAL.TECH · INNOVATION CHALLENGE\nSign in to Data Alchemist\n\nUse your @pal.tech Microsoft account or a local account.\n\nSign in\nCreate account\nContinue with Microsoft (pal.tech)\nOR with email + password\nWork email\nPassword\nForgot password?\nSign in\n\nDon't have an account? Create one\n\nProtected by pal.tech's acceptable use and data governance policies.",
+    "hasCanvasNodes": true,
+    "hasClickableNodes": false
+  },
+  "consoleLogs": [
+    {
+      "type": "warning",
+      "text": "You are using the in-browser Babel transformer. Be sure to precompile your scripts for production - https://babeljs.io/docs/setup/"
+    }
+  ],
+  "networkActivity": [
+    {
+      "method": "GET",
+      "url": "http://localhost/app/api.js",
+      "status": 200,
+      "type": "response"
+    },
+    {
+      "method": "GET",
+      "url": "http://localhost/api/config",
+      "status": 200,
+      "type": "response"
+    }
+  ]
+}

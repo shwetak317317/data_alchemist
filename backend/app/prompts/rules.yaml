@@ -10,6 +10,15 @@ recommend_rules:
 
   user: |
     Table: {{ table_fqn }}  Layer: {{ layer }}  Rows: {{ row_count }}
+    SQL dialect: {{ sql_dialect }}
+
+    SQL dialect notes:
+    - sqlserver: Use YEAR(col), MONTH(col), LEN(col), ISNULL(col, x), CHARINDEX, PATINDEX — NOT EXTRACT, DATE_TRUNC, LENGTH, COALESCE with 3+ args
+    - postgresql: Use EXTRACT(YEAR FROM col), DATE_TRUNC, LENGTH, COALESCE
+    - snowflake: Use YEAR(col), LENGTH(col), IFF, ZEROIFNULL
+    - databricks: Use YEAR(col), LENGTH(col), IFNULL
+    - duckdb: Use EXTRACT(YEAR FROM col), LENGTH(col), COALESCE
+    Write rule_expression in the dialect above. Do NOT mix dialects.
 
     Column statistics:
     {{ col_summary_json }}
@@ -41,6 +50,15 @@ nl_to_rule:
 
   user: |
     Table: {{ table_fqn }}  Layer: {{ layer }}
+    SQL dialect: {{ sql_dialect }}
+
+    SQL dialect notes:
+    - sqlserver: Use YEAR(col), MONTH(col), LEN(col), ISNULL(col, x), CHARINDEX — NOT EXTRACT, DATE_TRUNC, LENGTH
+    - postgresql: Use EXTRACT(YEAR FROM col), DATE_TRUNC, LENGTH, COALESCE
+    - snowflake: Use YEAR(col), LENGTH(col), IFF, ZEROIFNULL
+    - databricks: Use YEAR(col), LENGTH(col), IFNULL
+    - duckdb: Use EXTRACT(YEAR FROM col), LENGTH(col), COALESCE
+    Write rule_expression in the dialect above.
 
     Business requirement: "{{ natural_language }}"
 

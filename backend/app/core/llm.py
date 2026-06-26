@@ -78,10 +78,11 @@ def chat(messages: list[dict], **overrides) -> str:
 def parse_llm_json(raw: str | None):
     """Parse JSON from an LLM response.
 
-    Handles three common failure modes:
+    Handles four common failure modes:
     - Empty / None response (API key wrong, model filtered the request, etc.)
     - Qwen3 / thinking-model <think>...</think> blocks before the JSON answer
     - Markdown code fences (```json ... ```) that many models add despite instructions.
+    - Model emits only a thinking block then an empty fence (text empty after stripping).
     """
     import json as _json, re as _re
     if not raw or not raw.strip():
@@ -103,7 +104,22 @@ def parse_llm_json(raw: str | None):
         if inner and inner[-1].strip() == "```":
             inner = inner[:-1]                          # drop closing fence line
         text = "\n".join(inner).strip()
-    return _json.loads(text)
+
+    # Guard: fence stripping may produce an empty string (model emitted empty code block)
+    if not text:
+        raise ValueError(
+            "LLM returned an empty code block. "
+            "The model emitted a thinking block followed by an empty fence — no JSON to parse."
+        )
+
+    # Try direct parse first; fall back to extracting the first {...} object from prose
+    try:
+        return _json.loads(text)
+    except _json.JSONDecodeError:
+        match = _re.search(r"\{.*\}", text, _re.DOTALL)
+        if match:
+            return _json.loads(match.group())
+        raise
 
 
 def stream_chat(messages: list[dict], **overrides) -> Generator[str, None, None]:

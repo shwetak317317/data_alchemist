@@ -1,0 +1,36 @@
+{
+  "timestamp": "2026-06-24T10:50:09.914Z",
+  "url": "http://localhost/#/impact",
+  "pageData": {
+    "currentUrl": "http://localhost/#/impact",
+    "hasDTObject": true,
+    "hasImpactData": true,
+    "sourceNode": {
+      "id": "silver.orders_enriched",
+      "label": "silver.orders_enriched",
+      "sub": "net_revenue · 11.2% NULL",
+      "status": "fail"
+    },
+    "tiers": [
+      {
+        "label": "GOLD",
+        "nodeCount": 2
+      },
+      {
+        "label": "REPORTS / MODELS",
+        "nodeCount": 5
+      }
+    ],
+    "firstPageText": "Data Alchemist\nAGENTIC DQ PLATFORM · PAL.TECH\nMove data quality from reactive chaos to proactive trust.\n\nAutonomous profiling, AI-authored rules, anomaly explainability, and live trust scoring — across every layer of your warehouse.\n\n4\ndata layers monitored\n31\nactive DQ rules\n< 90s\ndetect → explain\nSOC 2 Type II\nISO 27001\nGDPR\nSSO / SAML\nPAL.TECH · INNOVATION CHALLENGE\nSign in to Data Alchemist\n\nUse your @pal.tech Microsoft account or a local account.\n\nSign in\nCreate account\nContinue with Micros",
+    "hasAuthCheck": true,
+    "cardCount": 0,
+    "svgCount": 9
+  },
+  "consoleLogs": [],
+  "networkErrors": [],
+  "demoModeInfo": {
+    "isDemoUser": false,
+    "hasToken": false,
+    "localStorageKeys": []
+  }
+}

@@ -646,6 +646,39 @@ def _save_report(db: Session, report: ProfilingReport, triggered_by: str | None 
             })
 
         db.commit()
+
+        # Auto-create / update lineage node for this table
+        try:
+            _LAYER_POS = {"RAW": 0, "BRONZE": 1, "SILVER": 2, "GOLD": 3}
+            health = "ok" if report.quality_score >= 80 else ("warn" if report.quality_score >= 60 else "fail")
+            pos = _LAYER_POS.get(report.layer or "", 4)
+            db.execute(text("""
+                INSERT INTO lineage_nodes
+                    (connection_id, external_id, label, layer, node_type,
+                     tier_label, health_status, position_order)
+                VALUES
+                    (:conn, :ext_id, :label, :layer, 'table',
+                     :tier, :health, :pos)
+                ON CONFLICT (connection_id, external_id) DO UPDATE
+                    SET health_status = EXCLUDED.health_status,
+                        layer = EXCLUDED.layer,
+                        position_order = EXCLUDED.position_order
+            """), {
+                "conn": report.connection_id,
+                "ext_id": report.table_fqn,
+                "label": report.table_fqn,
+                "layer": report.layer or "UNKNOWN",
+                "tier": report.layer or "UNKNOWN",
+                "health": health,
+                "pos": pos,
+            })
+            db.commit()
+        except Exception as le:
+            logger.debug("Lineage node upsert skipped: %s", le)
+            try:
+                db.rollback()
+            except Exception:
+                pass
     except Exception as e:
         logger.warning("Failed to save profiling report: %s", e)
         db.rollback()

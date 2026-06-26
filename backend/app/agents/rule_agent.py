@@ -18,6 +18,7 @@ def recommend_rules(
     report: ProfilingReport,
     connection_id: str,
     cde_columns: list[str] | None = None,
+    sql_dialect: str = "postgresql",
 ) -> list[DQRule]:
     cde_set = set(cde_columns or [])
     col_summary = [
@@ -35,6 +36,7 @@ def recommend_rules(
         row_count=report.row_count,
         col_summary=col_summary,
         risks=report.risks,
+        sql_dialect=sql_dialect,
     )
 
     try:
@@ -69,11 +71,13 @@ def nl_to_rule(
     natural_language: str,
     connection_id: str,
     layer: str = "UNKNOWN",
+    sql_dialect: str = "postgresql",
 ) -> NLConvertResponse:
     prompt = build_nl_to_rule_prompt(
         table_fqn=table_fqn,
         layer=layer,
         natural_language=natural_language,
+        sql_dialect=sql_dialect,
     )
 
     try:

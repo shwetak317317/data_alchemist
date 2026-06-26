@@ -221,11 +221,15 @@
       loadData();
     };
 
+    const _toDecisionVerb = (d) => ({ approved: "approve", rejected: "reject", active: "approve" }[d] || d);
+
     const decide = (id, d) => {
       setRuleDecisions(x => ({ ...x, [id]: d }));
-      toast(`Rule #${id} ${d} · logged to audit trail`, { kind: d === "rejected" ? "info" : "success" });
+      toast(`Rule ${d} · logged to audit trail`, { kind: d === "rejected" ? "info" : "success" });
       if (window.DTApi?.decideRule) {
-        window.DTApi.decideRule(id, { status: d }).then(() => loadData()).catch(() => {});
+        window.DTApi.decideRule(id, { decision: _toDecisionVerb(d), decided_by: "user" })
+          .then(() => loadData())
+          .catch(err => toast("Could not save decision: " + (err?.message || "error"), { kind: "error" }));
       }
     };
 
@@ -460,8 +464,15 @@
                 Run {fLayer === "ALL" ? "all" : fLayer}
               </Button>
               <Button size="sm" variant="soft" icon="check-check" onClick={() => {
-                allRules.filter(r => r.sev === "LOW").forEach(r => setRuleDecisions(x => ({ ...x, [r.id]: "approved" })));
-                toast("All LOW-severity rules approved", { kind: "success" });
+                const lowRules = allRules.filter(r => r.sev === "LOW");
+                lowRules.forEach(r => {
+                  setRuleDecisions(x => ({ ...x, [r.id]: "approved" }));
+                  if (window.DTApi?.decideRule) {
+                    window.DTApi.decideRule(r.id, { decision: "approve", decided_by: "user" }).catch(() => {});
+                  }
+                });
+                toast(`${lowRules.length} LOW-severity rules approved`, { kind: "success" });
+                setTimeout(() => loadData(), 600);
               }}>Bulk approve LOW</Button>
             </div>
           </Card>
@@ -710,8 +721,13 @@
                         table_fqn: generated.table_fqn || selectedFqn || null, layer: "SILVER",
                         column_name: generated.col || null, rule_expression: expr,
                         rule_type: "CUSTOM", severity: generated.sev,
-                        is_cde_rule: generated.cde || false, status: "approved",
+                        is_cde_rule: generated.cde || false, status: "draft",
                         nl_source: nl, created_by: "user",
+                      }).then(r => {
+                        if (r?.rule_id && window.DTApi?.decideRule) {
+                          window.DTApi.decideRule(r.rule_id, { decision: "approve", decided_by: "user" })
+                            .then(() => loadData()).catch(() => {});
+                        }
                       }).catch(() => {});
                     }
                   }}>{generated.refine ? "Approve with refinement" : "Approve & add"}</Button>

@@ -19,14 +19,21 @@ anomaly:
     Severity: {{ severity }}
     Metric value: {{ metric_value }}  Baseline: {{ baseline_value }}  Deviation: {{ deviation_pct }}%
 
-    Return JSON matching this schema exactly:
+    Return JSON matching this schema exactly. Each field must be substantive:
+    - "what_happened": 1-2 sentences describing the anomaly in plain language (at least 60 characters)
+    - "where": layer and table name
+    - "when_first_seen": timestamp or relative description
+    - "why_it_matters": 2-3 sentences explaining the business impact — which reports, pipelines, or decisions are affected (at least 80 characters)
+    - "how_bad": severity assessment in plain language
+    - "recommended_actions": list of at least 3 specific, actionable steps the data team should take (each step at least 30 characters)
+
     {
-      "what_happened": "one sentence describing the anomaly in plain language",
-      "where": "layer and table name",
-      "when_first_seen": "timestamp or relative description",
-      "why_it_matters": "business impact — what breaks or is at risk",
-      "how_bad": "severity assessment in plain language",
-      "recommended_actions": ["action 1", "action 2"]
+      "what_happened": "...",
+      "where": "...",
+      "when_first_seen": "...",
+      "why_it_matters": "...",
+      "how_bad": "...",
+      "recommended_actions": ["step 1", "step 2", "step 3"]
     }
 
 
