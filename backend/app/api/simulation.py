@@ -161,7 +161,9 @@ _SCENARIO_TABLES = {
 def _classify_regex(text: str) -> str:
     """Regex-based fallback classifier."""
     t = text.lower()
-    if "northeast" in t or ("region" in t and any(w in t for w in ["stop", "entirely", "loss", "offline", "down"])):
+    if "northeast" in t or "region" in t or "segment" in t or "partition" in t or any(
+        loc in t for loc in ["chicago", "southeast", "northwest", "southwest", "west coast", "east coast"]
+    ):
         return "segment"
     if "revenue" in t or ("not" in t and "load" in t) or "null" in t or "missing" in t:
         return "nullcol"
@@ -169,34 +171,38 @@ def _classify_regex(text: str) -> str:
         return "volume"
     if "ghost" in t or "status" in t or "invalid" in t or "code" in t or "whitelist" in t:
         return "whitelist"
-    if "crm" in t or "feed" in t or "arriv" in t or "source" in t or "file" in t:
+    if "crm" in t or "feed" in t or "arriv" in t or "source" in t or "file" in t or "offline" in t or "stop" in t:
         return "source"
     return "nullcol"
 
 
 async def _classify_with_llm(text: str) -> str:
-    """LLM-powered classification with regex fallback on any error."""
+    """LLM-powered classification with regex fallback on any error or timeout."""
     try:
         from app.core.llm import achat
-        response = await achat(
-            [
-                {
-                    "role": "system",
-                    "content": (
-                        "You are a data quality expert. Classify the data quality scenario into exactly "
-                        "one of these five categories and return ONLY the category key, nothing else:\n"
-                        "- segment: loss of data for a specific region, channel, location, or partition\n"
-                        "- nullcol: a column has unexpected NULL or missing values\n"
-                        "- volume: overall row count dropped significantly (not limited to one region)\n"
-                        "- whitelist: invalid or unexpected categorical values appeared in data\n"
-                        "- source: a source feed, file, or system did not arrive or is unavailable\n"
-                        "Return ONLY the key word (segment / nullcol / volume / whitelist / source)."
-                    ),
-                },
-                {"role": "user", "content": f"Classify this scenario: {text}"},
-            ],
-            temperature=0,
-            max_tokens=10,
+        # Hard wall-clock limit: 6s regardless of LiteLLM retry policy
+        response = await asyncio.wait_for(
+            achat(
+                [
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are a data quality expert. Classify the data quality scenario into exactly "
+                            "one of these five categories and return ONLY the category key, nothing else:\n"
+                            "- segment: loss of data for a specific region, channel, location, or partition\n"
+                            "- nullcol: a column has unexpected NULL or missing values\n"
+                            "- volume: overall row count dropped significantly (not limited to one region)\n"
+                            "- whitelist: invalid or unexpected categorical values appeared in data\n"
+                            "- source: a source feed, file, or system did not arrive or is unavailable\n"
+                            "Return ONLY the key word (segment / nullcol / volume / whitelist / source)."
+                        ),
+                    },
+                    {"role": "user", "content": f"Classify this scenario: {text}"},
+                ],
+                temperature=0,
+                max_tokens=10,
+            ),
+            timeout=6.0,
         )
         key = response.strip().lower().split()[0] if response.strip() else ""
         if key in _SCENARIOS:
@@ -296,30 +302,34 @@ async def _event_generator(
     # 4. Generate LLM business narrative (non-blocking — failure falls back to static body)
     try:
         from app.core.llm import achat
-        narrative = await achat(
-            [
-                {
-                    "role": "system",
-                    "content": (
-                        "You are a data steward writing a 3-4 bullet business explanation of a data quality incident. "
-                        "Be concise, factual, and impact-focused. Write in plain English for non-technical stakeholders. "
-                        "Format: each bullet on its own line starting with a dash and space (- )."
-                    ),
-                },
-                {
-                    "role": "user",
-                    "content": (
-                        f"Scenario type: {scn['type']}\n"
-                        f"What happened: {scn['body'][0]}\n"
-                        f"Trust score impact: dropped to {scn['drop']} (from ~69)\n"
-                        f"Revenue at risk: {scn['undercount']}\n"
-                        f"User description: {scenario_text}\n\n"
-                        "Generate a 3-4 bullet business explanation."
-                    ),
-                },
-            ],
-            temperature=0.2,
-            max_tokens=350,
+        # Hard wall-clock limit: 8s regardless of LiteLLM retry policy
+        narrative = await asyncio.wait_for(
+            achat(
+                [
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are a data steward writing a 3-4 bullet business explanation of a data quality incident. "
+                            "Be concise, factual, and impact-focused. Write in plain English for non-technical stakeholders. "
+                            "Format: each bullet on its own line starting with a dash and space (- )."
+                        ),
+                    },
+                    {
+                        "role": "user",
+                        "content": (
+                            f"Scenario type: {scn['type']}\n"
+                            f"What happened: {scn['body'][0]}\n"
+                            f"Trust score impact: dropped to {scn['drop']} (from ~69)\n"
+                            f"Revenue at risk: {scn['undercount']}\n"
+                            f"User description: {scenario_text}\n\n"
+                            "Generate a 3-4 bullet business explanation."
+                        ),
+                    },
+                ],
+                temperature=0.2,
+                max_tokens=350,
+            ),
+            timeout=8.0,
         )
         if narrative and narrative.strip():
             yield f"data: {json.dumps({'type': 'narrative', 'data': {'text': narrative.strip()}})}\n\n"
