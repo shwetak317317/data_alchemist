@@ -435,6 +435,7 @@
     const { taskList, setTaskList, activeConnectionId } = useApp();
     const [adding, setAdding] = React.useState(false);
     const [draft, setDraft] = React.useState("");
+    const ownerName = (() => { try { return JSON.parse(sessionStorage.getItem('dt_user') || '{}').name || 'User'; } catch(_) { return 'User'; } })();
     useIcons();
 
     React.useEffect(() => {
@@ -456,12 +457,12 @@
 
     const addTask = () => {
       if (!draft) return;
-      const newTask = { prio: "MEDIUM", title: draft, meta: "Added by Ravi Kumar · just now", owner: "Ravi Kumar", status: "OPEN" };
+      const newTask = { prio: "MEDIUM", title: draft, meta: `Added by ${ownerName} · just now`, owner: ownerName, status: "OPEN" };
       setTaskList(t => [newTask, ...t]);
       setDraft(""); setAdding(false);
       toast("Task added", { kind: "success" });
       if (window.DTApi) {
-        window.DTApi.createTask({ title: draft, priority: "MEDIUM", connection_id: activeConnectionId, assigned_to: "Ravi Kumar" }).catch(() => {});
+        window.DTApi.createTask({ title: draft, priority: "MEDIUM", connection_id: activeConnectionId, assigned_to: ownerName }).catch(() => {});
       }
     };
 
@@ -489,7 +490,7 @@
                 <div style={{ fontSize: 13.5, fontWeight: 600, color: t.status === "DONE" ? "var(--fg-3)" : "var(--fg-1)", textDecoration: t.status === "DONE" ? "line-through" : "none" }}>{t.title}</div>
                 <div style={{ fontSize: 11.5, color: "var(--fg-3)", marginTop: 2 }}>{t.meta}</div>
               </div>
-              <Avatar name={t.owner.replace(" → ", " ")} size={26} color={t.owner.includes("Priya") ? "purple" : t.owner === "Deepa Nair" ? "green" : "blue"} />
+              <Avatar name={t.owner.replace(" → ", " ")} size={26} color={["blue","purple","green","orange"][t.owner.charCodeAt(0) % 4]} />
               <span style={{ fontSize: 12, color: "var(--fg-2)", width: 96 }}>{t.owner}</span>
               {stChip(t.status)}
             </div>
@@ -501,44 +502,107 @@
 
   // ---------------- Daily Summary ----------------
   const Summary = () => {
-    const { go, activeConnectionId } = useApp();
+    const { go, activeConnectionId, activeConnectionName } = useApp();
+    const [summary, setSummary] = React.useState(null);
+    const [anomalies, setAnomalies] = React.useState([]);
+    const [auditTrail, setAuditTrail] = React.useState([]);
+    const [advisory, setAdvisory] = React.useState(null);
     const [cdeRows, setCdeRows] = React.useState([]);
+    const [loading, setLoading] = React.useState(true);
+    const [error, setError] = React.useState(null);
     useIcons();
 
     React.useEffect(() => {
-      if (!window.DTApi || !activeConnectionId) return;
-      window.DTApi.listCDEs(activeConnectionId)
-        .then(rows => {
-          if (!rows) return;
-          setCdeRows(rows.map(r => ({ name: r.column_name, status: r.health || "PASS" })));
-        })
-        .catch(() => {});
+      if (!window.DTApi) { setLoading(false); return; }
+      setLoading(true);
+      setError(null);
+      setSummary(null); setAnomalies([]); setAuditTrail([]); setAdvisory(null); setCdeRows([]);
+      Promise.all([
+        window.DTApi.getDashboardSummary(activeConnectionId).catch(() => null),
+        window.DTApi.getAnomalyInbox(activeConnectionId).catch(() => []),
+        window.DTApi.getAuditTrail(activeConnectionId, 10).catch(() => []),
+        window.DTApi.getAdvisory(activeConnectionId).catch(() => null),
+        activeConnectionId ? window.DTApi.listCDEs(activeConnectionId).catch(() => []) : Promise.resolve([]),
+      ]).then(([sum, anoms, audit, adv, cdes]) => {
+        setSummary(sum);
+        setAnomalies(anoms || []);
+        setAuditTrail(audit || []);
+        setAdvisory(adv);
+        setCdeRows((cdes || []).map(r => ({ name: r.column_name, status: r.health || "PASS" })));
+        setLoading(false);
+      }).catch(err => {
+        setError(err?.message || "Failed to load summary");
+        setLoading(false);
+      });
     }, [activeConnectionId]);
-    const issues = [
-      ["net_revenue NULL for 206K records (11.2%)", "Silver pipeline discount calc step failed", "CRITICAL", "Fixing"],
-      ["Row count 57% below avg (1.84M vs 4.3M)", "Caused by early pipeline + null filter", "CRITICAL", "Fixing"],
-      ["WMS shipment feed 85 mins late", "Downstream delivery status stale", "HIGH", "Open"],
-      ["status='RTN_INIT' — 882 unknown codes", "Northeast region only — OMS clarification", "HIGH", "Open"],
-      ["23 duplicate order_ids in Bronze", "Dedup logic review needed", "MEDIUM", "Open"],
-    ];
-    const decisions = [
-      "Suppressed R4 (days_to_deliver) — expected null today",
-      "Updated net_revenue description (Priya)",
-      "Promoted status to CDE (Priya)",
-      "Approved net_revenue_max_threshold rule (NL→DQ)",
-      "Edited status whitelist — added PEND_REVIEW",
-      "Escalated pipeline failure to Deepa Nair",
-      "Blocked Finance Dashboard publish (Sunita notified)",
-    ];
+
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const connectionLabel = activeConnectionName || "Demo";
+    const score = Math.round(summary?.overall_score ?? 0);
+    const delta = summary?.score_delta ?? 0;
+    const pipelineStatus = summary?.pipeline_status || "HEALTHY";
+    const generatedAt = summary?.last_run_at
+      ? new Date(summary.last_run_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      : new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+    const SEV_ORDER = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
+    const topIssues = [...anomalies]
+      .sort((a, b) => (SEV_ORDER[a.severity] ?? 9) - (SEV_ORDER[b.severity] ?? 9))
+      .slice(0, 5)
+      .map(a => [
+        (a.description || "").replace(/^\[SIM\]\s*/, ""),
+        a.table_fqn || "—",
+        a.severity || "MEDIUM",
+        a.status === "open" ? "Open" : "Acknowledged",
+      ]);
+
+    const decisions = auditTrail
+      .filter(r => r.action && r.entity)
+      .map(r => `${r.action} · ${r.entity}`);
+
+    const anomalyBreakdown = (summary?.anomaly_breakdown || []).slice(0, 4);
+
+    const recommendations = [
+      ...(advisory?.risk_reasons || []).map(r => r.text).filter(Boolean),
+      advisory?.recommendation && advisory.recommendation !== "No advisory available yet."
+        ? advisory.recommendation : null,
+    ].filter(Boolean).slice(0, 5);
+
+    const pipelineChipIntent = pipelineStatus === "HEALTHY" ? "success" : pipelineStatus === "ISSUES" ? "danger" : "warning";
+    const pipelineLabel = pipelineStatus === "HEALTHY" ? "Pipeline healthy" : pipelineStatus === "ISSUES" ? "Pipeline issues" : "Pipeline recovering";
+
+    if (loading) return (
+      <div className="dt-fade-up">
+        <Card style={{ height: 120, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--fg-3)", fontSize: 13 }}>
+          <i data-lucide="loader" style={{ width: 16, height: 16, marginRight: 8 }} className="dt-pulse"></i>Loading daily summary…
+        </Card>
+      </div>
+    );
+
+    if (error) return (
+      <div className="dt-fade-up">
+        <Card style={{ background: "var(--red-50)", border: "1px solid var(--red-200)", fontSize: 13, color: "var(--red-700)", display: "flex", gap: 10, alignItems: "center" }}>
+          <i data-lucide="alert-circle" style={{ width: 16, height: 16 }}></i>
+          Failed to load summary: {error}
+        </Card>
+      </div>
+    );
+
     return (
       <div className="dt-fade-up">
         <Card style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap" }}>
-          <ScoreRing score={69} size={104} stroke={10} />
+          <ScoreRing score={score} size={104} stroke={10} />
           <div style={{ flex: 1, minWidth: 220 }}>
             <Eyebrow>Data trust daily summary</Eyebrow>
-            <div style={{ fontFamily: "var(--font-doc-head)", fontWeight: 700, fontSize: 19, margin: "6px 0 4px" }}>RetailCo · 2024-11-05</div>
+            <div style={{ fontFamily: "var(--font-doc-head)", fontWeight: 700, fontSize: 19, margin: "6px 0 4px" }}>{connectionLabel} · {todayStr}</div>
             <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, color: "var(--fg-2)" }}>
-              <span>Generated 11:05 AM</span><span>·</span><Chip intent="warning" dot>Pipeline recovering</Chip><span>·</span><span style={{ color: "var(--red-500)", fontWeight: 600 }}>▼ 8 from yesterday</span>
+              <span>Generated {generatedAt}</span><span>·</span>
+              <Chip intent={pipelineChipIntent} dot>{pipelineLabel}</Chip>
+              {delta !== 0 && (
+                <span style={{ color: delta >= 0 ? "var(--green-500)" : "var(--red-500)", fontWeight: 600 }}>
+                  {delta >= 0 ? "▲" : "▼"} {Math.abs(delta)} vs yesterday
+                </span>
+              )}
             </div>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
@@ -547,59 +611,81 @@
           </div>
         </Card>
 
-        <Card style={{ marginBottom: 16, padding: 0, overflow: "hidden" }}>
-          <div style={{ padding: "16px 20px" }}><SectionTitle icon="alert-circle">Top issues</SectionTitle></div>
-          {issues.map((iss, i) => (
-            <div key={i} style={{ display: "flex", gap: 14, padding: "12px 20px", borderTop: "1px solid var(--grey-100)", alignItems: "center" }}>
-              <span style={{ fontFamily: "var(--font-display)", fontWeight: 800, color: "var(--fg-3)", width: 16 }}>{i + 1}</span>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 600 }}>{iss[0]}</div>
-                <div style={{ fontSize: 11.5, color: "var(--fg-3)", marginTop: 2 }}>{iss[1]}</div>
+        {topIssues.length > 0 && (
+          <Card style={{ marginBottom: 16, padding: 0, overflow: "hidden" }}>
+            <div style={{ padding: "16px 20px" }}><SectionTitle icon="alert-circle">Top issues</SectionTitle></div>
+            {topIssues.map((iss, i) => (
+              <div key={i} style={{ display: "flex", gap: 14, padding: "12px 20px", borderTop: "1px solid var(--grey-100)", alignItems: "center" }}>
+                <span style={{ fontFamily: "var(--font-display)", fontWeight: 800, color: "var(--fg-3)", width: 16 }}>{i + 1}</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>{iss[0]}</div>
+                  <div style={{ fontSize: 11.5, color: "var(--fg-3)", marginTop: 2 }}>{iss[1]}</div>
+                </div>
+                <Severity level={iss[2]} size="sm" />
+                <Chip intent={iss[3] === "Open" ? "warning" : "neutral"} size="sm" dot={iss[3] === "Open"}>{iss[3]}</Chip>
               </div>
-              <Severity level={iss[2]} size="sm" />
-              <Chip intent={iss[3] === "Fixing" ? "brand" : "neutral"} size="sm" dot={iss[3] === "Fixing"}>{iss[3]}</Chip>
-            </div>
-          ))}
-        </Card>
+            ))}
+          </Card>
+        )}
+        {topIssues.length === 0 && (
+          <Card style={{ marginBottom: 16, fontSize: 13, color: "var(--fg-3)", display: "flex", gap: 8, alignItems: "center" }}>
+            <i data-lucide="check-circle-2" style={{ width: 15, height: 15, color: "var(--green-500)" }}></i>
+            No open issues for this connection.
+          </Card>
+        )}
 
         <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 16 }}>
           <Card style={{ flex: 1, minWidth: 280 }}>
             <SectionTitle icon="radar">Anomaly summary</SectionTitle>
-            {[["Volume: orders_enriched −57%", "Pipeline re-run in progress", "CRITICAL"], ["Source: WMS feed 85 min late", "Raised with infra team", "HIGH"], ["Segment: RTN_INIT in Northeast", "OMS team notified", "MEDIUM"], ["Drift: return_rate 4× above avg", "Under investigation", "MEDIUM"]].map(([t, s, sev], i) => (
-              <div key={i} style={{ display: "flex", gap: 10, padding: "9px 0", borderBottom: i < 3 ? "1px solid var(--grey-100)" : "none", alignItems: "center" }}>
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: SEV[sev].c }}></span>
-                <div style={{ flex: 1 }}><div style={{ fontSize: 12.5, fontWeight: 600 }}>{t}</div><div style={{ fontSize: 11, color: "var(--fg-3)" }}>{s}</div></div>
+            {anomalyBreakdown.length > 0 ? anomalyBreakdown.map(({ label, intent, count }, i) => (
+              <div key={i} style={{ display: "flex", gap: 10, padding: "9px 0", borderBottom: i < anomalyBreakdown.length - 1 ? "1px solid var(--grey-100)" : "none", alignItems: "center" }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: intent === "danger" ? "var(--red-500)" : "var(--yellow-500)", flexShrink: 0 }}></span>
+                <div style={{ flex: 1 }}><div style={{ fontSize: 12.5, fontWeight: 600 }}>{label}</div></div>
+                <Chip intent={intent === "danger" ? "danger" : "warning"} size="sm">{count}</Chip>
               </div>
-            ))}
+            )) : (
+              <div style={{ fontSize: 12.5, color: "var(--fg-3)", padding: "8px 0" }}>No open anomalies.</div>
+            )}
           </Card>
-          <Card style={{ flex: 1, minWidth: 280 }}>
-            <SectionTitle icon="shield-alert">CDE status</SectionTitle>
-            {cdeRows.map((c, i) => (
-              <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 0", borderBottom: i < cdeRows.length - 1 ? "1px solid var(--grey-100)" : "none" }}>
-                <Mono style={{ flex: 1, fontWeight: 600 }}>{c.name}</Mono>
-                <Chip intent={c.status === "PASS" ? "success" : c.status === "WARN" ? "warning" : "danger"} size="sm" dot>{c.status}</Chip>
-              </div>
-            ))}
-          </Card>
+          {cdeRows.length > 0 && (
+            <Card style={{ flex: 1, minWidth: 280 }}>
+              <SectionTitle icon="shield-alert">CDE status</SectionTitle>
+              {cdeRows.map((c, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 0", borderBottom: i < cdeRows.length - 1 ? "1px solid var(--grey-100)" : "none" }}>
+                  <Mono style={{ flex: 1, fontWeight: 600 }}>{c.name}</Mono>
+                  <Chip intent={c.status === "PASS" || c.status === "HEALTHY" ? "success" : c.status === "WARN" ? "warning" : "danger"} size="sm" dot>
+                    {c.status === "HEALTHY" ? "PASS" : c.status}
+                  </Chip>
+                </div>
+              ))}
+            </Card>
+          )}
         </div>
 
         <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-          <Card style={{ flex: 1, minWidth: 280 }}>
-            <SectionTitle icon="user-check" right={<Chip intent="brand">{decisions.length}</Chip>}>Human decisions today</SectionTitle>
-            {decisions.map((d, i) => (
-              <div key={i} style={{ display: "flex", gap: 9, padding: "7px 0", fontSize: 12.5, color: "var(--fg-1)" }}>
-                <i data-lucide="check-circle-2" style={{ width: 15, height: 15, color: "var(--green-500)", flexShrink: 0, marginTop: 1 }}></i>{d}
-              </div>
-            ))}
-          </Card>
-          <Card style={{ flex: 1, minWidth: 280 }}>
-            <SectionTitle icon="lightbulb">Recommended for tomorrow</SectionTitle>
-            {["Implement Bronze pipeline dependency check — wait for full OMS extract", "Fix Silver net_revenue null filter — don't drop records silently", "Add WMS SLA monitoring rule — alert if file > 30 min late", "Resolve RTN_INIT status code with OMS team", "Review return rate spike — real or artifact?"].map((d, i) => (
-              <div key={i} style={{ display: "flex", gap: 9, padding: "7px 0", fontSize: 12.5, color: "var(--fg-1)" }}>
-                <span style={{ fontWeight: 700, color: "var(--brand)", width: 14 }}>{i + 1}</span>{d}
-              </div>
-            ))}
-          </Card>
+          {decisions.length > 0 && (
+            <Card style={{ flex: 1, minWidth: 280 }}>
+              <SectionTitle icon="user-check" right={<Chip intent="brand">{decisions.length}</Chip>}>Human decisions today</SectionTitle>
+              {decisions.map((d, i) => (
+                <div key={i} style={{ display: "flex", gap: 9, padding: "7px 0", fontSize: 12.5, color: "var(--fg-1)" }}>
+                  <i data-lucide="check-circle-2" style={{ width: 15, height: 15, color: "var(--green-500)", flexShrink: 0, marginTop: 1 }}></i>{d}
+                </div>
+              ))}
+            </Card>
+          )}
+          {recommendations.length > 0 && (
+            <Card style={{ flex: 1, minWidth: 280 }}>
+              <SectionTitle icon="lightbulb">Recommended for tomorrow</SectionTitle>
+              {recommendations.map((d, i) => (
+                <div key={i} style={{ display: "flex", gap: 9, padding: "7px 0", fontSize: 12.5, color: "var(--fg-1)" }}>
+                  <span style={{ fontWeight: 700, color: "var(--brand)", width: 14 }}>{i + 1}</span>{d}
+                </div>
+              ))}
+            </Card>
+          )}
+          {decisions.length === 0 && recommendations.length === 0 && (
+            <Card style={{ flex: 1, fontSize: 13, color: "var(--fg-3)" }}>No decisions or recommendations recorded yet.</Card>
+          )}
         </div>
       </div>
     );
