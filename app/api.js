@@ -59,8 +59,13 @@ export const getReportByTable  = (tableFqn, connId) => _fetch(`/profiling/report
 export function streamProfiling({ connectionId, schemaName, tableName, onProgress, onReport, onError }) {
   const body = JSON.stringify({ connection_id: connectionId, schema_name: schemaName, table_name: tableName });
   fetch(`${BASE}/profiling/run`, { method: 'POST', headers: { 'Content-Type': 'application/json', ..._authHeaders() }, body })
-    .then(res => {
-      if (!res.ok) { onError?.(`HTTP ${res.status}`); return; }
+    .then(async res => {
+      if (!res.ok) {
+        let msg = `HTTP ${res.status}`;
+        try { const body = await res.json(); if (body?.detail) msg = body.detail; } catch (_) {}
+        onError?.(msg);
+        return;
+      }
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';

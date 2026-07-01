@@ -23,7 +23,7 @@ from langgraph.graph import StateGraph, END
 
 from app.connectors.base import BaseConnector
 from app.services.profiling_service import (
-    get_row_count, get_column_null_stats, get_column_distinct_count,
+    get_row_count, get_column_null_stats, get_column_distinct_counts,
     get_top_values, get_numeric_stats, detect_format_pattern,
 )
 from app.core.llm import chat
@@ -67,6 +67,10 @@ def fetch_schema(state: ProfilingState) -> ProfilingState:
     connector = state["connector"]
     schema = state["schema_name"]
     table_schema = connector.describe_table(schema, state["table_name"])
+    if not table_schema.columns:
+        raise ValueError(
+            f"Table not found or has no columns: {schema}.{state['table_name']}"
+        )
     state["columns"] = table_schema.columns
     state["row_count"] = table_schema.row_count
     _emit(state, "Schema validation", f"{len(table_schema.columns)} columns detected", 10)
@@ -86,16 +90,16 @@ def compute_null_stats(state: ProfilingState) -> ProfilingState:
 
 def compute_distinct(state: ProfilingState) -> ProfilingState:
     total = max(state["row_count"], 1)
-    distinct = {}
-    for col in state["columns"]:
-        try:
-            cnt = get_column_distinct_count(
-                state["connector"], state["schema_name"], state["table_name"], col["name"]
-            )
-            distinct[col["name"]] = {"count": cnt, "ratio": round(cnt / total, 4)}
-        except Exception as e:
-            logger.warning("Distinct count failed for %s: %s", col["name"], e)
-            distinct[col["name"]] = {"count": 0, "ratio": 0}
+    counts = get_column_distinct_counts(
+        state["connector"], state["schema_name"], state["table_name"], state["columns"]
+    )
+    distinct = {
+        col["name"]: {
+            "count": counts.get(col["name"], 0),
+            "ratio": round(counts.get(col["name"], 0) / total, 4),
+        }
+        for col in state["columns"]
+    }
     state["distinct_stats"] = distinct
     _emit(state, "Cardinality & distinct analysis", "completed", 40)
     return state
