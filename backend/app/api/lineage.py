@@ -1,7 +1,8 @@
 """Lineage API — serve and manage node/edge graph from PostgreSQL lineage_nodes + lineage_edges."""
+import json
 import logging
 from collections import deque
-from typing import Optional
+from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -10,11 +11,28 @@ from sqlalchemy import text
 
 from app.core.metadata_db import get_db
 from app.core.auth_deps import get_current_user, CurrentUser
+from app.services.lineage_discovery import run_discovery, would_create_cycle, recompute_is_source
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/lineage", tags=["lineage"])
 
 _LAYER_ORDER = {"RAW": 0, "BRONZE": 1, "SILVER": 2, "GOLD": 3, "REPORT": 4, "MODEL": 4}
+
+# Shared column list + join for every node SELECT — keeps last_profiled_at (the
+# staleness indicator) consistent everywhere a lineage_node is read, instead of
+# some call sites having it and others silently missing it.
+_NODE_COLUMNS = """
+    n.node_id, n.external_id, n.label, n.sub_label, n.layer, n.node_type,
+    n.tier_label, n.health_status, n.note, n.position_order, n.is_source,
+    prof.last_profiled_at
+"""
+_NODE_PROFILING_JOIN = """
+    LEFT JOIN LATERAL (
+        SELECT MAX(run_at) AS last_profiled_at
+        FROM profiling_reports p
+        WHERE p.connection_id = n.connection_id AND p.table_fqn = n.external_id
+    ) prof ON TRUE
+"""
 
 
 # ── Pydantic Models ───────────────────────────────────────────────────────────
@@ -31,6 +49,7 @@ class LineageNode(BaseModel):
     note: Optional[str] = None
     position_order: int
     is_source: bool
+    last_profiled_at: Optional[str] = None  # None = never profiled (or unprofilable, e.g. a report/model node)
 
 
 class LineageEdge(BaseModel):
@@ -77,6 +96,86 @@ class CreateEdgeRequest(BaseModel):
     edge_type: str = "FEEDS"
 
 
+class DiscoverRequest(BaseModel):
+    include_fk: bool = True
+    include_query_log: bool = True
+    query_log_hours: int = 168
+    dbt_manifest: Optional[dict[str, Any]] = None
+    # Off by default — this is the one option in /discover that spends LLM
+    # tokens. Only applies to query-log statements the deterministic SQL
+    # parser genuinely couldn't parse at all (dynamic SQL, stored procs);
+    # extracted edges are capped at low confidence and always land as
+    # 'suggested', same review gate as every other heuristic edge.
+    include_llm_fallback: bool = False
+
+
+class DiscoverResponse(BaseModel):
+    fk_enabled: bool
+    fk_schemas_scanned: list[str]
+    fk_edges_found: int
+
+    query_log_enabled: bool
+    query_log_supported: bool
+    query_log_unsupported_reason: Optional[str] = None
+    query_log_statements_scanned: int
+    query_log_parse_failures: int
+    query_log_edges_found: int
+
+    llm_fallback_enabled: bool
+    llm_fallback_attempted: int
+    llm_fallback_skipped: int
+    llm_fallback_edges_found: int
+    llm_fallback_error: Optional[str] = None
+
+    dbt_provided: bool
+    dbt_models_scanned: int
+    dbt_edges_found: int
+
+    nodes_created: int
+    edges_confirmed: int
+    edges_suggested: int
+    edges_already_existed: int
+    edges_cycle_rejected: int
+
+
+class SuggestedEdge(BaseModel):
+    edge_id: str
+    source_label: str
+    target_label: str
+    edge_type: str
+    discovered_via: str
+    confidence: Optional[float] = None
+    evidence: Optional[str] = None
+    discovered_at: Optional[str] = None
+
+
+class NarrativeResponse(BaseModel):
+    node_found: bool
+    bullets: list[str] = []
+    severity: str = "low"
+    generated_via: str = "none"  # llm | template | none
+    downstream_count: int = 0
+
+
+class RootCause(BaseModel):
+    node_id: str
+    external_id: str
+    label: str
+    health_status: str
+    layer: Optional[str] = None
+    downstream_impact_count: int
+
+
+class LineageHealth(BaseModel):
+    total_known_tables: int
+    tables_with_edges: int
+    completeness_pct: float
+    edges_by_discovered_via: dict[str, int]
+    suggested_pending: int
+    suggested_approved: int
+    suggested_rejected: int
+
+
 # ── Shared helpers ────────────────────────────────────────────────────────────
 
 def _rows_to_graph(source_table: str, node_rows, edge_rows) -> LineageGraph:
@@ -90,6 +189,7 @@ def _rows_to_graph(source_table: str, node_rows, edge_rows) -> LineageGraph:
             layer=r[4], node_type=r[5] or "table", tier_label=r[6],
             health_status=r[7] or "ok", note=r[8],
             position_order=r[9] or 0, is_source=bool(r[10]),
+            last_profiled_at=r[11].isoformat() if len(r) > 11 and r[11] else None,
         )
         for r in node_rows
     ]
@@ -114,17 +214,18 @@ def _fetch_nodes_by_ids(db: Session, ids_list: list) -> tuple:
     id_params = {f"id_{i}": v for i, v in enumerate(ids_list)}
 
     node_rows = db.execute(text(f"""
-        SELECT node_id, external_id, label, sub_label, layer, node_type,
-               tier_label, health_status, note, position_order, is_source
-        FROM lineage_nodes
-        WHERE node_id IN ({placeholders})
-        ORDER BY position_order, tier_label
+        SELECT {_NODE_COLUMNS}
+        FROM lineage_nodes n
+        {_NODE_PROFILING_JOIN}
+        WHERE n.node_id IN ({placeholders})
+        ORDER BY n.position_order, n.tier_label
     """), id_params).fetchall()
 
     edge_rows = db.execute(text(f"""
         SELECT edge_id, source_node_id, target_node_id, edge_type
         FROM lineage_edges
         WHERE source_node_id IN ({placeholders}) AND target_node_id IN ({placeholders})
+          AND status = 'confirmed'
     """), id_params).fetchall()
 
     return node_rows, edge_rows
@@ -163,18 +264,18 @@ def propagate_lineage_health_sync(db: Session, connection_id: str, run_id: str) 
 def get_full_graph(connection_id: str, db: Session = Depends(get_db),
                    current_user: CurrentUser = Depends(get_current_user)):
     """Return the full lineage graph for a connection (all nodes + edges)."""
-    node_rows = db.execute(text("""
-        SELECT node_id, external_id, label, sub_label, layer, node_type,
-               tier_label, health_status, note, position_order, is_source
-        FROM lineage_nodes
-        WHERE connection_id = :conn
-        ORDER BY position_order, tier_label
+    node_rows = db.execute(text(f"""
+        SELECT {_NODE_COLUMNS}
+        FROM lineage_nodes n
+        {_NODE_PROFILING_JOIN}
+        WHERE n.connection_id = :conn
+        ORDER BY n.position_order, n.tier_label
     """), {"conn": connection_id}).fetchall()
 
     edge_rows = db.execute(text("""
         SELECT e.edge_id, e.source_node_id, e.target_node_id, e.edge_type
         FROM lineage_edges e
-        WHERE e.connection_id = :conn
+        WHERE e.connection_id = :conn AND e.status = 'confirmed'
     """), {"conn": connection_id}).fetchall()
 
     return _rows_to_graph(connection_id, node_rows, edge_rows)
@@ -195,7 +296,6 @@ def seed_lineage(connection_id: str, db: Session = Depends(get_db),
         raise HTTPException(404, "No profiling reports found. Profile a table first.")
 
     sorted_reports = sorted(reports, key=lambda r: _LAYER_ORDER.get(r[1] or "", 99))
-    min_pos = min(_LAYER_ORDER.get(r[1] or "", 99) for r in sorted_reports)
 
     created = 0
     for table_fqn, layer, score in sorted_reports:
@@ -207,7 +307,7 @@ def seed_lineage(connection_id: str, db: Session = Depends(get_db),
                  tier_label, health_status, position_order, is_source)
             VALUES
                 (:conn, :ext_id, :label, :layer, 'table',
-                 :tier, :health, :pos, :is_src)
+                 :tier, :health, :pos, TRUE)
             ON CONFLICT (connection_id, external_id) DO UPDATE
                 SET health_status = EXCLUDED.health_status,
                     layer = EXCLUDED.layer,
@@ -220,10 +320,18 @@ def seed_lineage(connection_id: str, db: Session = Depends(get_db),
             "tier": layer or "UNKNOWN",
             "health": health,
             "pos": pos,
-            "is_src": pos == min_pos,
         })
         created += 1
 
+    # New nodes default to is_source=TRUE (honest: nothing is known to feed
+    # into them yet). recompute_is_source then corrects this from real edge
+    # topology in one pass — matters when re-seeding a connection that already
+    # has discovered edges, and replaces the old "lowest profiled layer = source"
+    # heuristic, which couldn't tell "genuinely a source" from "just not yet
+    # profiled at a lower layer" (e.g. medallion architectures spanning
+    # separate per-layer databases, where most tables sit at one profiled
+    # layer with no FK/lineage evidence either way).
+    recompute_is_source(db, connection_id)
     db.commit()
     return {"seeded": created, "connection_id": connection_id}
 
@@ -296,10 +404,11 @@ def update_node(node_id: str, req: UpdateNodeRequest, db: Session = Depends(get_
     db.execute(text(f"UPDATE lineage_nodes SET {', '.join(sets)} WHERE node_id = :node_id"), params)
     db.commit()
 
-    row = db.execute(text("""
-        SELECT node_id, external_id, label, sub_label, layer, node_type,
-               tier_label, health_status, note, position_order, is_source
-        FROM lineage_nodes WHERE node_id = :node_id
+    row = db.execute(text(f"""
+        SELECT {_NODE_COLUMNS}
+        FROM lineage_nodes n
+        {_NODE_PROFILING_JOIN}
+        WHERE n.node_id = :node_id
     """), {"node_id": node_id}).fetchone()
     if not row:
         raise HTTPException(404, "Node not found")
@@ -308,6 +417,7 @@ def update_node(node_id: str, req: UpdateNodeRequest, db: Session = Depends(get_
         layer=row[4], node_type=row[5] or "table", tier_label=row[6],
         health_status=row[7] or "ok", note=row[8],
         position_order=row[9] or 0, is_source=bool(row[10]),
+        last_profiled_at=row[11].isoformat() if row[11] else None,
     )
 
 
@@ -325,7 +435,10 @@ def delete_node(node_id: str, db: Session = Depends(get_db),
 @router.post("/edges", response_model=LineageEdge)
 def create_edge(req: CreateEdgeRequest, db: Session = Depends(get_db),
                 current_user: CurrentUser = Depends(get_current_user)):
-    """Create a lineage edge between two nodes identified by external_id."""
+    """Create a lineage edge between two nodes identified by external_id.
+    Manually-curated edges are ground truth (same as FK/dbt discovery) and are
+    always status='confirmed' — but still checked for cycles, since a human
+    can fat-finger a reversed edge just as easily as a parser can."""
     src = db.execute(text(
         "SELECT node_id FROM lineage_nodes WHERE connection_id = :conn AND external_id = :ext"
     ), {"conn": req.connection_id, "ext": req.source_ext_id}).fetchone()
@@ -337,13 +450,22 @@ def create_edge(req: CreateEdgeRequest, db: Session = Depends(get_db),
     if not tgt:
         raise HTTPException(404, f"Target node not found: {req.target_ext_id}")
 
+    if would_create_cycle(db, src[0], tgt[0]):
+        raise HTTPException(
+            400,
+            f"Cannot add {req.source_ext_id} -> {req.target_ext_id}: "
+            f"{req.target_ext_id} already has a confirmed path back to {req.source_ext_id}, "
+            "so this would create a cycle.",
+        )
+
     row = db.execute(text("""
-        INSERT INTO lineage_edges (connection_id, source_node_id, target_node_id, edge_type)
-        VALUES (:conn, :src, :tgt, :etype)
+        INSERT INTO lineage_edges (connection_id, source_node_id, target_node_id, edge_type, discovered_via, status)
+        VALUES (:conn, :src, :tgt, :etype, 'manual', 'confirmed')
         ON CONFLICT (connection_id, source_node_id, target_node_id) DO NOTHING
         RETURNING edge_id
     """), {"conn": req.connection_id, "src": src[0], "tgt": tgt[0],
            "etype": req.edge_type}).fetchone()
+    recompute_is_source(db, req.connection_id)
     db.commit()
     return LineageEdge(
         edge_id=row[0] if row else None,
@@ -357,11 +479,247 @@ def create_edge(req: CreateEdgeRequest, db: Session = Depends(get_db),
 def delete_edge(edge_id: str, db: Session = Depends(get_db),
                 current_user: CurrentUser = Depends(get_current_user)):
     """Delete a lineage edge."""
-    res = db.execute(text("DELETE FROM lineage_edges WHERE edge_id = :id"), {"id": edge_id})
+    row = db.execute(text(
+        "SELECT connection_id FROM lineage_edges WHERE edge_id = :id"
+    ), {"id": edge_id}).fetchone()
+    if not row:
+        raise HTTPException(404, "Edge not found")
+    connection_id = row[0]
+    db.execute(text("DELETE FROM lineage_edges WHERE edge_id = :id"), {"id": edge_id})
+    recompute_is_source(db, connection_id)
+    db.commit()
+    return {"deleted": edge_id}
+
+
+@router.post("/discover/{connection_id}", response_model=DiscoverResponse)
+def discover_lineage(
+    connection_id: str,
+    req: DiscoverRequest = DiscoverRequest(),
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user),
+):
+    """Deterministic lineage edge discovery — no LLM anywhere in this path.
+
+    FK constraints and a supplied dbt manifest are ground truth and auto-confirmed
+    straight into the graph. SQL query-log parsing is heuristic and always lands as
+    'suggested' — see GET /suggested/{connection_id} and /edges/{edge_id}/approve —
+    because a wrong edge actively misdirects incident response, which is worse than
+    a missing one.
+    """
+    from app.api.connections import get_active_connector
+
+    row = db.execute(text(
+        "SELECT platform, schemas_scope FROM connections WHERE id = :id AND deleted_at IS NULL"
+    ), {"id": connection_id}).fetchone()
+    if not row:
+        raise HTTPException(404, f"Connection {connection_id} not found")
+    platform, schemas_scope = row[0], list(row[1] or [])
+
+    connector = get_active_connector(connection_id, db)
+    try:
+        report = run_discovery(
+            db=db,
+            connection_id=connection_id,
+            connector=connector,
+            platform=platform,
+            schemas=schemas_scope,
+            include_fk=req.include_fk,
+            include_query_log=req.include_query_log,
+            query_log_hours=req.query_log_hours,
+            dbt_manifest=req.dbt_manifest,
+            include_llm_fallback=req.include_llm_fallback,
+        )
+    finally:
+        connector.close()
+
+    logger.info(json.dumps({
+        "event": "lineage.discover",
+        "connection_id": connection_id,
+        "user": current_user.email,
+        "fk_edges_found": report.fk_edges_found,
+        "query_log_edges_found": report.query_log_edges_found,
+        "llm_fallback_edges_found": report.llm_fallback_edges_found,
+        "dbt_edges_found": report.dbt_edges_found,
+        "nodes_created": report.nodes_created,
+        "edges_confirmed": report.edges_confirmed,
+        "edges_suggested": report.edges_suggested,
+    }))
+
+    return DiscoverResponse(
+        fk_enabled=report.fk_enabled,
+        fk_schemas_scanned=report.fk_schemas_scanned,
+        fk_edges_found=report.fk_edges_found,
+        query_log_enabled=report.query_log_enabled,
+        query_log_supported=report.query_log_supported,
+        query_log_unsupported_reason=report.query_log_unsupported_reason,
+        query_log_statements_scanned=report.query_log_statements_scanned,
+        query_log_parse_failures=report.query_log_parse_failures,
+        query_log_edges_found=report.query_log_edges_found,
+        llm_fallback_enabled=report.llm_fallback_enabled,
+        llm_fallback_attempted=report.llm_fallback_attempted,
+        llm_fallback_skipped=report.llm_fallback_skipped,
+        llm_fallback_edges_found=report.llm_fallback_edges_found,
+        llm_fallback_error=report.llm_fallback_error,
+        dbt_provided=report.dbt_provided,
+        dbt_models_scanned=report.dbt_models_scanned,
+        dbt_edges_found=report.dbt_edges_found,
+        nodes_created=report.nodes_created,
+        edges_confirmed=report.edges_confirmed,
+        edges_suggested=report.edges_suggested,
+        edges_already_existed=report.edges_already_existed,
+        edges_cycle_rejected=report.edges_cycle_rejected,
+    )
+
+
+@router.get("/suggested/{connection_id}", response_model=list[SuggestedEdge])
+def list_suggested_edges(connection_id: str, db: Session = Depends(get_db),
+                         current_user: CurrentUser = Depends(get_current_user)):
+    """Pending query-log-discovered edges awaiting human approval."""
+    rows = db.execute(text("""
+        SELECT e.edge_id, src.label, tgt.label, e.edge_type,
+               e.discovered_via, e.confidence, e.evidence, e.discovered_at
+        FROM lineage_edges e
+        JOIN lineage_nodes src ON src.node_id = e.source_node_id
+        JOIN lineage_nodes tgt ON tgt.node_id = e.target_node_id
+        WHERE e.connection_id = :conn AND e.status = 'suggested'
+        ORDER BY e.confidence DESC NULLS LAST, e.discovered_at DESC
+    """), {"conn": connection_id}).fetchall()
+    return [
+        SuggestedEdge(
+            edge_id=r[0], source_label=r[1], target_label=r[2], edge_type=r[3],
+            discovered_via=r[4], confidence=r[5], evidence=r[6],
+            discovered_at=r[7].isoformat() if r[7] else None,
+        )
+        for r in rows
+    ]
+
+
+@router.post("/edges/{edge_id}/approve", response_model=LineageEdge)
+def approve_edge(edge_id: str, db: Session = Depends(get_db),
+                 current_user: CurrentUser = Depends(get_current_user)):
+    """Promote a suggested edge to confirmed — it now appears in the main graph
+    and BFS impact traversal. Re-checked for cycles at approval time (not just
+    at discovery time): the graph's confirmed topology may have changed since
+    this edge was suggested, e.g. another suggestion for the reverse direction
+    could have been approved first."""
+    pending = db.execute(text("""
+        SELECT connection_id, source_node_id, target_node_id, edge_type
+        FROM lineage_edges WHERE edge_id = :id AND status = 'suggested'
+    """), {"id": edge_id}).fetchone()
+    if not pending:
+        raise HTTPException(404, "Suggested edge not found (already reviewed, or doesn't exist)")
+    connection_id, src_id, tgt_id, edge_type = pending
+
+    if would_create_cycle(db, src_id, tgt_id):
+        raise HTTPException(
+            400,
+            "Cannot approve this edge: it would create a cycle with edges confirmed since it was suggested. "
+            "Reject it, or review the conflicting confirmed edge first.",
+        )
+
+    row = db.execute(text("""
+        UPDATE lineage_edges
+        SET status = 'confirmed', reviewed_by = :user, reviewed_at = NOW()
+        WHERE edge_id = :id AND status = 'suggested'
+        RETURNING source_node_id, target_node_id, edge_type
+    """), {"id": edge_id, "user": current_user.email}).fetchone()
+    if not row:
+        db.rollback()
+        raise HTTPException(409, "This suggestion was already reviewed by someone else just now — refresh and retry.")
+    recompute_is_source(db, connection_id)
+    db.commit()
+
+    src = db.execute(text("SELECT external_id FROM lineage_nodes WHERE node_id = :id"), {"id": row[0]}).fetchone()
+    tgt = db.execute(text("SELECT external_id FROM lineage_nodes WHERE node_id = :id"), {"id": row[1]}).fetchone()
+    return LineageEdge(edge_id=edge_id, source_ext_id=src[0], target_ext_id=tgt[0], edge_type=row[2])
+
+
+@router.post("/edges/{edge_id}/reject")
+def reject_edge(edge_id: str, db: Session = Depends(get_db),
+               current_user: CurrentUser = Depends(get_current_user)):
+    """Reject a suggested edge. Kept in the table (status='rejected') as an audit
+    trail rather than deleted, so re-running discovery doesn't just re-suggest the
+    same edge a steward already dismissed — see run_discovery's existing-edge check."""
+    res = db.execute(text("""
+        UPDATE lineage_edges
+        SET status = 'rejected', reviewed_by = :user, reviewed_at = NOW()
+        WHERE edge_id = :id AND status = 'suggested'
+    """), {"id": edge_id, "user": current_user.email})
     db.commit()
     if res.rowcount == 0:
-        raise HTTPException(404, "Edge not found")
-    return {"deleted": edge_id}
+        raise HTTPException(404, "Suggested edge not found (already reviewed, or doesn't exist)")
+    return {"rejected": edge_id}
+
+
+@router.post("/narrative/{connection_id}", response_model=NarrativeResponse)
+def get_impact_narrative(
+    connection_id: str,
+    table_fqn: str,
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user),
+):
+    """Generate a business-impact narrative for one table, grounded in the REAL
+    downstream lineage graph (confirmed edges only — same BFS as GET
+    /{table_fqn}). The only LLM-touching piece of the lineage module; see
+    lineage_narrative.py for the grounding discipline and deterministic
+    fallback (this endpoint never errors out to the user on an LLM failure)."""
+    from app.services.lineage_narrative import generate_impact_narrative
+
+    result = generate_impact_narrative(db, connection_id, table_fqn)
+    return NarrativeResponse(**result)
+
+
+@router.get("/root-causes/{connection_id}", response_model=list[RootCause])
+def get_root_causes(connection_id: str, db: Session = Depends(get_db),
+                    current_user: CurrentUser = Depends(get_current_user)):
+    """Rank genuine root-cause failures (no failing ancestor via confirmed
+    edges) by downstream blast radius. Multiple independent failures can
+    coexist — this returns all of them, ranked, rather than picking one."""
+    from app.services.lineage_discovery import compute_root_causes
+
+    return [RootCause(**rc) for rc in compute_root_causes(db, connection_id)]
+
+
+@router.get("/health/{connection_id}", response_model=LineageHealth)
+def get_lineage_health(connection_id: str, db: Session = Depends(get_db),
+                       current_user: CurrentUser = Depends(get_current_user)):
+    """Completeness/precision metrics for this connection's lineage graph —
+    the leading indicator of whether discovery is actually providing value,
+    not just internal logs. completeness_pct in particular: a module that
+    finds zero edges everywhere is a much bigger problem than any single
+    discovery run's counts reveal on their own."""
+    total_known = db.execute(text(
+        "SELECT COUNT(*) FROM connection_tables WHERE connection_id = :conn"
+    ), {"conn": connection_id}).scalar() or 0
+
+    with_edges = db.execute(text("""
+        SELECT COUNT(DISTINCT n.external_id)
+        FROM lineage_nodes n
+        JOIN lineage_edges e ON (e.source_node_id = n.node_id OR e.target_node_id = n.node_id)
+        WHERE n.connection_id = :conn AND e.status = 'confirmed'
+    """), {"conn": connection_id}).scalar() or 0
+
+    via_rows = db.execute(text("""
+        SELECT discovered_via, COUNT(*) FROM lineage_edges
+        WHERE connection_id = :conn AND status = 'confirmed'
+        GROUP BY discovered_via
+    """), {"conn": connection_id}).fetchall()
+
+    suggested_counts = dict(db.execute(text("""
+        SELECT status, COUNT(*) FROM lineage_edges
+        WHERE connection_id = :conn AND discovered_via IN ('query_log', 'query_log_llm')
+        GROUP BY status
+    """), {"conn": connection_id}).fetchall())
+
+    return LineageHealth(
+        total_known_tables=total_known,
+        tables_with_edges=with_edges,
+        completeness_pct=round(100.0 * with_edges / total_known, 1) if total_known else 0.0,
+        edges_by_discovered_via={r[0]: r[1] for r in via_rows},
+        suggested_pending=suggested_counts.get("suggested", 0),
+        suggested_approved=suggested_counts.get("confirmed", 0),
+        suggested_rejected=suggested_counts.get("rejected", 0),
+    )
 
 
 @router.get("/{table_fqn:path}", response_model=LineageGraph)
@@ -383,25 +741,27 @@ def get_lineage(table_fqn: str, connection_id: Optional[str] = None,
     if not root:
         # No root found — return full graph for the connection as fallback
         node_rows = db.execute(text(f"""
-            SELECT node_id, external_id, label, sub_label, layer, node_type,
-                   tier_label, health_status, note, position_order, is_source
-            FROM lineage_nodes n WHERE 1=1 {conn_filter}
-            ORDER BY position_order, tier_label
+            SELECT {_NODE_COLUMNS}
+            FROM lineage_nodes n
+            {_NODE_PROFILING_JOIN}
+            WHERE 1=1 {conn_filter}
+            ORDER BY n.position_order, n.tier_label
         """), params).fetchall()
         edge_rows = db.execute(text(f"""
             SELECT e.edge_id, e.source_node_id, e.target_node_id, e.edge_type
-            FROM lineage_edges e WHERE 1=1
+            FROM lineage_edges e WHERE e.status = 'confirmed'
             {conn_filter.replace('connection_id', 'e.connection_id')}
         """), params).fetchall()
         return _rows_to_graph(table_fqn, node_rows, edge_rows)
 
-    # BFS downstream from root
+    # BFS downstream from root — only follow confirmed edges; a 'suggested' edge
+    # awaiting review must not silently expand what impact analysis reports.
     visited: set = {root[0]}
     queue: deque = deque([root[0]])
     while queue:
         current = queue.popleft()
         for (nid,) in db.execute(text(
-            "SELECT target_node_id FROM lineage_edges WHERE source_node_id = :src"
+            "SELECT target_node_id FROM lineage_edges WHERE source_node_id = :src AND status = 'confirmed'"
         ), {"src": current}).fetchall():
             if nid not in visited:
                 visited.add(nid)

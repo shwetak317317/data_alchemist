@@ -1,6 +1,6 @@
 """Databricks SQL connector — supports Personal Access Token and OAuth M2M."""
 import logging
-from app.connectors.base import BaseConnector, TableSchema, QueryResult
+from app.connectors.base import BaseConnector, TableSchema, QueryResult, ForeignKeyRef
 
 logger = logging.getLogger(__name__)
 _LAYER_MAP = {"raw": "RAW", "bronze": "BRONZE", "silver": "SILVER", "gold": "GOLD"}
@@ -75,6 +75,54 @@ class DatabricksConnector(BaseConnector):
             cols = [d[0] for d in cur.description]
             rows = [list(r) for r in cur.fetchall()]
         return QueryResult(columns=cols, rows=rows, row_count=len(rows))
+
+    def list_foreign_keys(self, schema: str) -> list[ForeignKeyRef]:
+        """Declared FK constraints via Unity Catalog's information_schema.
+
+        Best-effort: only Unity-Catalog-backed workspaces expose
+        information_schema.referential_constraints; legacy Hive Metastore
+        workspaces will hit the except branch below and simply return no
+        FK-derived edges (query-log discovery still applies either way).
+        This query is unverified against a live Databricks workspace — treat
+        results as provisional until confirmed against a real deployment.
+        """
+        if not schema.replace("_", "").isalnum():
+            logger.warning("list_foreign_keys: refusing unsafe schema identifier %r", schema)
+            return []
+        sql = f"""
+            SELECT rc.constraint_name,
+                   ref_kcu.table_schema, ref_kcu.table_name, ref_kcu.column_name,
+                   kcu.table_schema, kcu.table_name, kcu.column_name
+            FROM information_schema.referential_constraints rc
+            JOIN information_schema.key_column_usage kcu
+                ON kcu.constraint_name = rc.constraint_name
+               AND kcu.constraint_schema = rc.constraint_schema
+            JOIN information_schema.key_column_usage ref_kcu
+                ON ref_kcu.constraint_name = rc.unique_constraint_name
+               AND ref_kcu.constraint_schema = rc.unique_constraint_schema
+            WHERE kcu.table_schema = '{schema}'
+            ORDER BY rc.constraint_name, kcu.ordinal_position
+        """
+        try:
+            result = self.query(sql)
+        except Exception as e:
+            logger.info(
+                "list_foreign_keys schema=%s: not available (likely non-Unity-Catalog workspace): %s",
+                schema, e,
+            )
+            return []
+
+        grouped: dict[str, ForeignKeyRef] = {}
+        for name, ref_schema, ref_table, ref_col, holder_schema, holder_table, holder_col in result.rows:
+            if name not in grouped:
+                grouped[name] = ForeignKeyRef(
+                    constraint_name=name,
+                    source_schema=ref_schema, source_table=ref_table, source_columns=[],
+                    target_schema=holder_schema, target_table=holder_table, target_columns=[],
+                )
+            grouped[name].source_columns.append(ref_col)
+            grouped[name].target_columns.append(holder_col)
+        return list(grouped.values())
 
     def close(self) -> None:
         if self._conn:

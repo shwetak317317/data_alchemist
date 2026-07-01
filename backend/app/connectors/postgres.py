@@ -2,7 +2,7 @@
 import logging
 import psycopg2
 import psycopg2.extras
-from app.connectors.base import BaseConnector, TableSchema, QueryResult
+from app.connectors.base import BaseConnector, TableSchema, QueryResult, ForeignKeyRef
 
 logger = logging.getLogger(__name__)
 _LAYER_MAP = {"raw": "RAW", "bronze": "BRONZE", "silver": "SILVER", "gold": "GOLD"}
@@ -77,6 +77,41 @@ class PostgresConnector(BaseConnector):
             cols = [d[0] for d in cur.description]
             rows = [list(r) for r in cur.fetchall()]
         return QueryResult(columns=cols, rows=rows, row_count=len(rows))
+
+    def list_foreign_keys(self, schema: str) -> list[ForeignKeyRef]:
+        """Declared FK constraints within this schema, via information_schema
+        (portable across Postgres versions — no pg_catalog internals needed)."""
+        sql = """
+            SELECT tc.constraint_name,
+                   ccu.table_schema, ccu.table_name, ccu.column_name,
+                   kcu.table_schema, kcu.table_name, kcu.column_name
+            FROM information_schema.table_constraints tc
+            JOIN information_schema.key_column_usage kcu
+                ON tc.constraint_name = kcu.constraint_name AND tc.table_schema = kcu.table_schema
+            JOIN information_schema.constraint_column_usage ccu
+                ON tc.constraint_name = ccu.constraint_name AND tc.table_schema = ccu.table_schema
+            WHERE tc.constraint_type = 'FOREIGN KEY' AND tc.table_schema = %s
+            ORDER BY tc.constraint_name, kcu.ordinal_position
+        """
+        try:
+            result = self.query(sql, {"schema": schema})
+        except Exception as e:
+            logger.warning("list_foreign_keys schema=%s: %s", schema, e)
+            return []
+
+        # holder = table with the FK column (kcu); referenced = the looked-up table (ccu).
+        # Lineage direction: referenced (upstream truth) -> holder (downstream, breaks if wrong).
+        grouped: dict[str, ForeignKeyRef] = {}
+        for name, ref_schema, ref_table, ref_col, holder_schema, holder_table, holder_col in result.rows:
+            if name not in grouped:
+                grouped[name] = ForeignKeyRef(
+                    constraint_name=name,
+                    source_schema=ref_schema, source_table=ref_table, source_columns=[],
+                    target_schema=holder_schema, target_table=holder_table, target_columns=[],
+                )
+            grouped[name].source_columns.append(ref_col)
+            grouped[name].target_columns.append(holder_col)
+        return list(grouped.values())
 
     def close(self) -> None:
         if self._conn and not self._conn.closed:

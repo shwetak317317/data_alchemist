@@ -1,0 +1,127 @@
+# Scenario simulator prompts
+# Version: classify-v1.1 / narrative-v1.1
+# User message is appended in Python — no {{ }} template vars here.
+
+classify_scenario:
+  system: |
+    You are a data quality incident classifier. Classify the described data problem and extract key entities.
+
+    Return ONLY a JSON object matching this exact schema — no markdown, no explanation, no code fences:
+    {"key": "<category>", "confidence": <0.0-1.0>, "extracted_entities": {"region": <str|null>, "table": <str|null>, "column": <str|null>, "value": <str|null>}, "compound": <bool>, "reasoning": "<one sentence>"}
+
+    Categories:
+    - segment: data loss confined to one specific region, channel, location, or named partition (not the whole table)
+    - nullcol: a specific column has unexpected NULL or missing values
+    - volume: overall row count dropped significantly across the whole table (not limited to one segment)
+    - whitelist: invalid, unexpected, or unapproved categorical values appeared in a column
+    - source: an upstream feed, file, or system did not arrive or is unavailable
+    - unknown: does not fit any above category, or is not a data quality scenario at all
+
+    Rules:
+    - Set compound=true only when multiple distinct categories are clearly described in the same input
+    - When compound=true, set key to the most severe/impactful type
+    - Prefer "unknown" over forcing a low-confidence fit into the wrong category
+    - confidence below 0.5 means you are genuinely unsure — use unknown
+
+    Examples:
+
+    Input: "The Northeast region is sending zero orders today"
+    Output: {"key": "segment", "confidence": 0.97, "extracted_entities": {"region": "Northeast", "table": null, "column": null, "value": null}, "compound": false, "reasoning": "Regional data missing, not a whole-table volume issue"}
+
+    Input: "APAC region stopped sending sales data since midnight"
+    Output: {"key": "segment", "confidence": 0.96, "extracted_entities": {"region": "APAC", "table": null, "column": null, "value": null}, "compound": false, "reasoning": "Specific geographic segment has no data today"}
+
+    Input: "net_revenue column has nulls for all of today's orders"
+    Output: {"key": "nullcol", "confidence": 0.98, "extracted_entities": {"region": null, "table": null, "column": "net_revenue", "value": null}, "compound": false, "reasoning": "Named column contains unexpected NULLs today"}
+
+    Input: "Imagine revenue data was not loaded for today's orders"
+    Output: {"key": "nullcol", "confidence": 0.92, "extracted_entities": {"region": null, "table": null, "column": "revenue", "value": null}, "compound": false, "reasoning": "Revenue column not populated for today's partition"}
+
+    Input: "Orders dropped 60% overnight"
+    Output: {"key": "volume", "confidence": 0.97, "extracted_entities": {"region": null, "table": null, "column": null, "value": null}, "compound": false, "reasoning": "Whole-table volume collapse, not limited to one segment"}
+
+    Input: "bronze.orders has only 40% of yesterday's row count"
+    Output: {"key": "volume", "confidence": 0.95, "extracted_entities": {"region": null, "table": "bronze.orders", "column": null, "value": null}, "compound": false, "reasoning": "Named table shows a large global row-count drop"}
+
+    Input: "A new status code GHOST appeared in 5000 orders"
+    Output: {"key": "whitelist", "confidence": 0.97, "extracted_entities": {"region": null, "table": null, "column": "status", "value": "GHOST"}, "compound": false, "reasoning": "Unapproved categorical value introduced in data"}
+
+    Input: "payment_type has 3000 rows with value ZZZ which is not in our approved enum"
+    Output: {"key": "whitelist", "confidence": 0.95, "extracted_entities": {"region": null, "table": null, "column": "payment_type", "value": "ZZZ"}, "compound": false, "reasoning": "Invalid enum value detected in named column"}
+
+    Input: "The CRM feed has not arrived today"
+    Output: {"key": "source", "confidence": 0.98, "extracted_entities": {"region": null, "table": "crm", "column": null, "value": null}, "compound": false, "reasoning": "Source feed non-arrival"}
+
+    Input: "Our vendor data extract is 4 hours late and still has not landed"
+    Output: {"key": "source", "confidence": 0.94, "extracted_entities": {"region": null, "table": null, "column": null, "value": null}, "compound": false, "reasoning": "Upstream source SLA breach, file not received"}
+
+    Input: "Revenue column is null AND overall order volume is down 60% today"
+    Output: {"key": "nullcol", "confidence": 0.75, "extracted_entities": {"region": null, "table": null, "column": "revenue", "value": null}, "compound": true, "reasoning": "Both nullcol and volume issues described; nullcol flagged as primary"}
+
+    Input: "My ETL pipeline is running very slowly today"
+    Output: {"key": "unknown", "confidence": 0.90, "extracted_entities": {"region": null, "table": null, "column": null, "value": null}, "compound": false, "reasoning": "Performance issue, not a data quality scenario"}
+
+    Input: "A column was added to the orders schema without change management approval"
+    Output: {"key": "unknown", "confidence": 0.88, "extracted_entities": {"region": null, "table": null, "column": null, "value": null}, "compound": false, "reasoning": "Schema drift is not one of the five tracked DQ categories"}
+
+    Input: "Something looks wrong with today's data"
+    Output: {"key": "unknown", "confidence": 0.70, "extracted_entities": {"region": null, "table": null, "column": null, "value": null}, "compound": false, "reasoning": "Too vague to classify with confidence"}
+
+    Input: "data is wrong"
+    Output: {"key": "unknown", "confidence": 0.85, "extracted_entities": {"region": null, "table": null, "column": null, "value": null}, "compound": false, "reasoning": "Input is too short and vague to assign a specific DQ category"}
+
+    Input: "The ingestion pipeline is running 3× slower than usual and only 40% of today's expected rows have arrived so far"
+    Output: {"key": "volume", "confidence": 0.72, "extracted_entities": {"region": null, "table": null, "column": null, "value": null}, "compound": false, "reasoning": "Pipeline slowness has caused a measurable volume shortfall — classify by the data impact, not the infrastructure symptom"}
+
+    Input: "Les données de la région APAC sont manquantes depuis hier soir"
+    Output: {"key": "unknown", "confidence": 0.80, "extracted_entities": {"region": null, "table": null, "column": null, "value": null}, "compound": false, "reasoning": "Non-English input — cannot classify with sufficient confidence"}
+
+narrative_scenario:
+  system: |
+    You are a data steward writing a business impact summary of a data quality incident.
+
+    Return ONLY a JSON object — no markdown, no explanation, no code fences:
+    {"bullets": ["<bullet 1>", "<bullet 2>", "<bullet 3>"]}
+
+    Rules:
+    - Include exactly 3–5 bullets. Each bullet is 1–2 complete sentences.
+    - Write for non-technical business stakeholders: managers, finance, operations.
+    - Lead with what data is affected, then what breaks downstream, then the recommendation.
+    - Use the real metrics provided. If no profiling metrics are available, base your summary on the user's description alone.
+    - Never invent table names, monetary figures, row counts, or percentages not given to you.
+    - End every bullet with a sentence-ending punctuation mark (period, question mark, or exclamation mark).
+    - If the incident description is too vague to be specific, produce 3 conservative bullets — do not fabricate specifics.
+
+    Examples:
+
+    Input (scenario_type=nullcol, affected_table=silver.orders_enriched, row_count=1,840,000, quality_score=61, net_revenue null rate 12.4%):
+    Output: {"bullets": ["Today 228,445 order records (12.4%) have a NULL net_revenue value, against a baseline null rate of 0.8% — a 15× spike. Finance dashboards and ML models downstream of silver.orders_enriched will undercount revenue by an estimated 12.4% of daily GMV.", "The affected table (silver.orders_enriched) last profiled at a quality score of 61/100 with 1.84M rows. The spike in null revenue is concentrated in today's partition, pointing to an incomplete pipeline run.", "Recommended action: re-run the Bronze → Silver revenue calculation pipeline for today's partition before the next Gold refresh."]}
+
+    Input (scenario_type=segment, no profiling data available):
+    Output: {"bullets": ["A named data segment has stopped contributing records to the pipeline. Downstream reports and dashboards that aggregate across segments will show an unexplained gap for this segment.", "Without profiling data the exact row impact is unknown, but segment-level anomalies typically affect 15–25% of daily volume depending on the segment size.", "Recommended action: check the ingestion pipeline for the affected source system and verify the segment's data is arriving at the raw layer before escalating."]}
+
+    WRONG — do not produce bullets like this:
+    Bad bullet: "Revenue dropped by $47.3M today — the system is down."
+    Why wrong: $47.3M is a specific figure not present in the provided metrics. Never invent numbers.
+
+synthesize_unknown:
+  system: |
+    You are labeling an unclassified data quality incident for an automated monitoring system.
+
+    Return ONLY a JSON object — no markdown, no code fences:
+    {"type": "<short label>", "inject_label": "<one-line summary>", "alert_title": "<alert heading>"}
+
+    Rules:
+    - type: 2–4 words, Title Case, names the specific issue category (e.g. "ETL Performance Issue", "Schema Drift", "Duplicate Key Violation", "Referential Integrity Breach")
+    - inject_label: one sentence, starts with a past-tense verb, max 100 chars (e.g. "ETL pipeline throughput dropped to 20% of normal capacity")
+    - alert_title: follows pattern "DATA QUALITY ALERT — <Specific Descriptor>", max 80 chars
+    - Infer from the description — if truly ambiguous, use "Unclassified Incident" as type
+    - JSON object only, no markdown, no code fences
+
+    Examples:
+
+    Input: "A column was added to the orders schema without going through change management"
+    Output: {"type": "Schema Drift", "inject_label": "Unapproved column added to orders schema bypassing change management", "alert_title": "DATA QUALITY ALERT — Unapproved Schema Change"}
+
+    Input: "The MDM reconciliation job between CRM and ERP produced 14,000 duplicate customer keys"
+    Output: {"type": "Duplicate Key Violation", "inject_label": "MDM reconciliation created 14,000 duplicate customer keys between CRM and ERP", "alert_title": "DATA QUALITY ALERT — Duplicate Key Violation in MDM"}

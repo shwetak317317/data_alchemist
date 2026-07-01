@@ -1,6 +1,6 @@
 """DuckDB connector — file-based or in-memory. Useful for local dev."""
 import logging
-from app.connectors.base import BaseConnector, TableSchema, QueryResult
+from app.connectors.base import BaseConnector, TableSchema, QueryResult, ForeignKeyRef
 
 logger = logging.getLogger(__name__)
 _LAYER_MAP = {"raw": "RAW", "bronze": "BRONZE", "silver": "SILVER", "gold": "GOLD"}
@@ -62,6 +62,34 @@ class DuckDBConnector(BaseConnector):
         cols = [d[0] for d in result.description]
         rows = [list(r) for r in result.fetchall()]
         return QueryResult(columns=cols, rows=rows, row_count=len(rows))
+
+    def list_foreign_keys(self, schema: str) -> list[ForeignKeyRef]:
+        """Declared FK constraints via duckdb_constraints(). Assumes the referenced
+        table lives in the same schema — DuckDB's constraint metadata does not
+        expose the referenced table's schema separately, and cross-schema FKs are
+        rare in typical single-file DuckDB usage."""
+        try:
+            rows = self._connect().execute(
+                "SELECT table_name, constraint_column_names, "
+                "constraint_foreign_table, constraint_foreign_column_names "
+                "FROM duckdb_constraints() "
+                "WHERE schema_name = ? AND constraint_type = 'FOREIGN KEY'",
+                [schema],
+            ).fetchall()
+        except Exception as e:
+            logger.warning("list_foreign_keys schema=%s: %s", schema, e)
+            return []
+
+        refs: list[ForeignKeyRef] = []
+        for holder_table, holder_cols, ref_table, ref_cols in rows:
+            if not ref_table:
+                continue
+            refs.append(ForeignKeyRef(
+                constraint_name=f"{holder_table}_{ref_table}_fk",
+                source_schema=schema, source_table=ref_table, source_columns=list(ref_cols or []),
+                target_schema=schema, target_table=holder_table, target_columns=list(holder_cols or []),
+            ))
+        return refs
 
     def close(self) -> None:
         if self._conn:

@@ -138,6 +138,26 @@ async def achat(messages: list[dict], **overrides) -> str:
     return response.choices[0].message.content or ""
 
 
+async def achat_with_usage(messages: list[dict], **overrides) -> tuple[str, dict | None]:
+    """Async completion — returns (content, usage_dict | None).
+
+    usage_dict keys: model, input_tokens, output_tokens.
+    Returns None for usage when the provider does not report it.
+    Keep achat() for callers that only need the text.
+    """
+    kwargs = _build_kwargs(**overrides)
+    response = await litellm.acompletion(messages=messages, **kwargs)
+    content = response.choices[0].message.content or ""
+    usage: dict | None = None
+    if hasattr(response, "usage") and response.usage is not None:
+        usage = {
+            "model": getattr(response, "model", kwargs.get("model")),
+            "input_tokens": getattr(response.usage, "prompt_tokens", None),
+            "output_tokens": getattr(response.usage, "completion_tokens", None),
+        }
+    return content, usage
+
+
 async def astream_chat(messages: list[dict], **overrides) -> AsyncGenerator[str, None]:
     """Async streaming. Async-yields text chunks."""
     kwargs = _build_kwargs(stream=True, **overrides)

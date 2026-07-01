@@ -2,7 +2,7 @@
 Snowflake connector — supports password, key pair, and OAuth authentication.
 """
 import logging
-from app.connectors.base import BaseConnector, TableSchema, QueryResult
+from app.connectors.base import BaseConnector, TableSchema, QueryResult, ForeignKeyRef
 
 logger = logging.getLogger(__name__)
 
@@ -99,6 +99,36 @@ class SnowflakeConnector(BaseConnector):
         cols = [d[0] for d in cursor.description]
         rows = [list(r) for r in cursor.fetchall()]
         return QueryResult(columns=cols, rows=rows, row_count=len(rows))
+
+    def list_foreign_keys(self, schema: str) -> list[ForeignKeyRef]:
+        """Declared FK constraints. Snowflake does not enforce FKs, but does let
+        you declare and query them via SHOW IMPORTED KEYS — useful metadata even
+        though the database itself never validates referential integrity."""
+        if not schema.replace("_", "").isalnum():
+            logger.warning("list_foreign_keys: refusing unsafe schema identifier %r", schema)
+            return []
+        try:
+            result = self.query(f"SHOW IMPORTED KEYS IN SCHEMA {schema}")
+        except Exception as e:
+            logger.warning("list_foreign_keys schema=%s: %s", schema, e)
+            return []
+
+        grouped: dict[str, ForeignKeyRef] = {}
+        for row in result.rows:
+            # positional per Snowflake docs: pk_schema=2, pk_table=3, pk_col=4,
+            # fk_schema=6, fk_table=7, fk_col=8, fk_name=12
+            pk_schema, pk_table, pk_col = row[2], row[3], row[4]
+            fk_schema, fk_table, fk_col = row[6], row[7], row[8]
+            fk_name = row[12]
+            if fk_name not in grouped:
+                grouped[fk_name] = ForeignKeyRef(
+                    constraint_name=fk_name,
+                    source_schema=pk_schema, source_table=pk_table, source_columns=[],
+                    target_schema=fk_schema, target_table=fk_table, target_columns=[],
+                )
+            grouped[fk_name].source_columns.append(pk_col)
+            grouped[fk_name].target_columns.append(fk_col)
+        return list(grouped.values())
 
     def close(self) -> None:
         if self._conn:

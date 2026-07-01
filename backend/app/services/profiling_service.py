@@ -44,15 +44,27 @@ def get_column_null_stats(connector: BaseConnector, schema: str, table: str, col
     return dict(zip(result.columns, result.rows[0]))
 
 
-def get_column_distinct_count(connector: BaseConnector, schema: str, table: str, col: str) -> int:
+def get_column_distinct_counts(connector: BaseConnector, schema: str, table: str, columns: list[dict]) -> dict:
+    """Return {col_name: distinct_count} for all columns in a single round trip.
+
+    Mirrors get_column_null_stats' one-query-for-all-columns shape instead of
+    issuing a separate COUNT(DISTINCT ...) query per column.
+    """
+    if not columns:
+        return {}
     tref = connector.table_ref(schema, table)
+    exprs = ", ".join(f"COUNT(DISTINCT [{c['name']}]) AS [{c['name']}]" for c in columns)
     try:
-        return int(connector.query_scalar(f"SELECT COUNT(DISTINCT [{col}]) FROM {tref}") or 0)
+        result = connector.query(f"SELECT {exprs} FROM {tref}")
     except Exception:
+        exprs_dq = ", ".join(f'COUNT(DISTINCT "{c["name"]}") AS "{c["name"]}"' for c in columns)
         try:
-            return int(connector.query_scalar(f'SELECT COUNT(DISTINCT "{col}") FROM {tref}') or 0)
+            result = connector.query(f'SELECT {exprs_dq} FROM {tref}')
         except Exception:
-            return 0
+            return {}
+    if not result.rows:
+        return {}
+    return {k: int(v or 0) for k, v in zip(result.columns, result.rows[0])}
 
 
 def get_top_values(connector: BaseConnector, schema: str, table: str, col: str, n: int = 10) -> list:

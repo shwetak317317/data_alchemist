@@ -2,15 +2,22 @@
 (function () {
   const D = window.DT;
 
-  // ---- Local classification fallback (mirrors backend _classify_regex) ----
-  function classifyLocal(text) {
+  // ---- Demo preset picker — used only when the backend is unreachable ----
+  // This is NOT a classifier. It maps quick-pick preset phrases to their scenario object
+  // so the UI still works in demo mode. Classification is the backend's job.
+  function _demoPreset(text) {
     const t = text.toLowerCase();
-    if (t.includes("northeast") || (t.includes("region") && (t.includes("stop") || t.includes("entirely") || t.includes("loss") || t.includes("offline") || t.includes("down")))) return SCN.segment;
-    if (t.includes("revenue") || (t.includes("not") && t.includes("load")) || t.includes("null") || t.includes("missing")) return SCN.nullcol;
-    if (t.includes("drop") || t.includes("60%") || t.includes("overnight") || t.includes("volume") || t.includes("batch") || t.includes("warehouse")) return SCN.volume;
-    if (t.includes("ghost") || t.includes("status") || t.includes("invalid") || t.includes("code") || t.includes("whitelist")) return SCN.whitelist;
-    if (t.includes("crm") || t.includes("feed") || t.includes("arriv") || t.includes("source") || t.includes("file")) return SCN.source;
-    return SCN.nullcol;
+    const checks = [
+      [["northeast", "apac", "emea", "region", "segment", "partition"], SCN.segment],
+      [["null", "blank", "revenue", "not loaded"],                      SCN.nullcol],
+      [["drop", "volume", "overnight", "60%", "row count"],             SCN.volume],
+      [["ghost", "invalid value", "whitelist", "unapproved"],           SCN.whitelist],
+      [["crm", "feed", "arrive", "source file", "sla"],                 SCN.source],
+    ];
+    for (const [keywords, preset] of checks) {
+      if (keywords.some(kw => t.includes(kw))) return preset;
+    }
+    return SCN.volume; // most common DQ issue type as default
   }
 
   const ev = (at, kind, title, detail) => ({ at, kind, title, detail });
@@ -125,15 +132,27 @@
   // ---- Simulation history strip ----
   const SimHistory = ({ connectionId }) => {
     const [history, setHistory] = React.useState([]);
+    const [accuracy, setAccuracy] = React.useState(null);
     const [open, setOpen] = React.useState(false);
     useIcons();
     React.useEffect(() => {
-      if (!open || !window.DTApi?.getSimulationHistory) return;
-      window.DTApi.getSimulationHistory(connectionId)
-        .then(rows => { if (rows && rows.length) setHistory(rows); })
-        .catch(() => {});
+      if (!open) return;
+      if (window.DTApi?.getSimulationHistory) {
+        window.DTApi.getSimulationHistory(connectionId)
+          .then(rows => { if (rows && rows.length) setHistory(rows); })
+          .catch(() => { console.warn('[SimHistory] getSimulationHistory failed'); });
+      }
+      if (window.DTApi?.getSimulationAccuracy) {
+        window.DTApi.getSimulationAccuracy(connectionId)
+          .then(data => { if (data) setAccuracy(data); })
+          .catch(() => { console.warn('[SimHistory] getSimulationAccuracy failed'); });
+      }
     }, [open, connectionId]);
-    if (!window.DTApi?.getSimulationHistory) return null;
+    // Do not return null at module level — window.DTApi may not be defined on first render
+    // (ES module deferred load). Always render the collapsible shell.
+
+    const confColor = (c) => c == null ? 'var(--fg-3)' : c >= 0.8 ? '#22c55e' : c >= 0.6 ? '#f59e0b' : '#ef4444';
+
     return (
       <Card style={{ marginBottom: 16 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }} onClick={() => setOpen(o => !o)}>
@@ -142,11 +161,36 @@
         </div>
         {open && (
           <div style={{ marginTop: 10 }}>
+            {accuracy && accuracy.total_runs > 0 && (
+              <div style={{ display: "flex", gap: 20, padding: "6px 0 12px", borderBottom: "1px solid var(--grey-100)", flexWrap: "wrap", marginBottom: 4 }}>
+                <div style={{ fontSize: 11.5, color: "var(--fg-3)" }}>
+                  <span style={{ fontWeight: 600, color: "var(--fg-1)" }}>{accuracy.total_runs}</span> runs ({accuracy.days}d)
+                </div>
+                {accuracy.mean_confidence != null && (
+                  <div style={{ fontSize: 11.5, color: "var(--fg-3)" }}>
+                    Avg confidence: <span style={{ fontWeight: 600, color: confColor(accuracy.mean_confidence) }}>{Math.round(accuracy.mean_confidence * 100)}%</span>
+                  </div>
+                )}
+                {accuracy.low_confidence_rate != null && (
+                  <div style={{ fontSize: 11.5, color: "var(--fg-3)" }}>
+                    Low-conf: <span style={{ fontWeight: 600, color: accuracy.low_confidence_rate > 0.2 ? "#ef4444" : "var(--fg-2)" }}>{Math.round(accuracy.low_confidence_rate * 100)}%</span>
+                  </div>
+                )}
+                {accuracy.real_metrics_rate != null && (
+                  <div style={{ fontSize: 11.5, color: "var(--fg-3)" }}>
+                    Grounded: <span style={{ fontWeight: 600, color: "var(--fg-2)" }}>{Math.round(accuracy.real_metrics_rate * 100)}%</span>
+                  </div>
+                )}
+              </div>
+            )}
             {history.length === 0
               ? <div style={{ fontSize: 12.5, color: "var(--fg-3)", padding: "8px 0" }}>No simulations run yet.</div>
               : history.slice(0, 5).map((r, i) => (
                 <div key={r.run_id || i} style={{ display: "flex", gap: 10, padding: "8px 0", borderTop: i ? "1px solid var(--grey-100)" : "none", alignItems: "center" }}>
                   <Chip intent={r.status === "remediated" ? "success" : r.status === "completed" ? "brand" : "neutral"} size="sm">{r.status}</Chip>
+                  {r.confidence != null && (
+                    <span style={{ fontSize: 11, color: confColor(r.confidence), fontWeight: 600, flexShrink: 0 }}>{Math.round(r.confidence * 100)}%</span>
+                  )}
                   <div style={{ flex: 1, fontSize: 12.5, color: "var(--fg-1)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.scenario_text}</div>
                   <Mono style={{ fontSize: 11, color: "var(--fg-3)", flexShrink: 0 }}>{r.started_at ? r.started_at.slice(0, 16).replace("T", " ") : "—"}</Mono>
                 </div>
@@ -166,14 +210,29 @@
       if (!window.DTApi?.listScenarios) return;
       window.DTApi.listScenarios()
         .then(rows => { if (rows && rows.length) setScenarios(rows); })
-        .catch(() => {});
+        .catch(() => { console.warn('[Simulator] listScenarios API failed'); });
     }, []);
+
+    // Sync the header/before-score to the real current trust score — without this,
+    // navigating here directly (skipping Home/DQ Execution) leaves the stale useState(69)
+    // default as the simulation's "before" baseline instead of the connection's real score.
+    React.useEffect(() => {
+      if (!window.DTApi?.getDashboardSummary) return;
+      window.DTApi.getDashboardSummary(activeConnectionId)
+        .then(s => {
+          if (!s) return;
+          setTrustScore(Math.round(s.overall_score) || 0);
+          if (s.pipeline_status) setPipeline(s.pipeline_status);
+        })
+        .catch(() => { console.warn('[Simulator] getDashboardSummary failed'); });
+    }, [activeConnectionId]);
 
     const [phase, setPhase] = React.useState("idle"); // idle | classifying | reacting | done
     const [scn, setScn] = React.useState(null);
     const [runId, setRunId] = React.useState(null);
     const [events, setEvents] = React.useState([]);
     const [healed, setHealed] = React.useState(false);
+    const [healTarget, setHealTarget] = React.useState(null);
     const timers = React.useRef([]);
     const abortRef = React.useRef(null);
     useIcons();
@@ -200,44 +259,52 @@
       setPipeline("ISSUES");
 
       if (window.DTApi?.streamSimulation) {
-        let drop = 52;
+        // Use a ref-like object so onEvent/onDone closures always see the latest drop value
+        // even when SSE event frames arrive before the meta frame.
+        const dropRef = { current: 52 };
         abortRef.current = window.DTApi.streamSimulation({
           scenarioText: text,
           connectionId: activeConnectionId,
           onMeta: (meta) => {
-            drop = meta.drop;
+            dropRef.current = meta.drop;
             if (meta.run_id) setRunId(meta.run_id);
             setScn({
               type: meta.scenario_type, drop: meta.drop, undercount: meta.undercount,
-              inject: meta.inject_sql, title: meta.title, body: meta.body,
+              inject: meta.inject_sql, title: meta.title, body: meta.body || [],
+              confidence: meta.confidence,
+              compound: meta.compound,
               events: [],
             });
             setPhase("reacting");
           },
           onEvent: (e) => {
             setEvents(prev => [...prev, e]);
-            if (e.kind === "fail" || e.kind === "warn") setTrustScore(ts => Math.max(drop, ts - 5));
+            if (e.kind === "fail" || e.kind === "warn") setTrustScore(ts => Math.max(dropRef.current, ts - 5));
           },
           onNarrative: (d) => {
-            if (!d || !d.text) return;
-            // Parse "- bullet" lines into array; keep existing body as fallback
-            const lines = d.text.split('\n')
-              .map(l => l.replace(/^[-•*]\s*/, '').trim())
-              .filter(l => l.length > 0);
-            if (lines.length > 0) {
-              setScn(s => s ? { ...s, body: lines } : s);
+            if (!d) return;
+            // Prefer structured bullets array (P3); fall back to parsing text lines.
+            const bullets = (d.bullets && d.bullets.length > 0)
+              ? d.bullets
+              : (d.text
+                ? d.text.split('\n').map(l => l.replace(/^[-•*]\s*/, '').trim()).filter(l => l.length > 0)
+                : []);
+            if (bullets.length > 0) {
+              setScn(s => s ? { ...s, body: bullets } : s);
             }
           },
-          onDone: () => { setTrustScore(drop); setTimeout(() => setPhase("done"), 400); },
+          onDone: () => { setTrustScore(dropRef.current); setTimeout(() => setPhase("done"), 400); },
           onError: () => {
-            const s = classifyLocal(text);
+            // Backend unreachable — show the closest preset with a demo-mode flag.
+            const s = { ..._demoPreset(text), demoMode: true };
             setScn(s);
             setPhase("reacting");
             injectLocal(s);
           },
         });
       } else {
-        const s = classifyLocal(text);
+        // No streamSimulation API — full demo mode (no backend running).
+        const s = { ..._demoPreset(text), demoMode: true };
         setScn(s);
         setPhase("reacting");
         injectLocal(s);
@@ -247,17 +314,26 @@
     const reset = () => {
       clearTimers(); abortRef.current?.();
       setPhase("idle"); setScn(null); setEvents([]); setHealed(false);
-      setRunId(null); setTrustScore(69); setPipeline("ISSUES");
+      setRunId(null); setHealTarget(null); setTrustScore(69); setPipeline("ISSUES");
     };
 
-    const heal = () => {
+    const heal = async () => {
       if (!scn) return;
       setHealed(true); setPipeline("RECOVERING");
-      // Call backend remediation (fire-and-forget)
+      // Await backend remediation to get the real computed recovery score.
+      let to = 88;
+      let remediationFailed = false;
       if (runId && window.DTApi?.remediateSimulation) {
-        window.DTApi.remediateSimulation(runId, activeConnectionId).catch(() => {});
+        try {
+          const res = await window.DTApi.remediateSimulation(runId, activeConnectionId);
+          if (res && typeof res.trust_score === 'number') to = res.trust_score;
+        } catch (_) {
+          remediationFailed = true;
+          toast("Remediation API failed — trust score estimate only", { kind: "warning" });
+        }
       }
-      const from = scn.drop ?? trustScore, to = 91, dur = 1300, t0 = Date.now();
+      setHealTarget(to);
+      const from = scn.drop ?? trustScore, dur = 1300, t0 = Date.now();
       const id = setInterval(() => {
         const p = Math.min((Date.now() - t0) / dur, 1);
         const eased = 1 - Math.pow(1 - p, 3);
@@ -265,7 +341,9 @@
         if (p >= 1) { clearInterval(id); setPipeline("HEALTHY"); }
       }, 33);
       timers.current.push({ ci: id });
-      toast("Remediation applied · pipeline re-running · trust score recovering", { kind: "success" });
+      if (!remediationFailed) {
+        toast("Remediation applied · pipeline re-running · trust score recovering", { kind: "success" });
+      }
     };
 
     const alertColor = scn && (scn.type === "Segment loss" || scn.type === "Column NULL" || scn.type === "Volume drop") ? "var(--red-500)" : "var(--orange-500)";
@@ -346,7 +424,22 @@
         {scn && (
           <Card style={{ marginBottom: 16 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-              <SectionTitle icon="activity" right={<Chip intent="brand" dot>Classified: {scn.type}</Chip>}>Live system reaction</SectionTitle>
+              <SectionTitle icon="activity" right={
+                <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                  <Chip intent={scn.demoMode ? "neutral" : "brand"} dot>Classified: {scn.type}</Chip>
+                  {scn.demoMode && (
+                    <Chip intent="warning" title="Backend unavailable — showing nearest preset, no AI classification">Demo mode</Chip>
+                  )}
+                  {!scn.demoMode && scn.confidence !== undefined && scn.confidence < 0.80 && (
+                    <Chip intent="warning" title="Classification confidence below 80% — result may be approximate">
+                      {Math.round(scn.confidence * 100)}% confidence
+                    </Chip>
+                  )}
+                  {scn.compound && (
+                    <Chip intent="neutral" title="Multiple issue types detected in this scenario">compound</Chip>
+                  )}
+                </div>
+              }>Live system reaction</SectionTitle>
             </div>
             <Mono style={{ display: "block", background: "var(--grey-900)", color: "var(--green-300)", padding: "10px 12px", borderRadius: 8, fontSize: 11.5, marginBottom: 16, overflowX: "auto" }}>$ {scn.inject}</Mono>
 
@@ -383,7 +476,7 @@
                 </div>
                 <div style={{ padding: 16 }}>
                   <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: "var(--fg-1)", lineHeight: 1.7 }}>
-                    {scn.body.map((b, i) => <li key={i}>{b}</li>)}
+                    {(scn.body || []).map((b, i) => <li key={i}>{b}</li>)}
                   </ul>
                 </div>
               </div>
@@ -403,7 +496,7 @@
                 {healed && <i data-lucide="arrow-right" style={{ width: 18, height: 18, color: "var(--fg-3)" }}></i>}
                 {healed && (
                   <div style={{ textAlign: "center" }}>
-                    <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 30, color: "var(--green-500)" }}>91</div>
+                    <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 30, color: "var(--green-500)" }}>{healTarget ?? trustScore}</div>
                     <div style={{ fontSize: 10, color: "var(--fg-3)" }}>after fix</div>
                   </div>
                 )}
@@ -452,7 +545,7 @@
             status: (r.status || "OPEN").toUpperCase().replace("IN_PROGRESS", "IN PROGRESS"),
           })));
         })
-        .catch(() => {});
+        .catch(() => { console.warn('[Tasks] listTasks API failed'); });
     }, [activeConnectionId]);
 
     const addTask = () => {
@@ -462,7 +555,11 @@
       setDraft(""); setAdding(false);
       toast("Task added", { kind: "success" });
       if (window.DTApi) {
-        window.DTApi.createTask({ title: draft, priority: "MEDIUM", connection_id: activeConnectionId, assigned_to: ownerName }).catch(() => {});
+        window.DTApi.createTask({ title: draft, priority: "MEDIUM", connection_id: activeConnectionId, assigned_to: ownerName }).catch(() => {
+          toast("Failed to save task", { kind: "error" });
+          // Roll back the optimistic add
+          setTaskList(t => t.filter(item => item.title !== draft || item.meta !== newTask.meta));
+        });
       }
     };
 
@@ -518,7 +615,7 @@
       setError(null);
       setSummary(null); setAnomalies([]); setAuditTrail([]); setAdvisory(null); setCdeRows([]);
       Promise.all([
-        window.DTApi.getDashboardSummary(activeConnectionId).catch(() => null),
+        window.DTApi.getDashboardSummary(activeConnectionId),
         window.DTApi.getAnomalyInbox(activeConnectionId).catch(() => []),
         window.DTApi.getAuditTrail(activeConnectionId, 10).catch(() => []),
         window.DTApi.getAdvisory(activeConnectionId).catch(() => null),
@@ -574,7 +671,10 @@
     if (loading) return (
       <div className="dt-fade-up">
         <Card style={{ height: 120, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--fg-3)", fontSize: 13 }}>
-          <i data-lucide="loader" style={{ width: 16, height: 16, marginRight: 8 }} className="dt-pulse"></i>Loading daily summary…
+          {/* Plain CSS spinner (not a lucide data-lucide icon): lucide.createIcons() replaces
+              <i data-lucide> nodes outside React's control, and when this loading tree is
+              discarded on data arrival, React's own unmount can throw removeChild errors. */}
+          <span style={{ width: 14, height: 14, marginRight: 8, borderRadius: "50%", display: "inline-block", border: "2px solid var(--grey-200)", borderTopColor: "var(--fg-3)" }} className="dt-spin"></span>Loading daily summary…
         </Card>
       </div>
     );

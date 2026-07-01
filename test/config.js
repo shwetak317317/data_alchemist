@@ -22,6 +22,20 @@ const CREDENTIALS = {
   password: 'May@123!!',
 };
 
+// ── Known connections ─────────────────────────────────────────────────────────
+// Two real SQL Server connections exist in this environment. They are NOT
+// interchangeable: "demo" carries the lineage/simulator regression fixtures
+// (seeded root-cause failures, FK/dbt edges, trust-score baselines) that
+// lineage-*.spec.ts and scenario-simulator.spec.ts assert against by name in
+// their comments. ensureConnection()'s generic auto-select prefers non-"demo"
+// names (correct for manual/UI use) and will land on "ofc" instead, which has
+// no such fixtures — so any test that depends on the seeded data must pin to
+// CONNECTIONS.demo explicitly via useConnection(), not rely on auto-select.
+const CONNECTIONS = {
+  demo: { id: '6d657fd4-d8f8-4bee-bd89-666e1abf74c1', name: 'My Connection demo', platform: 'sqlserver' },
+  ofc:  { id: '9ffa787e-f713-4903-aeb3-c57660a0ab44', name: 'My Connection ofc',  platform: 'sqlserver' },
+};
+
 // ── Viewport ──────────────────────────────────────────────────────────────────
 const VIEWPORT = { width: 1400, height: 900 };
 
@@ -42,10 +56,69 @@ const SESSION_FILE = path.join(__dirname, '.session.json');
 const _runId = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
 const SCREENSHOTS_DIR = path.join(__dirname, 'screenshots', _runId);
 
+// The app shell scrolls an inner <main id="dt-scroll"> div, not document.body
+// (body stays pinned at viewport height). Two techniques were tried and
+// rejected before this one:
+//   - page.screenshot({fullPage:true}) measures body's scroll height, which
+//     never grows, so it silently truncates to the viewport and misses
+//     everything below the fold (confirmed: it dropped an entire narrative
+//     panel during Impact Graph testing with no error or warning).
+//   - locator('#dt-scroll').screenshot() does NOT auto-scroll-and-stitch —
+//     it just captures whatever's currently within the container's rendered
+//     bounding box, so it's scroll-position-dependent and equally partial
+//     (confirmed: screenshots at scrollTop=0 vs scrollTop=max show entirely
+//     different, non-overlapping content).
+// The only technique that captures everything in one shot: temporarily force
+// the scroll container to lay out at its full content height (overflow:
+// visible; height:auto) so document.body.scrollHeight genuinely reflects all
+// content, THEN take a normal fullPage screenshot, then restore the original
+// styles so the live page/session is unaffected.
+async function fullPageScreenshot(page, filePath) {
+  const scrollContainer = page.locator('#dt-scroll');
+  if (await scrollContainer.count() === 0) {
+    await page.screenshot({ path: filePath, fullPage: true });
+    return;
+  }
+  const original = await page.evaluate(() => {
+    const el = document.getElementById('dt-scroll');
+    const orig = { overflow: el.style.overflow, height: el.style.height, scrollTop: el.scrollTop };
+    el.scrollTop = 0;
+    el.style.overflow = 'visible';
+    el.style.height = 'auto';
+    // Chromium's captureBeyondViewport screenshot path has a known compositor
+    // bug: position:sticky elements (e.g. the TopBar in shell.jsx) can paint at
+    // their last "stuck" scroll offset instead of their true laid-out position,
+    // even though getBoundingClientRect() reports the correct unstuck position
+    // (confirmed via a dedicated DOM-rect diagnostic). Forcing sticky -> static
+    // for the duration of the capture sidesteps the compositor entirely.
+    const stickyEls = Array.from(document.querySelectorAll('*')).filter(
+      e => getComputedStyle(e).position === 'sticky'
+    );
+    const stickyOriginal = stickyEls.map(e => e.style.position);
+    stickyEls.forEach(e => { e.style.position = 'static'; });
+    window.__dtStickyEls = stickyEls;
+    window.__dtStickyOriginal = stickyOriginal;
+    return orig;
+  });
+  try {
+    await page.screenshot({ path: filePath, fullPage: true });
+  } finally {
+    await page.evaluate((orig) => {
+      const el = document.getElementById('dt-scroll');
+      el.style.overflow = orig.overflow;
+      el.style.height = orig.height;
+      el.scrollTop = orig.scrollTop;
+      (window.__dtStickyEls || []).forEach((e, i) => { e.style.position = window.__dtStickyOriginal[i]; });
+      delete window.__dtStickyEls;
+      delete window.__dtStickyOriginal;
+    }, original);
+  }
+}
+
 async function ss(page, name) {
   if (!fs.existsSync(SCREENSHOTS_DIR)) fs.mkdirSync(SCREENSHOTS_DIR, { recursive: true });
   const filePath = path.join(SCREENSHOTS_DIR, `${name}.png`);
-  await page.screenshot({ path: filePath, fullPage: false });
+  await fullPageScreenshot(page, filePath);
   console.log(`  📸 ${name}.png`);
 }
 
@@ -241,7 +314,9 @@ async function ensureConnection(page) {
   let connections;
   try {
     connections = await page.evaluate(async () => {
-      const r = await fetch('/api/connections');
+      const token = sessionStorage.getItem('dt_token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const r = await fetch('/api/connections', { headers });
       return r.ok ? await r.json() : [];
     });
   } catch (e) {
@@ -281,7 +356,38 @@ async function ensureConnection(page) {
     { timeout: TIMEOUTS.appReady }
   );
 
-  console.log(`[connection] ✅ Set to "${pick.connection_name}"`);
+  console.log(`[connection] ✅ Set to "${pick.name || pick.connection_name}"`);
+}
+
+/**
+ * Force the active connection to a specific known one (see CONNECTIONS),
+ * regardless of what ensureConnection()'s generic auto-select would otherwise
+ * pick. Use this in any test that depends on a specific connection's seeded
+ * data (fixtures, baselines) rather than "whichever connection is active".
+ * Reloads so React's live state (not just localStorage) reflects the change.
+ */
+async function useConnection(page, { id, name, platform }) {
+  const current = await page.evaluate(() => localStorage.getItem('dt_conn_id'));
+  if (current === id) {
+    console.log(`[connection] Already pinned to "${name}"`);
+    return;
+  }
+
+  await page.evaluate(({ id, name, platform }) => {
+    localStorage.setItem('dt_conn_id',       id       || '');
+    localStorage.setItem('dt_conn_name',     name     || '');
+    localStorage.setItem('dt_conn_platform', platform || '');
+  }, { id, name, platform });
+
+  await _saveSession(page);
+  await _injectSavedSession(page);
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForFunction(
+    (t) => document.body.innerText.includes(t),
+    _APP_SHELL_TEXT,
+    { timeout: TIMEOUTS.appReady }
+  );
+  console.log(`[connection] 📌 Pinned to "${name}"`);
 }
 
 // ── Navigation ────────────────────────────────────────────────────────────────
@@ -349,16 +455,19 @@ async function assertNotBlank(page, label = 'Page is not blank') {
 module.exports = {
   BASE_URL,
   CREDENTIALS,
+  CONNECTIONS,
   VIEWPORT,
   TIMEOUTS,
   SCREENSHOTS_DIR,
   SCREEN_INDICATORS,
   ss,
+  fullPageScreenshot,
   checkAppHealth,
   launchBrowser,
   login,
   goTo,
   ensureConnection,
+  useConnection,
   collectJsErrors,
   assert,
   assertBodyContains,

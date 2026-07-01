@@ -384,6 +384,26 @@ def run_profiling_stream(req: ProfilingRunRequest, db: Session = Depends(get_db)
     connector = get_active_connector(req.connection_id, db)
     schema_name = req.schema_name or "dbo"
 
+    # Validate schema/table against the live connector's own catalog BEFORE they are
+    # ever interpolated into raw SQL downstream (connectors build FROM-clauses via
+    # f-string table_ref(), not bind params) — closes the injection surface and
+    # rejects typo'd/dropped tables with a real 404 instead of silently profiling
+    # an empty result set.
+    try:
+        if schema_name not in connector.list_schemas():
+            connector.close()
+            raise HTTPException(404, f"Schema not found on this connection: {schema_name}")
+        if req.table_name not in {t.table_name for t in connector.list_tables(schema_name)}:
+            connector.close()
+            raise HTTPException(404, f"Table not found: {schema_name}.{req.table_name}")
+    except HTTPException:
+        raise
+    except Exception as e:
+        connector.close()
+        logger.error("Table validation failed for %s.%s connection=%s: %s",
+                     schema_name, req.table_name, req.connection_id, e, exc_info=True)
+        raise HTTPException(502, f"Could not validate table against the data source: {e}")
+
     # Resolve layer from wizard layer_map stored in DB
     layer_override: str | None = None
     try:

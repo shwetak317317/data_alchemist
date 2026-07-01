@@ -11,6 +11,26 @@ function useIcons(dep) {
 }
 window.useIcons = useIcons;
 
+// Contains a screen crash to its own content area instead of blanking the whole app.
+// Needed because lucide.createIcons() mutates <i data-lucide> nodes outside React's
+// control; when a screen's loading→loaded transition swaps that subtree, React's own
+// unmount can throw removeChild errors that would otherwise unmount the entire tree.
+class ScreenErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { hasError: false }; }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  componentDidCatch(error, info) { console.error("Screen crashed:", error, info); }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: 24, background: "var(--red-50)", border: "1px solid var(--red-200)", borderRadius: 10, fontSize: 13, color: "var(--red-700)" }}>
+          This screen hit an unexpected error and could not render. Try switching screens and coming back.
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 // ---------- Platform metadata (for sidebar glyph/color) ----------
 const SIDEBAR_PLATFORMS = {
   sqlserver:  { glyph: "⬡", color: "#cc2020" },
@@ -348,7 +368,9 @@ function App() {
           <TopBar />
           <DemoBanner />
           <main id="dt-scroll" style={{ flex: 1, overflowY: "auto", padding: "26px 30px 40px" }}>
-            <Screen />
+            <ScreenErrorBoundary key={route}>
+              <Screen />
+            </ScreenErrorBoundary>
           </main>
         </div>
         <ToastHost />

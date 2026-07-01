@@ -44,3 +44,7 @@ httpx==0.27.2
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 bcrypt==4.0.1
+
+# SQL parsing — query-log lineage discovery (extract source/target tables from
+# INSERT/MERGE/CREATE TABLE AS SELECT statements, never regex-guessed)
+sqlglot==25.24.5

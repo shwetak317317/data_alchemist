@@ -23,6 +23,27 @@ class QueryResult:
     row_count: int
 
 
+@dataclass
+class ForeignKeyRef:
+    """A declared FK constraint, direction-normalized for lineage: source = the
+    referenced/parent table (upstream — the data other tables depend on), target =
+    the table holding the FK column (downstream — breaks if source data is wrong)."""
+    constraint_name: str
+    source_schema: str
+    source_table: str
+    source_columns: list[str]
+    target_schema: str
+    target_table: str
+    target_columns: list[str]
+
+
+@dataclass
+class QueryLogEntry:
+    query_text: str
+    executed_at: str | None = None   # ISO string, best-effort — platforms vary in precision
+    execution_count: int = 1
+
+
 class BaseConnector(ABC):
     """
     Pluggable connector interface.
@@ -55,6 +76,26 @@ class BaseConnector(ABC):
         if result.rows:
             return result.rows[0][0]
         return None
+
+    # ── Lineage discovery (optional capabilities) ──────────────────────────────
+    # Defaults are "unsupported" so every connector works out of the box; override
+    # only where a platform genuinely exposes this metadata. Callers MUST check
+    # supports_query_log() rather than inferring support from an empty list, so a
+    # real "no matches" result is never confused with "this platform isn't wired up".
+
+    def list_foreign_keys(self, schema: str) -> list["ForeignKeyRef"]:
+        """Return declared FK constraints within the given schema/database.
+        Default: unsupported — returns []. Override per connector."""
+        return []
+
+    def supports_query_log(self) -> bool:
+        """Whether list_recent_queries() is actually implemented for this connector."""
+        return False
+
+    def list_recent_queries(self, since_hours: int = 168, limit: int = 500) -> list["QueryLogEntry"]:
+        """Return recent executed query text, for SQL-parsed lineage discovery.
+        Default: unsupported — returns []. Check supports_query_log() first."""
+        return []
 
     def table_ref(self, schema: str, table: str) -> str:
         """Return a SQL-safe fully-qualified table reference for use in FROM clauses.

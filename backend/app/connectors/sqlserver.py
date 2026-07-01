@@ -9,7 +9,7 @@ Two operating modes:
 """
 import logging
 import pyodbc
-from app.connectors.base import BaseConnector, TableSchema, QueryResult
+from app.connectors.base import BaseConnector, TableSchema, QueryResult, ForeignKeyRef, QueryLogEntry
 
 logger = logging.getLogger(__name__)
 
@@ -272,6 +272,105 @@ class SqlServerConnector(BaseConnector):
         except Exception:
             conn.rollback()
             raise
+
+    def _encode_table_name(self, db_schema: str, table_name: str) -> str:
+        """Match list_tables' encoding: dbo tables are bare, others get 'schema.table'."""
+        return table_name if db_schema == "dbo" else f"{db_schema}.{table_name}"
+
+    def list_foreign_keys(self, schema: str) -> list[ForeignKeyRef]:
+        """Declared FK constraints. SQL Server FKs cannot cross databases, so in
+        cross-DB mode this only ever finds relationships within the single
+        database named by `schema` — it will not surface Bronze→Silver→Gold
+        style cross-database pipelines (those have no FK to discover; that's
+        what query-log discovery is for)."""
+        db_prefix = f"[{schema}]." if self._is_cross_db() else ""
+        schema_filter = "" if self._is_cross_db() else "WHERE sch1.name = ?"
+        sql = f"""
+            SELECT fk.name,
+                   sch1.name, tab1.name, col1.name,
+                   sch2.name, tab2.name, col2.name
+            FROM {db_prefix}sys.foreign_keys fk
+            JOIN {db_prefix}sys.foreign_key_columns fkc ON fkc.constraint_object_id = fk.object_id
+            JOIN {db_prefix}sys.tables tab1 ON tab1.object_id = fkc.parent_object_id
+            JOIN {db_prefix}sys.schemas sch1 ON sch1.schema_id = tab1.schema_id
+            JOIN {db_prefix}sys.columns col1 ON col1.object_id = fkc.parent_object_id
+                AND col1.column_id = fkc.parent_column_id
+            JOIN {db_prefix}sys.tables tab2 ON tab2.object_id = fkc.referenced_object_id
+            JOIN {db_prefix}sys.schemas sch2 ON sch2.schema_id = tab2.schema_id
+            JOIN {db_prefix}sys.columns col2 ON col2.object_id = fkc.referenced_object_id
+                AND col2.column_id = fkc.referenced_column_id
+            {schema_filter}
+            ORDER BY fk.name, col1.column_id
+        """
+        try:
+            result = self.query(sql, None if self._is_cross_db() else {"schema": schema})
+        except Exception as e:
+            logger.warning("list_foreign_keys schema=%s: %s", schema, e)
+            return []
+
+        # holder = table that HAS the FK column (sys.fk_columns "parent"); referenced =
+        # the looked-up table. Lineage direction: referenced (upstream truth) -> holder
+        # (breaks if referenced data is wrong) — the inverse of FK "parent/child" naming.
+        grouped: dict[str, ForeignKeyRef] = {}
+        for fk_name, holder_schema, holder_table, holder_col, ref_schema, ref_table, ref_col in result.rows:
+            if fk_name not in grouped:
+                grouped[fk_name] = ForeignKeyRef(
+                    constraint_name=fk_name,
+                    source_schema=schema if self._is_cross_db() else ref_schema,
+                    source_table=self._encode_table_name(ref_schema, ref_table),
+                    source_columns=[],
+                    target_schema=schema if self._is_cross_db() else holder_schema,
+                    target_table=self._encode_table_name(holder_schema, holder_table),
+                    target_columns=[],
+                )
+            grouped[fk_name].source_columns.append(ref_col)
+            grouped[fk_name].target_columns.append(holder_col)
+        return list(grouped.values())
+
+    def supports_query_log(self) -> bool:
+        return True
+
+    def list_recent_queries(self, since_hours: int = 168, limit: int = 500) -> list[QueryLogEntry]:
+        """Recent executed query text from the plan cache (sys.dm_exec_query_stats).
+
+        Requires VIEW SERVER STATE (or VIEW DATABASE STATE on Azure SQL) permission,
+        and only sees queries whose plan is still cached — this is a sample of recent
+        activity, not a complete audit log.
+
+        Deliberately lets a permission/connection error PROPAGATE rather than
+        swallowing it into an empty list: the caller (lineage_discovery service)
+        catches it and reports the real reason in query_log_unsupported_reason, so
+        "0 results because nothing matched" is never confused with "0 results
+        because the grant is missing" — those need very different follow-up action
+        from a steward.
+        """
+        sql = f"""
+            SELECT TOP ({int(limit)})
+                st.text,
+                qs.last_execution_time,
+                qs.execution_count
+            FROM sys.dm_exec_query_stats qs
+            CROSS APPLY sys.dm_exec_sql_text(qs.sql_handle) st
+            WHERE qs.last_execution_time >= DATEADD(HOUR, ?, SYSDATETIME())
+              AND st.text IS NOT NULL
+              AND (
+                    st.text LIKE '%INSERT%INTO%' OR
+                    st.text LIKE '%MERGE%' OR
+                    st.text LIKE '%SELECT%INTO%' OR
+                    st.text LIKE '%CREATE TABLE%AS%'
+                  )
+            ORDER BY qs.last_execution_time DESC
+        """
+        result = self.query(sql, {"since_hours": -abs(int(since_hours))})
+
+        return [
+            QueryLogEntry(
+                query_text=row[0],
+                executed_at=row[1].isoformat() if row[1] else None,
+                execution_count=int(row[2] or 1),
+            )
+            for row in result.rows if row[0]
+        ]
 
     def close(self) -> None:
         if self._conn and not self._conn.closed:
