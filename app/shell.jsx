@@ -180,9 +180,10 @@ const TopBar = () => {
   const { route, trustScore, pipeline, activeConnectionName } = useApp();
   const meta = NAV.flatMap(g => g.items).find(i => i.id === route) || {};
   const pipMap = {
-    ISSUES:     ["var(--red-500)", "var(--red-50)", "Issues detected"],
-    RECOVERING: ["var(--yellow-600)", "var(--yellow-50)", "Recovering"],
-    HEALTHY:    ["var(--green-500)", "var(--green-50)", "Healthy"],
+    ISSUES:      ["var(--red-500)", "var(--red-50)", "Issues detected"],
+    RECOVERING:  ["var(--yellow-600)", "var(--yellow-50)", "Recovering"],
+    HEALTHY:     ["var(--green-500)", "var(--green-50)", "Healthy"],
+    UNAVAILABLE: ["var(--grey-600, #4b5563)", "var(--grey-100)", "Source unreachable"],
   };
   const [pc, pbg, plabel] = pipMap[pipeline] || pipMap.ISSUES;
   return (

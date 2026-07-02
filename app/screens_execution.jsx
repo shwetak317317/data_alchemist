@@ -123,10 +123,12 @@
       const lr = rows.filter(x => x.layer === layer);
       const passed = lr.filter(x => x.status === "PASS").length;
       const failed = lr.filter(x => x.status === "FAIL").length;
+      const errored = lr.filter(x => x.status === "ERROR").length;
+      const allErrored = lr.length > 0 && errored === lr.length;
       const avgScore = lr.length
         ? Math.round(lr.reduce((sum, x) => sum + (x.qualityScore ?? (x.status === "PASS" ? 100 : 0)), 0) / lr.length)
         : 0;
-      return { layer, rules: lr.length, passed, failed, score: avgScore };
+      return { layer, rules: lr.length, passed, failed, errored, allErrored, score: avgScore };
     }).filter(l => l.rules > 0);
   };
 
@@ -145,6 +147,8 @@
       runNumber: r.run_number || null,
       rulesTotal: r.total_rules || mapped.length,
       failed: r.failed || 0,
+      errors: r.errors || 0,
+      allErrored: r.total_rules > 0 && r.errors === r.total_rules,
       overallScore: r.overall_quality_score ?? null,
       runTimestamp: r.run_timestamp || null,
       durationSecs: r.duration_seconds || null,
@@ -163,12 +167,15 @@
       const merged = Array.from(byId.values());
       const ls = _layerScoresFrom(merged);
       setLayerScores(ls);
+      const mergedErrors = merged.filter(x => x.status === "ERROR").length;
       setRunMeta(prevMeta => ({
         ...(prevMeta || {}),
         runId: r.run_id || prevMeta?.runId,
         runTimestamp: r.run_timestamp || prevMeta?.runTimestamp,
         rulesTotal: merged.length,
         failed: merged.filter(x => x.status === "FAIL" && !x.isExpected).length,
+        errors: mergedErrors,
+        allErrored: merged.length > 0 && mergedErrors === merged.length,
         overallScore: merged.length
           ? Math.round(merged.reduce((sum, x) => sum + (x.qualityScore ?? (x.status === "PASS" ? 100 : 0)), 0) / merged.length)
           : (prevMeta?.overallScore ?? null),
@@ -195,6 +202,7 @@
     const [ackId, setAckId]             = React.useState(null);
     const [ackNote, setAckNote]         = React.useState("");
     const [ackedIds, setAckedIds]       = React.useState({});
+    const [neverRunRules, setNeverRunRules] = React.useState([]);
     useIcons();
 
     // Sets the header trust/pipeline badge from a run response, or resets it to a
@@ -204,7 +212,11 @@
     const _applyHealthBadge = (r) => {
       if (!r) { setPipeline("UNKNOWN"); return; }
       if (r.overall_quality_score != null) setTrustScore(Math.round(r.overall_quality_score));
-      setPipeline((r.failed > 0 || r.errors > 0) ? "ISSUES" : "HEALTHY");
+      // An all-ERROR run means the source was unreachable — that's a connectivity
+      // problem, not a data-quality one, and reads very differently to a user
+      // than "every rule failed." Keep it visually and semantically distinct.
+      const allErrored = r.total_rules > 0 && r.errors === r.total_rules;
+      setPipeline(allErrored ? "UNAVAILABLE" : (r.failed > 0 || r.errors > 0) ? "ISSUES" : "HEALTHY");
     };
 
     React.useEffect(() => {
@@ -212,10 +224,12 @@
       setExecResults([]);
       setLayerScores([]);
       setRunMeta(null);
+      setNeverRunRules([]);
       window.DTApi.getCurrentExecState(activeConnectionId)
         .then(r => {
           _applyRunResults(r, setExecResults, setLayerScores, setRunMeta);
           _applyHealthBadge(r);
+          setNeverRunRules(r?.never_run_rules || []);
         })
         .catch(() => _applyHealthBadge(null));
       window.DTApi.listRules(activeConnectionId, "approved")
@@ -233,6 +247,7 @@
           if (r?.run_id) setLastRunId(r.run_id);
           _applyRunResults(r, setExecResults, setLayerScores, setRunMeta);
           _applyHealthBadge(r);
+          setNeverRunRules([]);
           setApiDone(true);
         })
         .catch(err => {
@@ -288,11 +303,26 @@
         is_expected: true,
         reason: reason || "Expected failure",
       }).then(() => {
-        setAckedIds(x => ({ ...x, [resultId]: true }));
         setAckId(null);
         setAckNote("");
         setShowRecords(false);
         toast("Marked as expected · logged to audit trail", { kind: "info" });
+        // Deferred: closing the modal and shrinking visibleResults' filtered
+        // row count in the same commit raced React's reconciler (NotFoundError
+        // on removeChild). Letting the modal's unmount commit first, then
+        // updating state on the next tick, avoids the collision.
+        setTimeout(() => {
+          setAckedIds(x => ({ ...x, [resultId]: true }));
+          setExecResults(prev => {
+            const updated = prev.map(r => r.resultId === resultId ? { ...r, isExpected: true } : r);
+            setLayerScores(_layerScoresFrom(updated));
+            setRunMeta(prevMeta => prevMeta ? {
+              ...prevMeta,
+              failed: updated.filter(x => x.status === "FAIL" && !x.isExpected).length,
+            } : prevMeta);
+            return updated;
+          });
+        }, 0);
       }).catch(err => {
         toast("Could not save — " + (err?.message || "try again"), { kind: "error" });
       });
@@ -308,6 +338,13 @@
       return rows;
     }, [execResults, filterStatus, filterLayer, ackedIds]);
 
+    // Prefix a leading =+-@ with a single quote so Excel/Sheets never treats a
+    // free-text cell (rule name, table name — both user/LLM authored) as a formula.
+    const csvSafe = (v) => {
+      const s = String(v ?? "");
+      return /^[=+\-@]/.test(s) ? `'${s}` : s;
+    };
+
     const downloadCsv = () => {
       const headers = ["Rule","Layer","Status","Table","Fail Count","Fail %","Quality Score","Severity","CDE"];
       const rows = visibleResults.map(r => [
@@ -315,7 +352,7 @@
         r.failCnt, r.failPct, r.qualityScore ?? "", r.sev, r.isCde ? "Y" : "N"
       ]);
       const csv = [headers, ...rows]
-        .map(row => row.map(v => `"${String(v ?? "").replace(/"/g, '""')}"`).join(","))
+        .map(row => row.map(v => `"${csvSafe(v).replace(/"/g, '""')}"`).join(","))
         .join("\n");
       const blob = new Blob([csv], { type: "text/csv" });
       const url = URL.createObjectURL(blob);
@@ -361,8 +398,19 @@
                         : runMeta.durationSecs < 1 ? `<1s` : `${Math.round(runMeta.durationSecs)}s`}</>
                     )}
                     {" · "}<strong style={{ color: "var(--red-500)" }}>{runMeta.failed ?? 0} failed</strong>
+                    {runMeta.errors > 0 && (
+                      <> · <strong style={{ color: "var(--grey-600, #4b5563)" }}>{runMeta.errors} couldn't run</strong></>
+                    )}
                   </div>
-                  {runMeta.overallScore !== null && (
+                  {runMeta.allErrored ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, padding: "6px 10px",
+                      borderRadius: 8, background: "var(--grey-100)", border: "1px solid var(--grey-200)" }}>
+                      <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--grey-700, #374151)" }}>
+                        Connection unreachable — no rule could run. This is not a data-quality result.
+                        Check the connection's health on the Connections page.
+                      </span>
+                    </div>
+                  ) : runMeta.overallScore !== null && (
                     <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8 }}>
                       <span style={{ fontSize: 11.5, color: "var(--fg-3)" }}>Overall quality</span>
                       <span style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20,
@@ -384,6 +432,15 @@
             </div>
             <Button variant="outline" icon="refresh-cw" size="sm" onClick={startRun}>Re-run checks</Button>
           </div>
+          {neverRunRules.length > 0 && (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, padding: "6px 10px",
+              borderRadius: 8, background: "var(--yellow-50)", border: "1px solid var(--yellow-200, #fde68a)" }}>
+              <span style={{ fontSize: 12.5, color: "var(--yellow-800, #92400e)" }}>
+                {neverRunRules.length} approved rule{neverRunRules.length > 1 ? "s" : ""} never run
+                ({neverRunRules.slice(0, 3).join(", ")}{neverRunRules.length > 3 ? "…" : ""}) — click Re-run checks to include {neverRunRules.length > 1 ? "them" : "it"}.
+              </span>
+            </div>
+          )}
         </Card>
 
         {/* ── Layer summary cards ── */}

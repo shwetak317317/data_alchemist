@@ -21,6 +21,7 @@ class TrustSummary(BaseModel):
     open_critical: int
     open_high: int
     open_medium: int
+    open_errors: int = 0                      # rules that could not execute (e.g. source unreachable) — distinct from FAIL
     active_anomalies: int
     cde_health_pct: float
     last_run_at: Optional[datetime] = None

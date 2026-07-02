@@ -9,7 +9,7 @@ from app.core.metadata_db import get_db
 from app.core.auth_deps import get_current_user, assert_connection_access, CurrentUser
 from app.core.json_utils import json_safe
 from app.api.connections import get_active_connector
-from app.agents.execution_agent import run_all_rules, all_rules_connection_error
+from app.agents.execution_agent import run_all_rules, all_rules_connection_error, weighted_quality_score
 from app.models.execution import ExecutionRunResponse, AcknowledgeFailureRequest
 from app.services.audit_service import log_event
 from app.api.lineage import propagate_lineage_health_sync
@@ -190,18 +190,29 @@ def get_current_state(connection_id: str, db: Session = Depends(get_db),
     from app.models.execution import RuleResult
     rule_results = [RuleResult(**r) for r in results]
     passed = sum(1 for r in rule_results if r.status == "PASS")
-    failed = sum(1 for r in rule_results if r.status == "FAIL")
+    failed = sum(1 for r in rule_results if r.status == "FAIL" and not r.is_expected_failure)
     errors = sum(1 for r in rule_results if r.status == "ERROR")
     latest_run_id, latest_ts = max(((row[1], row[2]) for row in rows), key=lambda x: x[1])
+
+    # Approved/active rules that have NEVER produced a result row are invisible
+    # to the DISTINCT-ON query above (it starts FROM dq_run_results) — surface
+    # them explicitly so a newly-approved CRITICAL rule can't look "clean"
+    # purely because it was never checked.
+    seen_rule_ids = {r.rule_id for r in rule_results}
+    all_approved = db.execute(text(
+        "SELECT rule_id, rule_name FROM dq_rules WHERE connection_id=:conn AND status IN ('approved','active')"
+    ), {"conn": connection_id}).fetchall()
+    never_run_rules = [r[1] for r in all_approved if r[0] not in seen_rule_ids]
 
     return ExecutionRunResponse(
         run_id=latest_run_id,
         connection_id=connection_id,
         run_timestamp=latest_ts,
-        total_rules=len(rule_results),
+        total_rules=len(rule_results) + len(never_run_rules),
         passed=passed, failed=failed, errors=errors,
-        overall_quality_score=sum(r.quality_score for r in rule_results) / max(len(rule_results), 1),
+        overall_quality_score=weighted_quality_score(rule_results),
         results=rule_results,
+        never_run_rules=never_run_rules,
     )
 
 
@@ -240,7 +251,7 @@ def get_run_results(run_id: str, db: Session = Depends(get_db),
     from app.models.execution import RuleResult
     rule_results = [RuleResult(**r) for r in results]
     passed = sum(1 for r in rule_results if r.status == "PASS")
-    failed = sum(1 for r in rule_results if r.status == "FAIL")
+    failed = sum(1 for r in rule_results if r.status == "FAIL" and not r.is_expected_failure)
     errors = sum(1 for r in rule_results if r.status == "ERROR")
 
     return ExecutionRunResponse(
@@ -249,7 +260,7 @@ def get_run_results(run_id: str, db: Session = Depends(get_db),
         run_timestamp=rows[0][2],
         total_rules=len(rule_results),
         passed=passed, failed=failed, errors=errors,
-        overall_quality_score=sum(r.quality_score for r in rule_results) / max(len(rule_results), 1),
+        overall_quality_score=weighted_quality_score(rule_results),
         results=rule_results,
     )
 

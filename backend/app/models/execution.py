@@ -35,6 +35,7 @@ class ExecutionRunResponse(BaseModel):
     results: list[RuleResult]
     duration_seconds: Optional[float] = None
     run_number: Optional[int] = None
+    never_run_rules: list[str] = []
 
 
 class AcknowledgeFailureRequest(BaseModel):

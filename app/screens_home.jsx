@@ -79,6 +79,7 @@
       CRITICAL: summary?.open_critical ?? 0,
       HIGH:     summary?.open_high     ?? 0,
       MEDIUM:   summary?.open_medium   ?? 0,
+      ERRORS:   summary?.open_errors   ?? 0,
     };
 
     // Recent activity
@@ -155,7 +156,14 @@
                     color: n > 0 && s === "CRITICAL" ? "var(--red-500)" : n > 0 && s === "HIGH" ? "var(--yellow-600)" : "var(--fg-1)" }}>{n}</span>
                 </div>
               ))}
-              {!loading && openIssues.CRITICAL === 0 && openIssues.HIGH === 0 && openIssues.MEDIUM === 0 && (
+              {openIssues.ERRORS > 0 && (
+                <div style={{ display: "flex", alignItems: "center", gap: 10, paddingTop: 6, borderTop: "1px dashed var(--grey-200)" }}>
+                  <span style={{ width: 9, height: 9, borderRadius: "50%", background: "var(--purple-500, #8b5cf6)" }}></span>
+                  <span style={{ flex: 1, fontSize: 13, color: "var(--fg-2)" }}>Couldn't run (source unreachable)</span>
+                  <span style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, color: "var(--purple-500, #8b5cf6)" }}>{openIssues.ERRORS}</span>
+                </div>
+              )}
+              {!loading && openIssues.CRITICAL === 0 && openIssues.HIGH === 0 && openIssues.MEDIUM === 0 && openIssues.ERRORS === 0 && (
                 <div style={{ fontSize: 11.5, color: "var(--green-600)", marginTop: 2, fontWeight: 600 }}>No open issues</div>
               )}
             </div>

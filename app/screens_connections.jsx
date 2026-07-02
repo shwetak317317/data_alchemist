@@ -149,13 +149,16 @@
     React.useEffect(() => { loadConns(true); }, []);
 
     const handleSync = (c) => {
+      if (!window.DTApi?.testSavedConnection) return;
       setSyncing(c.id);
       toast(`Re-testing ${c.name}…`, { kind: "info" });
-      loadConns(false);
-      setTimeout(() => {
-        setSyncing(null);
-        toast(`${c.name} synced`, { kind: "success" });
-      }, 1400);
+      window.DTApi.testSavedConnection(c.id)
+        .then(result => {
+          toast(result.success ? `${c.name} is reachable` : `${c.name} failed: ${result.message}`,
+            { kind: result.success ? "success" : "error" });
+        })
+        .catch(err => toast(`${c.name} sync failed: ${err.message}`, { kind: "error" }))
+        .finally(() => { setSyncing(null); loadConns(false); });
     };
 
     const handleDelete = (c) => {

@@ -318,11 +318,21 @@ def test_saved_connection(
         schemas = connector.list_schemas()
         steps.append(f"Found {len(schemas)} schema(s): {', '.join(schemas[:6]) or '(none)'}")
         connector.close()
+        db.execute(text(
+            "UPDATE connections SET status='active', error_message=NULL, "
+            "last_tested_at=NOW(), updated_at=NOW() WHERE id=:id"
+        ), {"id": connection_id})
+        db.commit()
         return ConnectionTestResult(success=True, message="Connection successful",
                                     latency_ms=latency, details=steps, schemas=schemas)
     except ImportError as e:
         latency = int((time.monotonic() - start) * 1000)
         steps.append(f"Driver not installed: {e}")
+        db.execute(text(
+            "UPDATE connections SET status='error', error_message=:err, "
+            "last_tested_at=NOW(), updated_at=NOW() WHERE id=:id"
+        ), {"id": connection_id, "err": f"Required driver not installed: {e}"})
+        db.commit()
         return ConnectionTestResult(success=False, message=f"Required driver not installed: {e}",
                                     latency_ms=latency, details=steps)
     except Exception as e:
@@ -331,6 +341,11 @@ def test_saved_connection(
         clean = raw[raw.find("["):] if "[" in raw else raw
         steps.append(f"Failed: {clean}")
         logger.error("Saved connection test failed (%s / %s): %s", connection_id, platform, raw)
+        db.execute(text(
+            "UPDATE connections SET status='error', error_message=:err, "
+            "last_tested_at=NOW(), updated_at=NOW() WHERE id=:id"
+        ), {"id": connection_id, "err": clean})
+        db.commit()
         return ConnectionTestResult(success=False, message=clean, latency_ms=latency, details=steps)
 
 

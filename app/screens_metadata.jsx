@@ -193,7 +193,6 @@
     const [busNames, setBusNames] = React.useState({});
     const [owners, setOwners]     = React.useState({});
     const [editing, setEditing]         = React.useState(null);
-    const [expandedRow, setExpandedRow] = React.useState(null);
     const [enriching, setEnriching]         = React.useState(false);
     const [enrichingLayer, setEnrichingLayer] = React.useState(null);
     const [enrichProgress, setEnrichProgress] = React.useState({ done: 0, total: 0 });
@@ -211,7 +210,14 @@
     const [sortDir, setSortDir] = React.useState('asc');
     const [selectedCols, setSelectedCols] = React.useState(new Set());
     const [showAddModal, setShowAddModal] = React.useState(false);
+    const [expandedRows, setExpandedRows] = React.useState(new Set());
+    // Tables that failed enrichment because no real profiling report backs them
+    // (e.g. a stale/cached dataset entry pointing at a table that no longer
+    // exists) — flagged so the sidebar stops offering a dead-end "Enrich".
+    const [brokenTables, setBrokenTables] = React.useState({});
     useIcons();
+
+    const rowKey = (m) => m.column_id || `${m.tableFqn}.${m.col}`;
 
     // ── Load ALL data for connection ────────────────────────────────────────
     const loadData = React.useCallback(() => {
@@ -322,6 +328,7 @@
       try {
         const report = await window.DTApi.getReportByTable(targetFqn, activeConnectionId);
         if (!report || !report.report_id) throw new Error('No profiling report found — run Profiling first.');
+        setBrokenTables(b => { if (!b[targetFqn]) return b; const next = { ...b }; delete next[targetFqn]; return next; });
         const result = await window.DTApi.enrichMetadata(report.report_id, activeConnectionId);
         const tName = targetFqn.split('.').slice(-1)[0];
         const missed = result.missing_columns?.length || 0;
@@ -336,6 +343,12 @@
         const msg = (e.message || 'Enrichment failed').replace(/^API \d+: /, '');
         setEnrichError(msg);
         toast(msg, { kind: 'error' });
+        // "No profiling report" means the sidebar's dataset cache is pointing at
+        // a table with no real profiling behind it (stale cache, renamed/dropped
+        // source table). Flag it so the sidebar stops offering a dead-end retry.
+        if (/no profiling report/i.test(msg)) {
+          setBrokenTables(b => ({ ...b, [targetFqn]: msg }));
+        }
       } finally {
         setEnriching(false);
       }
@@ -344,7 +357,7 @@
     const runEnrichAllLayer = async (group) => {
       const eligible = group.tables.filter(t => {
         const cov = coverageByTable[t.fqn] || { total: 0, enriched: 0 };
-        return t.profiled && cov.enriched === 0;
+        return t.profiled && cov.enriched === 0 && !brokenTables[t.fqn];
       });
       if (!eligible.length) {
         toast(`No un-enriched profiled tables in ${group.layer}`, { kind: 'info' });
@@ -353,12 +366,16 @@
       setEnrichingLayer(group.layer);
       setEnrichProgress({ done: 0, total: eligible.length });
       let doneCount = 0;
+      const failedTables = [];
 
       for (let i = 0; i < eligible.length; i++) {
         const t = eligible[i];
         try {
           const report = await window.DTApi.getReportByTable(t.fqn, activeConnectionId);
-          if (report && report.report_id) {
+          if (!report || !report.report_id) {
+            failedTables.push(t.name);
+            setBrokenTables(b => ({ ...b, [t.fqn]: 'No profiling report found' }));
+          } else {
             await window.DTApi.enrichMetadata(report.report_id, activeConnectionId);
             doneCount++;
             // Fetch this table's enriched columns and merge into state immediately
@@ -385,7 +402,9 @@
               setOwners(o => ({ ...o, ...Object.fromEntries(newCols.map(m => [m.col, m.businessOwner])) }));
             }
           }
-        } catch (_) { /* skip failed tables, continue with next */ }
+        } catch (e) {
+          failedTables.push(t.name);
+        }
         setEnrichProgress({ done: i + 1, total: eligible.length });
         // Yield a macrotask so React flushes and paints before the next table starts
         await new Promise(resolve => setTimeout(resolve, 0));
@@ -395,6 +414,9 @@
       setEnrichProgress({ done: 0, total: 0 });
       if (doneCount === 0) {
         toast(`Could not enrich any tables in ${group.layer} — run Profiling first.`, { kind: 'error' });
+      } else if (failedTables.length > 0) {
+        toast(`Enriched ${doneCount} table(s) in ${group.layer} · ${failedTables.length} skipped (${failedTables.slice(0, 3).join(', ')}${failedTables.length > 3 ? '…' : ''})`,
+          { kind: 'info' });
       }
       // Final full refresh to update CDEs, datasets, and sidebar coverage counts
       loadData();
@@ -660,7 +682,7 @@
                         {(() => {
                           const eligible = group.tables.filter(t => {
                             const cov = coverageByTable[t.fqn] || { total: 0, enriched: 0 };
-                            return t.profiled && cov.enriched === 0;
+                            return t.profiled && cov.enriched === 0 && !brokenTables[t.fqn];
                           });
                           if (!eligible.length) return null;
                           const busy = enrichingLayer === group.layer;
@@ -714,7 +736,13 @@
                               </span>
                             </button>
                             {/* Quick Enrich button for profiled tables with no metadata */}
-                            {t.profiled && cov.total === 0 && (
+                            {t.profiled && cov.total === 0 && brokenTables[t.fqn] ? (
+                              <span title={brokenTables[t.fqn]}
+                                style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10,
+                                  margin: '0 10px 5px 16px', color: 'var(--yellow-700)' }}>
+                                <IcoWarning /> No profiling report — stale entry
+                              </span>
+                            ) : t.profiled && cov.total === 0 && (
                               <button
                                 disabled={enriching || !!enrichingLayer}
                                 onClick={e => { e.stopPropagation(); setSelectedFqn(t.fqn); runEnrichmentFor(t.fqn); }}
@@ -778,6 +806,16 @@
                   style={{ background: 'none', border: 'none', cursor: 'pointer',
                     fontSize: 11, color: 'var(--fg-3)', textDecoration: 'underline' }}>
                   Clear
+                </button>
+              )}
+              {filteredRows.length > 0 && (
+                <button onClick={() => {
+                    const allOpen = filteredRows.every(m => expandedRows.has(rowKey(m)));
+                    setExpandedRows(allOpen ? new Set() : new Set(filteredRows.map(rowKey)));
+                  }}
+                  style={{ background: 'none', border: '1px solid var(--grey-200)', cursor: 'pointer',
+                    fontSize: 11, color: 'var(--fg-2)', borderRadius: 6, padding: '3px 9px' }}>
+                  {filteredRows.every(m => expandedRows.has(rowKey(m))) ? 'Collapse all' : 'Expand all'}
                 </button>
               )}
               <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--fg-3)' }}>
@@ -866,7 +904,7 @@
 
                 // ── Column row ───────────────────────────────────────────
                 const m = row;
-                const isOpen    = expandedRow === m.col;
+                const isOpen    = expandedRows.has(rowKey(m));
                 const isEditing = editing === m.col;
                 const ls        = LAYER_STYLE[m.layer] || LAYER_STYLE.UNKNOWN;
 
@@ -883,7 +921,11 @@
                           setSelectedCols(next);
                         }}
                         onClick={e => e.stopPropagation()} />
-                      <button onClick={() => setExpandedRow(isOpen ? null : m.col)}
+                      <button onClick={() => setExpandedRows(prev => {
+                          const next = new Set(prev);
+                          isOpen ? next.delete(rowKey(m)) : next.add(rowKey(m));
+                          return next;
+                        })}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, flexShrink: 0, color: 'var(--fg-3)' }}>
                         <IcoChevron open={isOpen} />
                       </button>
@@ -891,6 +933,11 @@
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
                           <Mono style={{ fontWeight: 700, fontSize: 13 }}>{m.col}</Mono>
+                          {!isOpen && busNames[m.col] && (
+                            <span style={{ fontSize: 11.5, color: 'var(--fg-2)', fontStyle: 'italic' }}>
+                              {busNames[m.col]}
+                            </span>
+                          )}
                           {m.dataType && (
                             <span style={{ fontSize: 11, color: 'var(--fg-3)', background: 'var(--grey-100)',
                               padding: '1px 6px', borderRadius: 4 }}>{m.dataType}</span>
@@ -945,7 +992,7 @@
                             </button>
                           )}
                           {m.status !== 'rejected' && !isEditing && (
-                            <button title="Edit" onClick={() => { setEditing(m.col); setExpandedRow(m.col); }}
+                            <button title="Edit" onClick={() => { setEditing(m.col); setExpandedRows(prev => new Set(prev).add(rowKey(m))); }}
                               style={iconBtnBase}>
                               <IcoPencil />
                             </button>

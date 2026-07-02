@@ -9,6 +9,7 @@ from sqlalchemy import text
 from app.core.metadata_db import get_db
 from app.core.auth_deps import get_current_user, CurrentUser
 from app.models.dashboard import TrustSummary, LayerHealth, TrendPoint, CDEStatus
+from app.agents.execution_agent import SEVERITY_WEIGHT
 
 
 class AuditEntry(BaseModel):
@@ -62,7 +63,6 @@ def get_summary(connection_id: str | None = None, db: Session = Depends(get_db),
         layer: sum(scores) / len(scores)
         for layer, scores in layer_score_lists.items()
     }
-    overall = round(sum(layer_averages.values()) / max(len(layer_averages), 1), 1) if layer_averages else 0
     profiled_table_count = len(latest_rows)
 
     # Latest profiling run_at
@@ -79,6 +79,8 @@ def get_summary(connection_id: str | None = None, db: Session = Depends(get_db),
     issues_by_sev: dict = {}
     last_execution_ts = None
     execution_runs = 0
+    execution_error_count = 0
+    execution_quality_score = None
     if latest_run_id:
         run_params = {**params, "run_id": latest_run_id}
         issue_rows = db.execute(text("""
@@ -90,6 +92,18 @@ def get_summary(connection_id: str | None = None, db: Session = Depends(get_db),
         last_execution_ts = db.execute(text("""
             SELECT MAX(run_timestamp) FROM dq_run_results WHERE run_id=:run_id
         """), run_params).scalar()
+
+        # Latest run's own health — same weighted-score definition used by the
+        # DQ Execution screen, so this dashboard never reports "Healthy" for a
+        # connection whose most recent run couldn't even reach the source.
+        run_rows = db.execute(text("""
+            SELECT quality_score, severity, status FROM dq_run_results WHERE run_id=:run_id
+        """), {"run_id": latest_run_id}).fetchall()
+        execution_error_count = sum(1 for r in run_rows if r[2] == "ERROR")
+        if run_rows:
+            total_weight = sum(SEVERITY_WEIGHT.get(r[1], 1) for r in run_rows) or 1
+            weighted_sum = sum(float(r[0] or 0) * SEVERITY_WEIGHT.get(r[1], 1) for r in run_rows)
+            execution_quality_score = round(weighted_sum / total_weight, 1)
 
     execution_runs = int(db.execute(text(f"""
         SELECT COUNT(DISTINCT run_id) FROM dq_run_results {conn_where}
@@ -223,7 +237,15 @@ def get_summary(connection_id: str | None = None, db: Session = Depends(get_db),
             critical_count=0, high_count=0,
         ))
 
-    pipeline_status = "ISSUES" if issues_by_sev.get("CRITICAL", 0) > 0 else (
+    # Prefer the latest execution run's own health over historical profiling
+    # stats — profiling scores go stale the moment the source becomes
+    # unreachable, which previously let this dashboard report "Healthy" while
+    # every rule in the latest run errored out.
+    overall = execution_quality_score if execution_quality_score is not None else (
+        round(sum(layer_averages.values()) / max(len(layer_averages), 1), 1) if layer_averages else 0
+    )
+
+    pipeline_status = "ISSUES" if (issues_by_sev.get("CRITICAL", 0) > 0 or execution_error_count > 0) else (
         "RECOVERING" if issues_by_sev.get("HIGH", 0) > 0 else "HEALTHY"
     )
 
@@ -240,6 +262,7 @@ def get_summary(connection_id: str | None = None, db: Session = Depends(get_db),
         open_critical=issues_by_sev.get("CRITICAL", 0),
         open_high=issues_by_sev.get("HIGH", 0),
         open_medium=issues_by_sev.get("MEDIUM", 0),
+        open_errors=execution_error_count,
         active_anomalies=anomaly_count,
         cde_health_pct=cde_health_pct,
         last_run_at=last_run_at,

@@ -55,7 +55,7 @@ def list_dictionary(connection_id: str | None = None, table_fqn: str | None = No
         f"SELECT column_id, table_fqn, schema_name, table_name, layer, column_name, "
         f"business_name, description, data_type, format_standard, is_pii, is_cde, "
         f"cde_score, business_owner, sensitivity_tag, ai_suggested, status, "
-        f"approved_by, approved_at FROM data_dictionary {where} ORDER BY table_fqn, column_name"
+        f"approved_by, approved_at, connection_id FROM data_dictionary {where} ORDER BY table_fqn, column_name"
     ), params).fetchall()
     return [
         {
@@ -65,7 +65,7 @@ def list_dictionary(connection_id: str | None = None, table_fqn: str | None = No
             "format_standard": r[9], "is_pii": r[10], "is_cde": r[11],
             "cde_score": float(r[12]) if r[12] else None, "business_owner": r[13],
             "sensitivity_tag": r[14], "ai_suggested": r[15], "status": r[16],
-            "approved_by": r[17], "approved_at": r[18],
+            "approved_by": r[17], "approved_at": r[18], "connection_id": r[19],
         }
         for r in rows
     ]
@@ -403,6 +403,12 @@ def export_dictionary(connection_id: str | None = None, table_fqn: str | None = 
                       db: Session = Depends(get_db),
                       current_user: CurrentUser = Depends(get_current_user)):
     """Export the data dictionary as a CSV download."""
+    def csv_safe(v):
+        # Prefix a leading =+-@ so Excel/Sheets never treats an AI-generated or
+        # human-edited free-text cell (business_name, description, owner) as a formula.
+        s = str(v) if v is not None else ""
+        return f"'{s}" if s[:1] in ("=", "+", "-", "@") else s
+
     rows = list_dictionary(connection_id=connection_id, table_fqn=table_fqn, db=db, current_user=current_user)
     output = io.StringIO()
     writer = csv.writer(output)
@@ -413,11 +419,11 @@ def export_dictionary(connection_id: str | None = None, table_fqn: str | None = 
     ])
     for r in rows:
         writer.writerow([
-            r["table_fqn"], r["column_name"], r["data_type"] or "",
-            r["business_name"] or "", r["description"] or "",
+            csv_safe(r["table_fqn"]), csv_safe(r["column_name"]), r["data_type"] or "",
+            csv_safe(r["business_name"] or ""), csv_safe(r["description"] or ""),
             r["format_standard"] or "", r["is_pii"], r["sensitivity_tag"] or "",
             r["is_cde"], r["cde_score"] or 0,
-            r["business_owner"] or "", r["layer"] or "",
+            csv_safe(r["business_owner"] or ""), r["layer"] or "",
             r["ai_suggested"], r["status"], r["approved_by"] or "",
         ])
     return Response(

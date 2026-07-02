@@ -13,6 +13,20 @@ from app.agents.explainability_agent import explain_rule_failure
 
 logger = logging.getLogger(__name__)
 
+SEVERITY_WEIGHT = {"CRITICAL": 3, "HIGH": 2, "MEDIUM": 1, "LOW": 0.5}
+
+
+def weighted_quality_score(results: list[RuleResult]) -> float:
+    """Severity-weighted average quality score — the single definition of
+    'overall quality' for a set of rule results. Used by run_all_rules() and
+    by every endpoint/screen that reports an execution run's score, so the
+    number never changes depending on which endpoint computed it."""
+    if not results:
+        return 0.0
+    total_weight = sum(SEVERITY_WEIGHT.get(r.severity, 1) for r in results) or 1
+    weighted_sum = sum(r.quality_score * SEVERITY_WEIGHT.get(r.severity, 1) for r in results)
+    return round(weighted_sum / total_weight, 1)
+
 
 def execute_rule(
     connector: BaseConnector,
@@ -188,12 +202,7 @@ def run_all_rules(
     errors = sum(1 for r in results if r.status == "ERROR")
 
     # Overall quality score: weighted average (CRITICAL failures penalised more)
-    severity_weight = {"CRITICAL": 3, "HIGH": 2, "MEDIUM": 1, "LOW": 0.5}
-    total_weight = sum(severity_weight.get(r.severity, 1) for r in results) or 1
-    weighted_score = sum(
-        r.quality_score * severity_weight.get(r.severity, 1) for r in results
-    )
-    overall = round(weighted_score / total_weight, 1)
+    overall = weighted_quality_score(results)
 
     return ExecutionRunResponse(
         run_id=run_id,

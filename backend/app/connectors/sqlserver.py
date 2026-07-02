@@ -246,11 +246,17 @@ class SqlServerConnector(BaseConnector):
             → [database].[db_schema].[table_name]
         Single-DB mode: schema=schema within configured database
             → [schema].[table]
+
+        Each identifier segment is bracket-escaped (`]` → `]]`) per SQL Server's
+        quoted-identifier rules — without this, a table_fqn containing `]` can
+        break out of the bracket quoting and inject SQL into the rule-execution
+        queries built in execution_agent.py.
         """
+        esc = lambda s: s.replace("]", "]]")
         if self._is_cross_db():
             db_schema, tname = _split_table(table)
-            return f"[{schema}].[{db_schema}].[{tname}]"
-        return f"[{schema}].[{table}]"
+            return f"[{esc(schema)}].[{esc(db_schema)}].[{esc(tname)}]"
+        return f"[{esc(schema)}].[{esc(table)}]"
 
     def query(self, sql: str, params: dict | None = None) -> QueryResult:
         conn = self._connect()

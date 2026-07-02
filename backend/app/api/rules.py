@@ -172,7 +172,7 @@ def decide_rule(rule_id: str, req: RuleDecisionRequest, db: Session = Depends(ge
                 current_user: CurrentUser = Depends(get_current_user)):
     """Human approves / edits / rejects / snoozes a rule."""
     row = db.execute(text(
-        "SELECT r.rule_id, r.status, r.rule_expression, r.connection_id, c.org_id "
+        "SELECT r.rule_id, r.status, r.rule_expression, r.connection_id, c.org_id, r.created_by "
         "FROM dq_rules r LEFT JOIN connections c ON c.id = r.connection_id "
         "WHERE r.rule_id=:id"
     ), {"id": rule_id}).fetchone()
@@ -184,6 +184,11 @@ def decide_rule(rule_id: str, req: RuleDecisionRequest, db: Session = Depends(ge
     now = datetime.now(timezone.utc)
 
     if req.decision == "approve":
+        # Dual control: a rule's author cannot approve their own rule expression
+        # (which runs as raw SQL against the connection) — someone else on the
+        # org must review it first. Admins may override.
+        if row[5] and row[5] == current_user.email and current_user.role != "admin":
+            raise HTTPException(403, "You cannot approve a rule you created — ask another team member to review it.")
         new_status = "approved"
         db.execute(text(
             "UPDATE dq_rules SET status='approved', approved_by=:by, approved_at=:at, updated_at=:at "
