@@ -32,15 +32,15 @@ const Button = ({ variant = "primary", size = "md", icon, iconRight, children, o
   );
 };
 
-const IconBtn = ({ icon, onClick, title, active, size = 36, danger }) => {
+const IconBtn = ({ icon, onClick, title, active, size = 36, danger, disabled }) => {
   const [hover, setHover] = React.useState(false);
   return (
-    <button title={title} onClick={onClick} style={{
+    <button title={title} onClick={disabled ? undefined : onClick} disabled={disabled} style={{
       width: size, height: size, borderRadius: 8, border: "1px solid var(--grey-200)",
-      background: active ? "var(--brand-soft)" : hover ? "var(--grey-50)" : "#fff",
+      background: active ? "var(--brand-soft)" : hover && !disabled ? "var(--grey-50)" : "#fff",
       color: danger ? "var(--danger)" : active ? "var(--brand)" : "var(--fg-1)",
-      cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center",
-      transition: "all 150ms", flexShrink: 0,
+      cursor: disabled ? "not-allowed" : "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center",
+      transition: "all 150ms", flexShrink: 0, opacity: disabled ? 0.4 : 1,
     }} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
       <i data-lucide={icon} style={{ width: size * 0.5, height: size * 0.5 }}></i>
     </button>

@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 
 from app.core.metadata_db import get_db
-from app.core.auth_deps import get_current_user, CurrentUser
+from app.core.auth_deps import get_current_user, assert_connection_access, CurrentUser
 from app.api.connections import get_active_connector
 from app.agents.rule_agent import recommend_rules, nl_to_rule
 from app.models.rule import DQRule, RuleDecisionRequest, NLConvertRequest, NLConvertResponse, RuleRecommendRequest
@@ -35,20 +35,24 @@ def _row_to_rule(row) -> DQRule:
 def list_rules(connection_id: str | None = None, status: str | None = None,
                db: Session = Depends(get_db),
                current_user: CurrentUser = Depends(get_current_user)):
-    filters = []
-    params: dict = {}
+    # Always scope to the caller's org (or pre-multitenancy 'default' connections) so
+    # rules from another organisation's connections can never appear in the list,
+    # whether or not a specific connection_id was requested.
+    filters = ["(c.org_id = :org OR c.org_id = 'default')"]
+    params: dict = {"org": current_user.org_id}
     if connection_id:
-        filters.append("connection_id = :conn")
+        filters.append("r.connection_id = :conn")
         params["conn"] = connection_id
     if status:
-        filters.append("status = :status")
+        filters.append("r.status = :status")
         params["status"] = status
-    where = "WHERE " + " AND ".join(filters) if filters else ""
+    where = "WHERE " + " AND ".join(filters)
     rows = db.execute(text(
-        f"SELECT rule_id, connection_id, rule_name, rule_description, table_fqn, "
-        f"layer, column_name, rule_expression, rule_type, severity, is_cde_rule, status, "
-        f"approved_by, approved_at, snooze_until, created_by, nl_source "
-        f"FROM dq_rules {where} ORDER BY created_at DESC"
+        f"SELECT r.rule_id, r.connection_id, r.rule_name, r.rule_description, r.table_fqn, "
+        f"r.layer, r.column_name, r.rule_expression, r.rule_type, r.severity, r.is_cde_rule, r.status, "
+        f"r.approved_by, r.approved_at, r.snooze_until, r.created_by, r.nl_source "
+        f"FROM dq_rules r JOIN connections c ON c.id = r.connection_id {where} "
+        f"ORDER BY r.created_at DESC"
     ), params).fetchall()
     return [_row_to_rule(r) for r in rows]
 
@@ -65,6 +69,8 @@ def recommend(req: RuleRecommendRequest, db: Session = Depends(get_db),
     ), {"id": req.report_id}).fetchone()
     if not row:
         raise HTTPException(404, "Profiling report not found")
+    if row[1] != req.connection_id:
+        raise HTTPException(400, "Profiling report does not belong to the specified connection")
 
     report = ProfilingReport(
         report_id=row[0], connection_id=row[1], table_fqn=row[2],
@@ -81,13 +87,22 @@ def recommend(req: RuleRecommendRequest, db: Session = Depends(get_db),
     ), {"conn": req.connection_id}).fetchall()
     cde_cols = [r[0] for r in cde_rows]
 
-    # Get connection platform so the LLM generates dialect-correct SQL
-    platform_row = db.execute(text(
-        "SELECT platform FROM connections WHERE id=:conn"
+    # Get connection platform + org so the LLM generates dialect-correct SQL and
+    # cross-organisation recommendation requests are rejected.
+    conn_row = db.execute(text(
+        "SELECT platform, org_id FROM connections WHERE id=:conn AND deleted_at IS NULL"
     ), {"conn": req.connection_id}).fetchone()
-    sql_dialect = (platform_row[0] or "postgresql").lower() if platform_row else "postgresql"
+    if not conn_row:
+        raise HTTPException(404, "Connection not found")
+    assert_connection_access(conn_row[1], current_user)
+    sql_dialect = (conn_row[0] or "postgresql").lower()
 
-    rules = recommend_rules(report, req.connection_id, cde_cols, sql_dialect=sql_dialect)
+    try:
+        rules = recommend_rules(report, req.connection_id, cde_cols, sql_dialect=sql_dialect, db=db)
+    except Exception:
+        # recommend_rules() re-raises on LLM/parse failure rather than swallowing to an
+        # empty list, so a real failure is never indistinguishable from "found 0 rules".
+        raise HTTPException(502, "AI rule recommendation is temporarily unavailable — please retry.")
 
     # Resolve table_id FK from the connection_tables cache (if populated)
     table_id_row = db.execute(text(
@@ -132,11 +147,24 @@ def recommend(req: RuleRecommendRequest, db: Session = Depends(get_db),
 def nl_convert(req: NLConvertRequest, db: Session = Depends(get_db),
                current_user: CurrentUser = Depends(get_current_user)):
     """Convert plain-English expectation to a structured DQ rule."""
-    platform_row = db.execute(text(
-        "SELECT platform FROM connections WHERE id=:conn"
+    conn_row = db.execute(text(
+        "SELECT platform, org_id FROM connections WHERE id=:conn AND deleted_at IS NULL"
     ), {"conn": req.connection_id}).fetchone()
-    sql_dialect = (platform_row[0] or "postgresql").lower() if platform_row else "postgresql"
-    return nl_to_rule(req.table_fqn, req.natural_language, req.connection_id, sql_dialect=sql_dialect)
+    if not conn_row:
+        raise HTTPException(404, "Connection not found")
+    assert_connection_access(conn_row[1], current_user)
+    sql_dialect = (conn_row[0] or "postgresql").lower()
+
+    known_columns = None
+    if req.table_fqn:
+        col_rows = db.execute(text(
+            "SELECT column_name, data_type FROM data_dictionary WHERE connection_id=:conn AND table_fqn=:fqn"
+        ), {"conn": req.connection_id, "fqn": req.table_fqn}).fetchall()
+        if col_rows:
+            known_columns = [{"column_name": r[0], "data_type": r[1]} for r in col_rows]
+
+    return nl_to_rule(req.table_fqn, req.natural_language, req.connection_id, sql_dialect=sql_dialect,
+                       db=db, known_columns=known_columns)
 
 
 @router.patch("/{rule_id}", response_model=DQRule)
@@ -144,10 +172,13 @@ def decide_rule(rule_id: str, req: RuleDecisionRequest, db: Session = Depends(ge
                 current_user: CurrentUser = Depends(get_current_user)):
     """Human approves / edits / rejects / snoozes a rule."""
     row = db.execute(text(
-        "SELECT rule_id, status, rule_expression, connection_id FROM dq_rules WHERE rule_id=:id"
+        "SELECT r.rule_id, r.status, r.rule_expression, r.connection_id, c.org_id "
+        "FROM dq_rules r LEFT JOIN connections c ON c.id = r.connection_id "
+        "WHERE r.rule_id=:id"
     ), {"id": rule_id}).fetchone()
     if not row:
         raise HTTPException(404, "Rule not found")
+    assert_connection_access(row[4], current_user)
 
     old_status = row[1]
     now = datetime.now(timezone.utc)
@@ -186,7 +217,7 @@ def decide_rule(rule_id: str, req: RuleDecisionRequest, db: Session = Depends(ge
     log_event(db, user_email=current_user.email, event_type=req.decision.upper(),
               entity_type="RULE", entity_id=rule_id,
               old_value={"status": old_status}, new_value={"status": new_status},
-              reason=req.reason, connection_id=row[3])
+              reason=req.reason, connection_id=row[3], org_id=row[4])
     db.commit()
 
     updated = db.execute(text(
@@ -202,7 +233,19 @@ def decide_rule(rule_id: str, req: RuleDecisionRequest, db: Session = Depends(ge
 def create_rule(rule: DQRule, db: Session = Depends(get_db),
                 current_user: CurrentUser = Depends(get_current_user)):
     """Manually add a custom rule."""
+    conn_row = db.execute(text(
+        "SELECT org_id FROM connections WHERE id=:conn AND deleted_at IS NULL"
+    ), {"conn": rule.connection_id}).fetchone()
+    if not conn_row:
+        raise HTTPException(404, "Connection not found")
+    assert_connection_access(conn_row[0], current_user)
+
     rid = str(uuid.uuid4())
+    # Every new rule starts as 'draft' regardless of what the caller sends — approval
+    # must go through decide_rule(), which requires a second explicit PATCH request
+    # and writes an audit_trail row. Letting create_rule set status directly would
+    # let a rule's author self-approve their own SQL in the same call that defines
+    # it, with no audit trail and no second look before it runs against live data.
     db.execute(text("""
         INSERT INTO dq_rules
             (rule_id, connection_id, rule_name, rule_description, table_fqn,
@@ -211,16 +254,15 @@ def create_rule(rule: DQRule, db: Session = Depends(get_db),
         VALUES
             (:rule_id, :conn, :name, :desc, :table_fqn,
              :layer, :col, :expr, :type, :sev, :cde,
-             CASE WHEN :status IN ('approved','active') THEN :status ELSE 'draft' END,
-             :created_by, :nl_source, NOW(), NOW())
+             'draft', :created_by, :nl_source, NOW(), NOW())
     """), {
         "rule_id": rid, "conn": rule.connection_id, "name": rule.rule_name,
         "desc": rule.rule_description, "table_fqn": rule.table_fqn,
         "layer": rule.layer, "col": rule.column_name, "expr": rule.rule_expression,
         "type": rule.rule_type, "sev": rule.severity, "cde": rule.is_cde_rule,
         "created_by": current_user.email, "nl_source": rule.nl_source,
-        "status": rule.status or "draft",
     })
     db.commit()
     rule.rule_id = rid
+    rule.status = "draft"
     return rule

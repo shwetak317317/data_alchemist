@@ -324,7 +324,13 @@
         if (!report || !report.report_id) throw new Error('No profiling report found — run Profiling first.');
         const result = await window.DTApi.enrichMetadata(report.report_id, activeConnectionId);
         const tName = targetFqn.split('.').slice(-1)[0];
-        toast(`AI enriched ${result.enriched} columns in ${tName} · review below`, { kind: 'success' });
+        const missed = result.missing_columns?.length || 0;
+        toast(
+          missed > 0
+            ? `AI enriched ${result.enriched - missed} of ${result.enriched} columns in ${tName} · ${missed} need manual review (AI skipped them)`
+            : `AI enriched ${result.enriched} columns in ${tName} · review below`,
+          { kind: missed > 0 ? 'info' : 'success' }
+        );
         loadData();
       } catch (e) {
         const msg = (e.message || 'Enrichment failed').replace(/^API \d+: /, '');
@@ -426,8 +432,9 @@
 
     const demoteColumn = (c) => {
       if (!c.column_id) return;
+      const label = c.name || c.col;
       window.DTApi.cdePromote(c.column_id, 'demote', {})
-        .then(() => { toast(`${c.name} removed from CDE registry`, { kind: 'info' }); loadData(); })
+        .then(() => { toast(`${label} removed from CDE registry`, { kind: 'info' }); loadData(); })
         .catch(e => toast('Demote failed: ' + e.message, { kind: 'error' }));
     };
 
@@ -447,9 +454,15 @@
     };
 
     const handleBulkPromote = () => {
-      filteredRows
-        .filter(m => selectedCols.has(m.col) && m.canPromote && !m.cde)
-        .forEach(m => promoteColumn(m));
+      const selected = filteredRows.filter(m => selectedCols.has(m.col));
+      const eligible = selected.filter(m => m.canPromote && !m.cde);
+      eligible.forEach(m => promoteColumn(m));
+      const skipped = selected.length - eligible.length;
+      if (eligible.length === 0) {
+        toast('None promoted — selected columns are already CDE or score ≤ 40', { kind: 'info' });
+      } else if (skipped > 0) {
+        toast(`${eligible.length} of ${selected.length} promoted — ${skipped} already CDE or score ≤ 40`, { kind: 'info' });
+      }
       setSelectedCols(new Set());
     };
 
@@ -587,7 +600,9 @@
                       : selectedFqn ? 'Enrich this table' : 'Run AI Enrichment'}
                 </span>
               </Button>
-              <Chip intent="brand" dot>{approvedCount} approved</Chip>
+              <Chip intent={approvedCount === 0 && enrichedCount > 0 ? 'warning' : 'brand'} dot>
+                {approvedCount} approved{approvedCount === 0 && enrichedCount > 0 ? ' — review pending' : ''}
+              </Chip>
             </div>
           </div>
         </Card>
@@ -903,6 +918,7 @@
                         {!isOpen && descs[m.col] && (
                           <div style={{ fontSize: 12, color: 'var(--fg-2)', marginTop: 2, lineHeight: 1.4,
                             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 520 }}>
+                            {busNames[m.col] && <span style={{ fontWeight: 600, color: 'var(--fg-1)' }}>{busNames[m.col]}: </span>}
                             {descs[m.col]}
                           </div>
                         )}
@@ -934,12 +950,17 @@
                               <IcoPencil />
                             </button>
                           )}
-                          {m.canPromote && !m.cde ? (
+                          {m.cde ? (
+                            <button title="Demote from CDE" onClick={() => demoteColumn(m)}
+                              style={{ ...iconBtnBase, color: 'var(--red-500)' }}>
+                              <IcoArrowDown />
+                            </button>
+                          ) : m.canPromote ? (
                             <button title="Promote to CDE" onClick={() => promoteColumn(m)}
                               style={{ ...iconBtnBase, color: 'var(--brand)' }}>
                               <IcoArrowUp />
                             </button>
-                          ) : (!m.cde && m.status !== 'rejected' && (
+                          ) : (m.status !== 'rejected' && (
                             <button title="Reject" onClick={() => decide(m.col, 'rejected')}
                               style={{ ...iconBtnBase, color: 'var(--red-500)' }}>
                               <IcoX />

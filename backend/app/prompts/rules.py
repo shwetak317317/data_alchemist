@@ -27,11 +27,16 @@ def build_nl_to_rule_prompt(
     layer: str,
     natural_language: str,
     sql_dialect: str = "postgresql",
+    known_columns: list[dict] | None = None,
 ) -> list[dict]:
+    columns_text = "\n".join(
+        f"- {c['column_name']} ({c.get('data_type') or 'unknown type'})" for c in known_columns
+    ) if known_columns else None
     return load_prompt(
         "rules", "nl_to_rule",
         table_fqn=table_fqn or "unknown",
         layer=layer,
         natural_language=natural_language,
         sql_dialect=sql_dialect,
+        known_columns=columns_text,
     )

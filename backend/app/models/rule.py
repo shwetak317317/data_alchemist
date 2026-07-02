@@ -40,6 +40,7 @@ class NLConvertRequest(BaseModel):
 
 class NLConvertResponse(BaseModel):
     rule_name: str
+    column_name: Optional[str] = None
     rule_expression: str
     rule_type: str
     severity: str
@@ -47,6 +48,11 @@ class NLConvertResponse(BaseModel):
     is_cde_rule: bool
     explanation: str
     table_fqn: Optional[str] = None
+    # True when the LLM (or a post-generation check against the data dictionary)
+    # could not confidently ground the requirement to a real column/table, or the
+    # requirement was ambiguous/self-contradictory. The UI must warn before approval.
+    unresolved: bool = False
+    unresolved_reason: Optional[str] = None
 
 
 class RuleRecommendRequest(BaseModel):

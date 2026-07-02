@@ -117,8 +117,9 @@ export const decideRule        = (ruleId, body)   => _fetch(`/rules/${ruleId}`, 
 export const createRule        = (body)           => _fetch('/rules', { method: 'POST', body: JSON.stringify(body) });
 
 // ── Execution ─────────────────────────────────────────────────────────────────
-export const runExecution      = (connId)         => _fetch(`/execution/run?connection_id=${connId}`, { method: 'POST' });
+export const runExecution      = (connId, layer, ruleId) => _fetch(`/execution/run?connection_id=${connId}${layer ? `&layer=${encodeURIComponent(layer)}` : ''}${ruleId ? `&rule_id=${encodeURIComponent(ruleId)}` : ''}`, { method: 'POST' });
 export const getLatestRun      = (connId)         => _fetch(`/execution/latest?connection_id=${connId}`);
+export const getCurrentExecState = (connId)       => _fetch(`/execution/current?connection_id=${connId}`);
 export const getRunResults     = (runId)           => _fetch(`/execution/results/${runId}`);
 export const acknowledgeFailure = (body)           => _fetch('/execution/acknowledge', { method: 'POST', body: JSON.stringify(body) });
 

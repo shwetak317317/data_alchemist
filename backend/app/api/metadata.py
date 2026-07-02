@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 
 from app.core.metadata_db import get_db
-from app.core.auth_deps import get_current_user, CurrentUser
+from app.core.auth_deps import get_current_user, CurrentUser, assert_connection_access
 from app.core.llm import chat, parse_llm_json
 from app.services.audit_service import log_event
 from app.prompts.metadata import build_metadata_enrichment_prompt
@@ -20,10 +20,29 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/metadata", tags=["metadata"])
 
 
+def _assert_conn_org(db: Session, connection_id: str, current_user: CurrentUser) -> None:
+    """Look up a connection's org and 403 if it doesn't match the caller's org."""
+    row = db.execute(text("SELECT org_id FROM connections WHERE id=:id"), {"id": connection_id}).fetchone()
+    if not row:
+        raise HTTPException(404, "Connection not found")
+    assert_connection_access(row[0], current_user)
+
+
+def _assert_column_org(db: Session, column_id: str, current_user: CurrentUser, connection_id: str | None) -> None:
+    """403 unless the dictionary column's connection belongs to the caller's org."""
+    if not connection_id:
+        raise HTTPException(404, "Column not found")
+    _assert_conn_org(db, connection_id, current_user)
+
+
 @router.get("/dictionary")
 def list_dictionary(connection_id: str | None = None, table_fqn: str | None = None,
                     db: Session = Depends(get_db),
                     current_user: CurrentUser = Depends(get_current_user)):
+    if not connection_id:
+        raise HTTPException(400, "connection_id is required")
+    _assert_conn_org(db, connection_id, current_user)
+
     filters, params = [], {}
     if connection_id:
         filters.append("connection_id=:conn")
@@ -59,6 +78,8 @@ def enrich_from_profiling(report_id: str, connection_id: str, db: Session = Depe
     Use the Metadata Agent (LiteLLM) to generate descriptions and CDE scores
     for all columns in a profiling report.
     """
+    _assert_conn_org(db, connection_id, current_user)
+
     row = db.execute(text(
         "SELECT table_fqn, layer, column_stats FROM profiling_reports WHERE report_id=:id"
     ), {"id": report_id}).fetchone()
@@ -91,15 +112,31 @@ def enrich_from_profiling(report_id: str, connection_id: str, db: Session = Depe
                     "type": c.get("data_type"),
                     "null_pct": c.get("null_pct", 0)} for c in cols]
 
-    prompt = build_metadata_enrichment_prompt(table_fqn, layer, col_summary)
+    # Chunk wide tables so a single LLM call's JSON output never risks being cut
+    # off by the max_tokens ceiling (each enriched column costs ~60-90 tokens).
+    ENRICH_BATCH_SIZE = 40
+    batches = [col_summary[i:i + ENRICH_BATCH_SIZE] for i in range(0, len(col_summary), ENRICH_BATCH_SIZE)]
 
-    try:
-        raw = chat(prompt)
-        data = parse_llm_json(raw)
-        enriched_cols = {c["name"]: c for c in data.get("columns", [])}
-    except Exception as e:
-        logger.error("Metadata enrichment failed: %s", e)
-        raise HTTPException(500, f"LLM enrichment failed: {e}")
+    enriched_cols: dict = {}
+    for batch in batches:
+        prompt = build_metadata_enrichment_prompt(table_fqn, layer, batch)
+        try:
+            raw = chat(prompt)
+            data = parse_llm_json(raw)
+        except Exception as e:
+            logger.error("Metadata enrichment failed for %s (batch of %d columns): %s", table_fqn, len(batch), e)
+            raise HTTPException(500, "AI enrichment failed — please retry. If this keeps happening, check backend logs.")
+        for c in data.get("columns", []):
+            name = c.get("name")
+            if name:
+                enriched_cols[name] = c
+
+    missing = [c["name"] for c in col_summary if c["name"] not in enriched_cols]
+    if missing:
+        logger.warning(
+            "Metadata enrichment for %s: LLM omitted or mis-named %d/%d columns: %s",
+            table_fqn, len(missing), len(col_summary), missing,
+        )
 
     schema_name = table_fqn.split(".")[0] if "." in table_fqn else ""
     table_name = table_fqn.split(".")[-1]
@@ -110,6 +147,7 @@ def enrich_from_profiling(report_id: str, connection_id: str, db: Session = Depe
         if not col_name:
             continue
         meta = enriched_cols.get(col_name, {})
+        ai_suggested = col_name in enriched_cols
         # Include connection_id in the PK so two connections pointing at the
         # same physical DB never share or overwrite each other's dictionary rows.
         col_id = f"{connection_id}:{table_fqn}.{col_name}"
@@ -124,7 +162,7 @@ def enrich_from_profiling(report_id: str, connection_id: str, db: Session = Depe
                 (:col_id, :conn, :table_fqn, :schema, :table,
                  :layer, :col_name, :bus_name, :desc, :dtype,
                  :fmt, :pii, :cde, :cde_score, :owner,
-                 :sensitivity, TRUE, 'draft', NOW(), NOW())
+                 :sensitivity, :ai_suggested, 'draft', NOW(), NOW())
             ON CONFLICT (column_id) DO UPDATE SET
                 business_name=EXCLUDED.business_name,
                 description=EXCLUDED.description,
@@ -140,11 +178,12 @@ def enrich_from_profiling(report_id: str, connection_id: str, db: Session = Depe
             "fmt": meta.get("format_standard", ""), "pii": meta.get("is_pii", False),
             "cde": meta.get("is_cde", False), "cde_score": meta.get("cde_score", 0),
             "owner": meta.get("business_owner", ""), "sensitivity": meta.get("sensitivity_tag", "NONE"),
+            "ai_suggested": ai_suggested,
         })
         created.append(col_id)
 
     db.commit()
-    return {"enriched": len(created), "column_ids": created}
+    return {"enriched": len(created), "column_ids": created, "missing_columns": missing}
 
 
 @router.post("/dictionary/{column_id}/{decision}")
@@ -159,6 +198,7 @@ def decide_column(column_id: str, decision: str,
                      {"id": column_id}).fetchone()
     if not row:
         raise HTTPException(404, "Column not found")
+    _assert_column_org(db, column_id, current_user, row[1])
 
     if decision == "approve":
         db.execute(text(
@@ -192,6 +232,10 @@ def decide_column(column_id: str, decision: str,
 @router.get("/cdes")
 def list_cdes(connection_id: str | None = None, db: Session = Depends(get_db),
               current_user: CurrentUser = Depends(get_current_user)):
+    if not connection_id:
+        raise HTTPException(400, "connection_id is required")
+    _assert_conn_org(db, connection_id, current_user)
+
     filters, params = ["dd.is_cde=TRUE"], {}
     if connection_id:
         filters.append("dd.connection_id=:conn")
@@ -237,6 +281,7 @@ def cde_action(column_id: str, action: str,
     ), {"id": column_id}).fetchone()
     if not col_row:
         raise HTTPException(404, "Column not found")
+    _assert_column_org(db, column_id, current_user, col_row[0])
 
     is_cde = action == "promote"
     db.execute(text(
@@ -281,6 +326,7 @@ def add_column(body: dict, db: Session = Depends(get_db),
     col_name = (body.get("column_name") or "").strip()
     if not conn_id or not table_fqn or not col_name:
         raise HTTPException(400, "connection_id, table_fqn, and column_name are required")
+    _assert_conn_org(db, conn_id, current_user)
 
     col_id = f"{conn_id}:{table_fqn}.{col_name}"
     schema_name = table_fqn.split(".")[0] if "." in table_fqn else ""
@@ -335,6 +381,7 @@ def bulk_decide(body: dict, db: Session = Depends(get_db),
         ), {"id": cid}).fetchone()
         if not row:
             continue
+        _assert_column_org(db, cid, current_user, row[1])
         if decision == "approve":
             db.execute(text(
                 "UPDATE data_dictionary SET status='approved', approved_by=:by, "

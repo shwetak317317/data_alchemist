@@ -60,18 +60,39 @@ nl_to_rule:
     - duckdb: Use EXTRACT(YEAR FROM col), LENGTH(col), COALESCE
     Write rule_expression in the dialect above.
 
+    {% if known_columns %}
+    Known columns on this table, verified from the data dictionary (name: type):
+    {{ known_columns }}
+
+    You MUST reference only columns from this list. Do NOT invent column names, table
+    names, or aliases that are not listed above.
+    {% else %}
+    No verified column list is available for this table yet (it has not been cataloged).
+    Be conservative — do not guess at specific column names you cannot verify.
+    {% endif %}
+
     Business requirement: "{{ natural_language }}"
 
     Convert this requirement into a single DQ rule with a runnable SQL expression.
     The expression must return TRUE for passing rows and FALSE for failing rows.
 
+    If the requirement clearly does not correspond to any column in the list above,
+    or is ambiguous, or is self-contradictory (e.g. asks for a value to be both always
+    null and never empty), do NOT guess or fabricate an expression. Instead set
+    "unresolved": true, explain why in "unresolved_reason", and still fill the other
+    fields with your best-effort guess so a human can edit it — but the human must be
+    warned it needs review.
+
     Return JSON matching this schema exactly:
     {
       "rule_name": "snake_case_name",
+      "column_name": "the exact column name this rule primarily applies to, from the list above, or null for a table-level rule",
       "rule_expression": "SQL returning TRUE=pass FALSE=fail",
       "rule_type": "NULL_CHECK|RANGE|FORMAT|FK|VOLUME|CUSTOM",
       "severity": "CRITICAL|HIGH|MEDIUM|LOW",
       "description": "plain English description",
       "is_cde_rule": true,
-      "explanation": "why this rule matters for data trust"
+      "explanation": "why this rule matters for data trust",
+      "unresolved": false,
+      "unresolved_reason": "null, or a short explanation of what could not be confidently resolved"
     }

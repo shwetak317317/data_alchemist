@@ -99,29 +99,28 @@
     );
   };
 
-  const _applyRunResults = (r, setExecResults, setLayerScores, setRunMeta) => {
-    if (!r) return;
-    const mapped = (r.results || []).map(x => ({
-      id: x.rule_id,
-      resultId: x.result_id || "",
-      rule: x.rule_name,
-      tableFqn: x.table_fqn || "",
-      isCde: x.is_cde_rule || false,
-      status: x.status,
-      failCnt: x.failed_records > 0 ? x.failed_records.toLocaleString() : "0",
-      failPct: x.fail_pct || 0,
-      qualityScore: x.quality_score ?? null,
-      sev: x.severity || "—",
-      layer: (x.layer || "SILVER").toUpperCase(),
-      sampleRecords: x.sample_failed_records || [],
-      remediation: x.remediation_suggestion || "",
-      isExpected: x.is_expected_failure || false,
-      acknowledgedBy: x.acknowledged_by || "",
-    }));
-    if (mapped.length) setExecResults(mapped);
+  const _mapResultRow = (x) => ({
+    id: x.rule_id,
+    resultId: x.result_id || "",
+    rule: x.rule_name,
+    tableFqn: x.table_fqn || "",
+    isCde: x.is_cde_rule || false,
+    status: x.status,
+    failCnt: x.failed_records > 0 ? x.failed_records.toLocaleString() : "0",
+    failPct: x.fail_pct || 0,
+    qualityScore: x.quality_score ?? null,
+    sev: x.severity || "—",
+    layer: (x.layer || "SILVER").toUpperCase(),
+    sampleRecords: x.sample_failed_records || [],
+    remediation: x.remediation_suggestion || "",
+    isExpected: x.is_expected_failure || false,
+    acknowledgedBy: x.acknowledged_by || "",
+  });
+
+  const _layerScoresFrom = (rows) => {
     const LAYERS = ["RAW", "BRONZE", "SILVER", "GOLD"];
-    const ls = LAYERS.map(layer => {
-      const lr = mapped.filter(x => x.layer === layer);
+    return LAYERS.map(layer => {
+      const lr = rows.filter(x => x.layer === layer);
       const passed = lr.filter(x => x.status === "PASS").length;
       const failed = lr.filter(x => x.status === "FAIL").length;
       const avgScore = lr.length
@@ -129,6 +128,17 @@
         : 0;
       return { layer, rules: lr.length, passed, failed, score: avgScore };
     }).filter(l => l.rules > 0);
+  };
+
+  // Replaces the whole results set — use only for a run that covers ALL approved
+  // rules (initial load, full "Re-run checks"). A scoped run (single layer/rule)
+  // must use _mergeScopedResults instead, or it wipes out every other rule's
+  // last-known result from the table.
+  const _applyRunResults = (r, setExecResults, setLayerScores, setRunMeta) => {
+    if (!r) return;
+    const mapped = (r.results || []).map(_mapResultRow);
+    if (mapped.length) setExecResults(mapped);
+    const ls = _layerScoresFrom(mapped);
     if (ls.length) setLayerScores(ls);
     if (r.run_id) setRunMeta({
       runId: r.run_id,
@@ -138,6 +148,32 @@
       overallScore: r.overall_quality_score ?? null,
       runTimestamp: r.run_timestamp || null,
       durationSecs: r.duration_seconds || null,
+    });
+  };
+
+  // Merges a scoped run's results (single layer or single rule) into the existing
+  // table by rule_id, so re-running one rule doesn't erase every other rule's
+  // last-known result. Layer scores and the header summary are recomputed from
+  // the full merged set, not from the scoped API response's totals.
+  const _mergeScopedResults = (r, setExecResults, setLayerScores, setRunMeta) => {
+    if (!r || !r.results || !r.results.length) return;
+    setExecResults(prev => {
+      const byId = new Map(prev.map(x => [x.id, x]));
+      r.results.forEach(x => byId.set(x.rule_id, _mapResultRow(x)));
+      const merged = Array.from(byId.values());
+      const ls = _layerScoresFrom(merged);
+      setLayerScores(ls);
+      setRunMeta(prevMeta => ({
+        ...(prevMeta || {}),
+        runId: r.run_id || prevMeta?.runId,
+        runTimestamp: r.run_timestamp || prevMeta?.runTimestamp,
+        rulesTotal: merged.length,
+        failed: merged.filter(x => x.status === "FAIL" && !x.isExpected).length,
+        overallScore: merged.length
+          ? Math.round(merged.reduce((sum, x) => sum + (x.qualityScore ?? (x.status === "PASS" ? 100 : 0)), 0) / merged.length)
+          : (prevMeta?.overallScore ?? null),
+      }));
+      return merged;
     });
   };
 
@@ -161,26 +197,31 @@
     const [ackedIds, setAckedIds]       = React.useState({});
     useIcons();
 
+    // Sets the header trust/pipeline badge from a run response, or resets it to a
+    // neutral "no data yet" state — called on connection switch so the badge never
+    // shows a previous connection's leftover status (an [ISSUES]/green mismatch
+    // is worse than no badge at all).
+    const _applyHealthBadge = (r) => {
+      if (!r) { setPipeline("UNKNOWN"); return; }
+      if (r.overall_quality_score != null) setTrustScore(Math.round(r.overall_quality_score));
+      setPipeline((r.failed > 0 || r.errors > 0) ? "ISSUES" : "HEALTHY");
+    };
+
     React.useEffect(() => {
       if (!window.DTApi || !activeConnectionId) return;
       setExecResults([]);
       setLayerScores([]);
       setRunMeta(null);
-      window.DTApi.getLatestRun(activeConnectionId)
-        .then(r => r?.run_id && window.DTApi.getRunResults(r.run_id))
-        .then(r => _applyRunResults(r, setExecResults, setLayerScores, setRunMeta))
-        .catch(() => {});
+      window.DTApi.getCurrentExecState(activeConnectionId)
+        .then(r => {
+          _applyRunResults(r, setExecResults, setLayerScores, setRunMeta);
+          _applyHealthBadge(r);
+        })
+        .catch(() => _applyHealthBadge(null));
       window.DTApi.listRules(activeConnectionId, "approved")
         .then(r => setRuleCount(r?.length || 0))
         .catch(() => {});
     }, [activeConnectionId]);
-
-    React.useEffect(() => {
-      if (!window.DTApi || !lastRunId) return;
-      window.DTApi.getRunResults(lastRunId)
-        .then(r => _applyRunResults(r, setExecResults, setLayerScores, setRunMeta))
-        .catch(() => {});
-    }, [lastRunId]);
 
     const startRun = () => {
       if (!window.DTApi || !activeConnectionId) { setPhase("running"); return; }
@@ -190,8 +231,8 @@
       window.DTApi.runExecution(activeConnectionId)
         .then(r => {
           if (r?.run_id) setLastRunId(r.run_id);
-          if (r?.overall_quality_score != null) setTrustScore(Math.round(r.overall_quality_score));
-          setPipeline(r?.failed > 0 ? "ISSUES" : "HEALTHY");
+          _applyRunResults(r, setExecResults, setLayerScores, setRunMeta);
+          _applyHealthBadge(r);
           setApiDone(true);
         })
         .catch(err => {
@@ -213,6 +254,7 @@
       window.DTApi.runExecution(activeConnectionId, layer)
         .then(r => {
           if (r?.run_id) setLastRunId(r.run_id);
+          _mergeScopedResults(r, setExecResults, setLayerScores, setRunMeta);
           setLayerRun(s => ({ ...s, [layer]: "done" }));
           toast(`${layer} layer re-run complete`, { kind: "success" });
         })
@@ -227,6 +269,7 @@
       window.DTApi.runExecution(activeConnectionId, null, id)
         .then(r => {
           if (r?.run_id) setLastRunId(r.run_id);
+          _mergeScopedResults(r, setExecResults, setLayerScores, setRunMeta);
           setRuleRun(s => ({ ...s, [id]: "done" }));
           toast("Rule re-run complete", { kind: "success" });
         })
@@ -244,12 +287,15 @@
         acknowledged_by: "user",
         is_expected: true,
         reason: reason || "Expected failure",
-      }).catch(() => {});
-      setAckedIds(x => ({ ...x, [resultId]: true }));
-      setAckId(null);
-      setAckNote("");
-      setShowRecords(false);
-      toast("Marked as expected · logged to audit trail", { kind: "info" });
+      }).then(() => {
+        setAckedIds(x => ({ ...x, [resultId]: true }));
+        setAckId(null);
+        setAckNote("");
+        setShowRecords(false);
+        toast("Marked as expected · logged to audit trail", { kind: "info" });
+      }).catch(err => {
+        toast("Could not save — " + (err?.message || "try again"), { kind: "error" });
+      });
     };
 
     const visibleResults = React.useMemo(() => {
@@ -416,7 +462,7 @@
                       opacity: isAcked ? 0.55 : 1 }}>
                       <td style={{ padding: "11px 18px" }}>
                         <Mono style={{ fontWeight: 500 }}>{r.rule}</Mono>
-                        {(r.isCde || r.tableFqn || (fail && !isAcked && r.remediation)) && (
+                        {(r.isCde || r.tableFqn || ((fail || isError) && !isAcked && r.remediation)) && (
                           <div style={{ marginTop: 3 }}>
                             <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
                               {r.isCde && (
@@ -427,8 +473,8 @@
                                 <span style={{ fontSize: 11, color: "var(--fg-3)" }}>{r.tableFqn}</span>
                               )}
                             </div>
-                            {fail && !isAcked && r.remediation && (
-                              <div style={{ fontSize: 11.5, color: "var(--fg-2)", marginTop: 2, lineHeight: 1.4 }}>
+                            {(fail || isError) && !isAcked && r.remediation && (
+                              <div style={{ fontSize: 11.5, color: isError ? "var(--amber-600, #b45309)" : "var(--fg-2)", marginTop: 2, lineHeight: 1.4 }}>
                                 {r.remediation}
                               </div>
                             )}

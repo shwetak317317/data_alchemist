@@ -2,29 +2,6 @@
 (function () {
   const D = window.DT;
 
-  function synthRule(text) {
-    const t = text.toLowerCase();
-    if (t.includes("25000") || t.includes("25,000") || (t.includes("exceed") && t.includes("revenue"))) {
-      return { name: "net_revenue_max_threshold", col: "net_revenue", expr: "net_revenue <= 25000 AND channel != 'CORP'", sev: "HIGH", cde: true,
-        why: "99.97% of orders have net_revenue < $25,000. The top 0.03% (552 orders) are either bulk B2B (channel='CORP') or likely data-entry errors.",
-        refine: "net_revenue <= 25000 AND channel != 'CORP'  (excludes legitimate corporate orders)" };
-    }
-    if (t.includes("negative") || t.includes(">= 0") || t.includes("not be negative")) {
-      return { name: "amount_non_negative", col: "net_revenue", expr: "net_revenue >= 0", sev: "HIGH", cde: true,
-        why: "Negative revenue indicates a data-entry error or an uncorrected return record. 0 such rows exist today, but the rule guards future loads.", refine: null };
-    }
-    if (t.includes("email")) {
-      return { name: "email_format_valid", col: "email", expr: "email RLIKE '^[^@]+@[^@]+\\\\.[^@]+$'", sev: "MEDIUM", cde: true,
-        why: "email is a CDE on customers_master. 0.4% of values currently fail a basic format pattern.", refine: null };
-    }
-    if (t.includes("duplicate") || t.includes("unique")) {
-      return { name: "order_id_unique", col: "order_id", expr: "count(*) = count(distinct order_id)", sev: "CRITICAL", cde: false,
-        why: "order_id is the primary key. 23 duplicates were detected in today's Bronze load — a uniqueness rule prevents silent fan-out on joins.", refine: null };
-    }
-    return { name: "custom_rule", col: "net_revenue", expr: "/* AI-generated expression from your expectation */", sev: "MEDIUM", cde: false,
-      why: "The agent translated your expectation into a structured check. Review the expression and severity before approving.", refine: null };
-  }
-
   const IcoChevron = ({ open }) => (
     <svg width="12" height="12" viewBox="0 0 12 12" fill="none"
       style={{ transition: "transform .2s", transform: open ? "rotate(90deg)" : "rotate(0deg)", flexShrink: 0 }}>
@@ -75,6 +52,8 @@
     const [editId, setEditId]             = React.useState(null);
     const [exprDraft, setExprDraft]       = React.useState("");
     const [runState, setRunState]         = React.useState({});
+    const [genEditingExpr, setGenEditingExpr] = React.useState(false);
+    const [genExprDraft, setGenExprDraft]     = React.useState("");
     const nlResultRef = React.useRef(null);
     useIcons();
 
@@ -83,6 +62,8 @@
       if (generated && nlResultRef.current) {
         nlResultRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
       }
+      setGenEditingExpr(false);
+      setGenExprDraft("");
     }, [generated]);
 
     const mapRule = (r, i) => ({
@@ -94,7 +75,10 @@
       layer: (r.layer || "SILVER").toUpperCase(),
       sev: r.severity || "MEDIUM",
       by: r.nl_source ? "NL" : "AI",
-      status: r.status || "draft",
+      // The backend persists a rejected decision as status='retired' (rules.py::decide_rule) —
+      // map it to 'rejected' here so the UI recognizes it after a reload instead of rendering
+      // it as an untouched pending draft.
+      status: r.status === "retired" ? "rejected" : (r.status || "draft"),
       ruleType: r.rule_type || "CUSTOM",
       tableFqn: r.table_fqn || "",
       col: r.column_name || "",
@@ -199,6 +183,7 @@
       }
       setGeneratingAll(true);
       setGenAllProgress({ done: 0, total: eligible.length });
+      const failedTables = [];
       for (let i = 0; i < eligible.length; i++) {
         const t = eligible[i];
         setGeneratingFor(t.fqn);
@@ -210,7 +195,9 @@
             const fresh = await window.DTApi.listRules(activeConnectionId).catch(() => null);
             if (fresh) setApiRules(fresh.map(mapRule));
           }
-        } catch (_) { /* skip failed tables */ }
+        } catch (err) {
+          failedTables.push({ fqn: t.fqn, message: (err?.message || "error").replace(/^API \d+: /, "") });
+        }
         setGenAllProgress({ done: i + 1, total: eligible.length });
         await new Promise(r => setTimeout(r, 0));
       }
@@ -218,6 +205,10 @@
       setGeneratingAll(false);
       setGenAllProgress({ done: 0, total: 0 });
       setFilterStatus("ALL");
+      if (failedTables.length) {
+        const names = failedTables.map(f => f.fqn.split(".").pop()).join(", ");
+        toast(`${failedTables.length} of ${eligible.length} tables failed to generate rules (${names}) — ${failedTables[0].message}`, { kind: "error" });
+      }
       loadData();
     };
 
@@ -250,53 +241,85 @@
       setSnoozeDate("");
     };
 
-    const FAILING = {
-      1: { failCnt: "206,338", failPct: "11.2" },
-      3: { failCnt: "882",     failPct: "0.05"  },
-      4: { failCnt: "147",     failPct: "0.008" },
-      7: { failCnt: "—",       failPct: "0"     },
-      11:{ failCnt: "23",      failPct: "0.0005"},
-    };
+    // Runnable requires: (1) synced to the backend (real string rule_id, not a
+    // pending-local tempId) and (2) approved/active — the execution engine only ever
+    // runs approved/active rules (backend/app/api/execution.py), so including a
+    // draft/rejected/snoozed rule here would mark it "running" forever: the backend
+    // silently excludes it from the response and its spinner never resolves.
+    const isRunnable = (r) => typeof r.id === "string" && ["approved", "active"].includes(statusOf(r));
+
+    const _applyResult = (id, result, durationSec) => (result
+      ? { status: result.status, failCnt: String(result.failed_records ?? 0),
+          failPct: String(result.fail_pct ?? 0), ms: (durationSec || 0).toFixed(1),
+          message: result.remediation_suggestion || null }
+      : undefined);
 
     const runOne = (r) => {
+      if (!activeConnectionId) return;
+      if (!isRunnable(r)) { toast("This rule hasn't finished syncing yet — try again in a moment", { kind: "info" }); return; }
       setRunState(s => ({ ...s, [r.id]: "running" }));
-      setTimeout(() => {
-        const f = FAILING[r.id];
-        setRunState(s => ({ ...s, [r.id]: f
-          ? { pass: false, ...f, ms: 1.2 }
-          : { pass: true, failCnt: "0", failPct: "0", ms: (0.4 + Math.random() * 0.8).toFixed(1) } }));
-        toast(f ? `Rule #${r.id} ran — FAILED (${f.failCnt} records)` : `Rule #${r.id} ran — PASSED`, { kind: f ? "error" : "success" });
-      }, 850 + Math.random() * 500);
+      window.DTApi.runExecution(activeConnectionId, null, r.id)
+        .then(resp => {
+          const result = (resp?.results || []).find(x => x.rule_id === r.id) || (resp?.results || [])[0];
+          if (!result) throw new Error("No result returned");
+          const applied = _applyResult(r.id, result, resp.duration_seconds);
+          setRunState(s => ({ ...s, [r.id]: applied }));
+          const label = applied.status === "PASS" ? "PASSED" : applied.status === "ERROR" ? "ERRORED" : "FAILED";
+          toast(applied.status === "ERROR"
+            ? `Rule "${r.name}" could not run — ${applied.message || "execution error"}`
+            : `Rule "${r.name}" ran — ${label}${applied.status === "FAIL" ? ` (${applied.failCnt} records)` : ""}`,
+            { kind: applied.status === "PASS" ? "success" : "error" });
+        })
+        .catch(err => {
+          setRunState(s => { const n = { ...s }; delete n[r.id]; return n; });
+          toast(`Could not run rule: ${(err?.message || "error").replace(/^API \d+: /, "")}`, { kind: "error" });
+        });
     };
 
     const runLayer = (layer) => {
-      const ids = visibleRules.filter(r => layer === "ALL" || r.layer === layer).map(r => r.id);
+      if (!activeConnectionId) return;
+      const rules = visibleRules.filter(r => (layer === "ALL" || r.layer === layer) && isRunnable(r));
+      const ids = rules.map(r => r.id);
+      if (!ids.length) { toast("No runnable rules in this scope", { kind: "info" }); return; }
       ids.forEach(id => setRunState(s => ({ ...s, [id]: "running" })));
       toast(`Running ${ids.length} rules${layer === "ALL" ? "" : " · " + layer + " layer"}…`, { kind: "info" });
-      ids.forEach((id, i) => setTimeout(() => {
-        const f = FAILING[id];
-        setRunState(s => ({ ...s, [id]: f
-          ? { pass: false, ...f, ms: 1.2 }
-          : { pass: true, failCnt: "0", failPct: "0", ms: (0.4 + Math.random() * 0.8).toFixed(1) } }));
-      }, 700 + i * 220));
+      window.DTApi.runExecution(activeConnectionId, layer === "ALL" ? null : layer)
+        .then(resp => {
+          const byId = {};
+          (resp?.results || []).forEach(res => { byId[res.rule_id] = res; });
+          setRunState(s => {
+            const next = { ...s };
+            ids.forEach(id => { next[id] = _applyResult(id, byId[id], resp.duration_seconds); });
+            return next;
+          });
+        })
+        .catch(err => {
+          setRunState(s => { const n = { ...s }; ids.forEach(id => delete n[id]); return n; });
+          toast(`Could not run rules: ${(err?.message || "error").replace(/^API \d+: /, "")}`, { kind: "error" });
+        });
     };
 
-    const convertNl = () => {
-      if (window.DTApi && activeConnectionId) {
-        setNlLoading(true);
-        window.DTApi.nlToRule({ natural_language: nl, connection_id: activeConnectionId, table_fqn: selectedFqn || null })
-          .then(r => setGenerated({
-            name: r.rule_name, col: r.column_name, expr: r.rule_expression,
-            sev: r.severity || "MEDIUM", cde: false,
-            why: r.rationale || r.explanation || "",
-            refine: null,
-            table_fqn: r.table_fqn || selectedFqn || null,
-          }))
-          .catch(() => setGenerated(synthRule(nl)))
-          .finally(() => setNlLoading(false));
-      } else {
-        setGenerated(synthRule(nl));
+    const convertNl = (text) => {
+      const q = (text ?? nl).trim();
+      if (!q) return;
+      if (!window.DTApi || !activeConnectionId) {
+        toast("Connect a data source first to convert natural language to a rule", { kind: "error" });
+        return;
       }
+      setNlLoading(true);
+      setGenerated(null);
+      window.DTApi.nlToRule({ natural_language: q, connection_id: activeConnectionId, table_fqn: selectedFqn || null })
+        .then(r => setGenerated({
+          name: r.rule_name, col: r.column_name, expr: r.rule_expression,
+          sev: r.severity || "MEDIUM", cde: false,
+          why: r.rationale || r.explanation || "",
+          refine: null,
+          table_fqn: r.table_fqn || selectedFqn || null,
+          unresolved: r.unresolved || false,
+          unresolvedReason: r.unresolved_reason || null,
+        }))
+        .catch(err => toast(`Could not convert to a rule: ${(err?.message || "error").replace(/^API \d+: /, "")}`, { kind: "error" }))
+        .finally(() => setNlLoading(false));
     };
 
     const pendingCount  = allRules.filter(r => statusOf(r) === "draft").length;
@@ -423,7 +446,7 @@
                 ))}
                 <div style={{ width: 1, height: 16, background: "var(--grey-200)", margin: "0 4px" }}></div>
                 <Eyebrow style={{ marginRight: 2 }}>Status</Eyebrow>
-                {[["ALL","All"],["draft","Pending"],["approved","Approved"],["active","Active"],["snoozed","Snoozed"]].map(([val, lbl]) => (
+                {[["ALL","All"],["draft","Pending"],["approved","Approved"],["active","Active"],["snoozed","Snoozed"],["rejected","Rejected"]].map(([val, lbl]) => (
                   <button key={val} onClick={() => setFilterStatus(val)} style={pillSt(filterStatus === val)}>{lbl}</button>
                 ))}
               </div>
@@ -463,43 +486,74 @@
               <Button size="sm" variant="soft" icon="circle-play" onClick={() => runLayer(fLayer)}>
                 Run {fLayer === "ALL" ? "all" : fLayer}
               </Button>
-              <Button size="sm" variant="soft" icon="check-check" onClick={() => {
-                const lowRules = allRules.filter(r => r.sev === "LOW");
-                lowRules.forEach(r => {
-                  setRuleDecisions(x => ({ ...x, [r.id]: "approved" }));
-                  if (window.DTApi?.decideRule) {
-                    window.DTApi.decideRule(r.id, { decision: "approve", decided_by: "user" }).catch(() => {});
-                  }
-                });
-                toast(`${lowRules.length} LOW-severity rules approved`, { kind: "success" });
-                setTimeout(() => loadData(), 600);
+              <Button size="sm" variant="soft" icon="check-check" onClick={async () => {
+                const lowRules = allRules.filter(r => r.sev === "LOW" && statusOf(r) === "draft");
+                if (!lowRules.length) { toast("No pending LOW-severity rules to approve", { kind: "info" }); return; }
+                if (!window.DTApi?.decideRule) return;
+                const outcomes = await Promise.allSettled(
+                  lowRules.map(r => window.DTApi.decideRule(r.id, { decision: "approve", decided_by: "user" }))
+                );
+                const succeeded = lowRules.filter((_, i) => outcomes[i].status === "fulfilled");
+                succeeded.forEach(r => setRuleDecisions(x => ({ ...x, [r.id]: "approved" })));
+                const failedCount = lowRules.length - succeeded.length;
+                const noun = (n) => `rule${n === 1 ? "" : "s"}`;
+                toast(
+                  failedCount > 0
+                    ? `${succeeded.length} of ${lowRules.length} LOW-severity ${noun(lowRules.length)} approved — ${failedCount} failed, please retry`
+                    : `${succeeded.length} LOW-severity ${noun(succeeded.length)} approved`,
+                  { kind: failedCount > 0 ? "error" : "success" }
+                );
+                loadData();
               }}>Bulk approve LOW</Button>
             </div>
           </Card>
 
           {/* Empty state */}
-          {selectedFqn && visibleRules.length === 0 && (
-            <Card style={{ marginBottom: 16, textAlign: "center", padding: "44px 24px" }}>
-              <div style={{ fontSize: 30, marginBottom: 12 }}>🔍</div>
-              <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 8 }}>No rules yet for {selectedName}</div>
-              <div style={{ fontSize: 13, color: "var(--fg-2)", marginBottom: 20, maxWidth: 380, margin: "0 auto 20px" }}>
-                {generatingFor === selectedFqn
-                  ? "Generating AI rule suggestions from the profiling report…"
-                  : "Click Generate rules to get AI suggestions based on the profiling report, or use the NL converter below."}
-              </div>
-              {generatingFor === selectedFqn
-                ? <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                    fontSize: 13, color: "var(--brand)", fontWeight: 600 }}>
-                    <span className="dt-spin" style={{ width: 14, height: 14, border: "2px solid var(--brand-ring)",
-                      borderTopColor: "var(--brand)", borderRadius: "50%" }}></span>
-                    Generating…
+          {(() => {
+            const hasActiveFilters = fLayer !== "ALL" || filterStatus !== "ALL" || filterType !== "ALL" || !!searchText;
+            if (visibleRules.length === 0 && allRules.length > 0 && hasActiveFilters) {
+              // Filters/search excluded everything — distinct from "no rules exist yet for
+              // this table," which previously reused this same blank space with no message
+              // at all whenever a table wasn't selected (or filters were the actual cause).
+              return (
+                <Card style={{ marginBottom: 16, textAlign: "center", padding: "44px 24px" }}>
+                  <div style={{ fontSize: 30, marginBottom: 12 }}>🔍</div>
+                  <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 8 }}>No rules match your filters</div>
+                  <div style={{ fontSize: 13, color: "var(--fg-2)", marginBottom: 20 }}>
+                    Try clearing the layer, status, type, or search filters.
                   </div>
-                : <Button variant="primary" onClick={() => generateRules(selectedFqn)} disabled={!!generatingFor}>
-                    Generate rules for {selectedName}
+                  <Button variant="soft" onClick={() => { setFLayer("ALL"); setFilterStatus("ALL"); setFilterType("ALL"); setSearchText(""); }}>
+                    Clear filters
                   </Button>
-              }
-            </Card>
-          )}
+                </Card>
+              );
+            }
+            if (selectedFqn && visibleRules.length === 0 && !hasActiveFilters) {
+              return (
+                <Card style={{ marginBottom: 16, textAlign: "center", padding: "44px 24px" }}>
+                  <div style={{ fontSize: 30, marginBottom: 12 }}>🔍</div>
+                  <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 8 }}>No rules yet for {selectedName}</div>
+                  <div style={{ fontSize: 13, color: "var(--fg-2)", marginBottom: 20, maxWidth: 380, margin: "0 auto 20px" }}>
+                    {generatingFor === selectedFqn
+                      ? "Generating AI rule suggestions from the profiling report…"
+                      : "Click Generate rules to get AI suggestions based on the profiling report, or use the NL converter below."}
+                  </div>
+                  {generatingFor === selectedFqn
+                    ? <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                        fontSize: 13, color: "var(--brand)", fontWeight: 600 }}>
+                        <span className="dt-spin" style={{ width: 14, height: 14, border: "2px solid var(--brand-ring)",
+                          borderTopColor: "var(--brand)", borderRadius: "50%" }}></span>
+                        Generating…
+                      </div>
+                    : <Button variant="primary" onClick={() => generateRules(selectedFqn)} disabled={!!generatingFor}>
+                        Generate rules for {selectedName}
+                      </Button>
+                  }
+                </Card>
+              );
+            }
+            return null;
+          })()}
 
           {/* Rule list */}
           {visibleRules.length > 0 && (
@@ -587,12 +641,16 @@
                             </div>
                           : <div style={{ display: "inline-flex", alignItems: "center", gap: 10, marginTop: 8,
                               padding: "5px 12px", borderRadius: 8,
-                              background: run.pass ? "var(--green-50)" : "var(--red-50)" }}>
-                              {run.pass
+                              background: run.status === "PASS" ? "var(--green-50)" : run.status === "ERROR" ? "var(--yellow-50)" : "var(--red-50)" }}>
+                              {run.status === "PASS"
                                 ? <Chip intent="success" size="sm" icon="check">PASS</Chip>
-                                : <Chip intent="danger" size="sm" icon="x">FAIL</Chip>}
+                                : run.status === "ERROR"
+                                  ? <Chip intent="warning" size="sm" icon="alert-triangle">ERROR</Chip>
+                                  : <Chip intent="danger" size="sm" icon="x">FAIL</Chip>}
                               <span style={{ fontSize: 12, color: "var(--fg-2)" }}>
-                                {run.pass ? "0 violations" : `${run.failCnt} violations · ${run.failPct}%`}
+                                {run.status === "PASS" ? "0 violations"
+                                  : run.status === "ERROR" ? (run.message || "execution error")
+                                  : `${run.failCnt} violations · ${run.failPct}%`}
                               </span>
                               <span style={{ fontSize: 11, color: "var(--fg-3)" }}>· {run.ms}s</span>
                             </div>
@@ -601,7 +659,9 @@
                       {/* Action buttons */}
                       <div style={{ flexShrink: 0, display: "flex", gap: 5, alignItems: "center" }}>
                         {editId !== r.id && (
-                          <IconBtn icon="play" title="Run this rule" size={30} onClick={() => runOne(r)} />
+                          <IconBtn icon="play" size={30} onClick={() => done && runOne(r)}
+                            disabled={!done}
+                            title={done ? "Run this rule" : "Approve this rule before running it against live data"} />
                         )}
                         {done
                           ? <Chip intent="success" size="sm" icon="check">{st === "active" ? "Active" : "Approved"}</Chip>
@@ -661,7 +721,7 @@
             </div>
             <div style={{ display: "flex", gap: 7, marginTop: 10, flexWrap: "wrap" }}>
               {["revenue should never be negative", "emails must be valid format", "order_id must be unique"].map(s => (
-                <button key={s} onClick={() => { setNl(s); setGenerated(synthRule(s)); }}
+                <button key={s} onClick={() => { setNl(s); convertNl(s); }}
                   style={{ fontSize: 11.5, color: "var(--fg-2)", background: "#fff",
                     border: "1px solid var(--grey-200)", borderRadius: 999, padding: "4px 11px", cursor: "pointer" }}>
                   {s}
@@ -673,15 +733,36 @@
               <div ref={nlResultRef} className="dt-fade-up" style={{ marginTop: 16, background: "#fff", borderRadius: 12,
                 border: "1px solid var(--grey-200)", padding: 18 }}>
                 <Eyebrow style={{ marginBottom: 12 }}>Generated rule — review before approving</Eyebrow>
+                {generated.unresolved && (
+                  <div style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 14,
+                    padding: "10px 12px", background: "var(--red-50)", border: "1px solid var(--red-200)", borderRadius: 8 }}>
+                    <i data-lucide="alert-triangle" style={{ width: 15, height: 15, color: "var(--red-600)", flexShrink: 0, marginTop: 1 }}></i>
+                    <div>
+                      <div style={{ fontSize: 12.5, fontWeight: 700, color: "var(--red-700)" }}>Could not verify this rule against the real schema</div>
+                      <div style={{ fontSize: 12, color: "var(--red-700)", marginTop: 2 }}>
+                        {generated.unresolvedReason || "The AI could not confidently match this request to a real column or the request was ambiguous. Review the expression carefully before approving."}
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <div style={{ display: "grid", gridTemplateColumns: "110px 1fr",
                   rowGap: 10, columnGap: 14, fontSize: 13, alignItems: "start" }}>
                   <span style={{ color: "var(--fg-3)", paddingTop: 2 }}>Rule name</span>
                   <Mono style={{ fontWeight: 700, wordBreak: "break-word" }}>{generated.name}</Mono>
                   <span style={{ color: "var(--fg-3)", paddingTop: 2 }}>Table</span>
-                  <Mono style={{ wordBreak: "break-all" }}>{generated.table_fqn || (selectedFqn ? selectedFqn : activeConnectionName ? activeConnectionName + " (auto)" : "connection default")}</Mono>
+                  {(generated.table_fqn || selectedFqn)
+                    ? <Mono style={{ wordBreak: "break-all" }}>{generated.table_fqn || selectedFqn}</Mono>
+                    : <span style={{ color: "var(--yellow-800)", fontWeight: 600 }}>Unresolved — select a table before approving</span>}
                   <span style={{ color: "var(--fg-3)", paddingTop: 8 }}>Expression</span>
-                  <Mono style={{ background: "var(--grey-50)", padding: "6px 10px", borderRadius: 6,
-                    whiteSpace: "pre-wrap", wordBreak: "break-all", overflowWrap: "anywhere" }}>{generated.expr}</Mono>
+                  {genEditingExpr ? (
+                    <textarea value={genExprDraft} onChange={e => setGenExprDraft(e.target.value)}
+                      rows={2} style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 12,
+                        padding: "7px 10px", borderRadius: 6, border: "1px solid var(--brand)",
+                        outline: "none", boxShadow: "0 0 0 3px var(--brand-ring)", resize: "vertical" }} />
+                  ) : (
+                    <Mono style={{ background: "var(--grey-50)", padding: "6px 10px", borderRadius: 6,
+                      whiteSpace: "pre-wrap", wordBreak: "break-all", overflowWrap: "anywhere" }}>{generated.refine || generated.expr}</Mono>
+                  )}
                   <span style={{ color: "var(--fg-3)", paddingTop: 2 }}>Severity</span>
                   <span style={{ paddingTop: 2 }}><Severity level={generated.sev} size="sm" /></span>
                   <span style={{ color: "var(--fg-3)", paddingTop: 2 }}>CDE impact</span>
@@ -702,37 +783,61 @@
                     </div>
                   )}
                 </div>
-                <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-                  <Button variant="primary" icon="check" onClick={() => {
-                    const expr = generated.refine || generated.expr;
-                    const tempId = 100 + customRules.length;
-                    setCustomRules(c => [...c, {
-                      id: tempId, name: generated.name, expr, layer: "SILVER",
-                      sev: generated.sev, by: "NL", status: "approved",
-                      ruleType: "CUSTOM", tableFqn: generated.table_fqn || selectedFqn || "",
-                      col: generated.col || "", cde: generated.cde || false, why: generated.why || "",
-                    }]);
-                    setGenerated(null);
-                    toast(`Rule ${generated.name} approved & added`, { kind: "success" });
-                    if (window.DTApi?.createRule && activeConnectionId) {
-                      window.DTApi.createRule({
-                        rule_id: "", connection_id: activeConnectionId,
-                        rule_name: generated.name, rule_description: generated.why || "",
-                        table_fqn: generated.table_fqn || selectedFqn || null, layer: "SILVER",
-                        column_name: generated.col || null, rule_expression: expr,
-                        rule_type: "CUSTOM", severity: generated.sev,
-                        is_cde_rule: generated.cde || false, status: "draft",
-                        nl_source: nl, created_by: "user",
-                      }).then(r => {
-                        if (r?.rule_id && window.DTApi?.decideRule) {
-                          window.DTApi.decideRule(r.rule_id, { decision: "approve", decided_by: "user" })
-                            .then(() => loadData()).catch(() => {});
+                <div style={{ marginTop: 14 }}>
+                  {/* Both button groups stay mounted at all times — only visibility toggles via CSS.
+                      Conditionally unmounting icon-bearing <Button icon="..."> elements here crashes
+                      the screen (React removeChild error) because lucide.createIcons() (shell.jsx)
+                      replaces their <i data-lucide> children with raw <svg> nodes outside React's
+                      tracking; if React later tries to remove that same <i> node during an unmount,
+                      the DOM no longer has it where React expects. See ScreenErrorBoundary comment. */}
+                  <div style={{ display: genEditingExpr ? "flex" : "none", gap: 8 }}>
+                    <Button variant="primary" onClick={() => {
+                      setGenerated(g => ({ ...g, expr: genExprDraft, refine: null }));
+                      setGenEditingExpr(false);
+                    }}>Save expression</Button>
+                    <Button variant="ghost" onClick={() => setGenEditingExpr(false)}>Cancel</Button>
+                  </div>
+                  <div style={{ display: genEditingExpr ? "none" : "flex", gap: 8 }}>
+                    <Button variant="primary" icon="check" onClick={() => {
+                        const expr = generated.refine || generated.expr;
+                        const tempId = 100 + customRules.length;
+                        setCustomRules(c => [...c, {
+                          id: tempId, name: generated.name, expr, layer: "SILVER",
+                          sev: generated.sev, by: "NL", status: "approved",
+                          ruleType: "CUSTOM", tableFqn: generated.table_fqn || selectedFqn || "",
+                          col: generated.col || "", cde: generated.cde || false, why: generated.why || "",
+                        }]);
+                        setGenerated(null);
+                        toast(`Rule ${generated.name} approved & added`, { kind: "success" });
+                        if (window.DTApi?.createRule && activeConnectionId) {
+                          window.DTApi.createRule({
+                            rule_id: "", connection_id: activeConnectionId,
+                            rule_name: generated.name, rule_description: generated.why || "",
+                            table_fqn: generated.table_fqn || selectedFqn || null, layer: "SILVER",
+                            column_name: generated.col || null, rule_expression: expr,
+                            rule_type: "CUSTOM", severity: generated.sev,
+                            is_cde_rule: generated.cde || false, status: "draft",
+                            nl_source: nl, created_by: "user",
+                          }).then(r => {
+                            if (r?.rule_id && window.DTApi?.decideRule) {
+                              return window.DTApi.decideRule(r.rule_id, { decision: "approve", decided_by: "user" });
+                            }
+                          }).then(() => {
+                            // The rule now exists in the DB (apiRules) — drop the local placeholder
+                            // so it doesn't render as a duplicate alongside the persisted copy.
+                            setCustomRules(c => c.filter(x => x.id !== tempId));
+                            loadData();
+                          }).catch(err => {
+                            toast(`Could not save the rule to the database: ${(err?.message || "error").replace(/^API \d+: /, "")}`, { kind: "error" });
+                          });
                         }
-                      }).catch(() => {});
-                    }
-                  }}>{generated.refine ? "Approve with refinement" : "Approve & add"}</Button>
-                  <Button variant="soft" icon="pencil">Edit expression</Button>
-                  <Button variant="ghost" onClick={() => setGenerated(null)}>Reject</Button>
+                      }}>{generated.refine ? "Approve with refinement" : "Approve & add"}</Button>
+                      <Button variant="soft" icon="pencil" onClick={() => {
+                        setGenExprDraft(generated.refine || generated.expr);
+                        setGenEditingExpr(true);
+                      }}>Edit expression</Button>
+                    <Button variant="ghost" onClick={() => setGenerated(null)}>Reject</Button>
+                  </div>
                 </div>
               </div>
             )}

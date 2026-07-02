@@ -99,8 +99,56 @@ def execute_rule(
             quality_score=0,
             severity=severity,
             is_cde_rule=is_cde_rule,
-            remediation_suggestion=f"Execution error: {e}",
+            remediation_suggestion=_safe_error_message(e),
         )
+
+
+def _safe_error_message(e: Exception) -> str:
+    """User-facing summary of a rule execution failure — never the raw driver/DB
+    exception text. The full exception is already logged server-side (see caller);
+    this value is returned in the API response and must not leak SQL error detail,
+    which would hand an attacker an oracle for refining an injected rule_expression."""
+    text = str(e).lower()
+    if any(s in text for s in ("login timeout", "could not connect", "timeout expired",
+                                "cannot reach", "timed out", "connection refused")):
+        return "Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page."
+    if "login failed" in text or "authentication" in text or "access denied" in text or "permission" in text:
+        return "The connection's credentials do not have permission to run this rule. Check the connection's configuration."
+    return "This rule could not be executed due to a data source error. Check the connection's health, or contact support if the problem persists."
+
+
+def all_rules_connection_error(
+    connection_id: str,
+    rules: list[dict],
+    exc: Exception,
+    run_id: str | None = None,
+) -> ExecutionRunResponse:
+    """Build a run response where every rule is ERROR, without touching the
+    connector. Used when a pre-flight connectivity check has already failed —
+    calling execute_rule() per rule in that case would retry the same doomed
+    ODBC login for every single rule (each blocking for the full driver login
+    timeout), turning an instant, well-understood failure into a multi-minute
+    hang before the user sees anything."""
+    if run_id is None:
+        run_id = str(uuid.uuid4())
+    run_timestamp = datetime.now(timezone.utc)
+    message = _safe_error_message(exc)
+    results = [
+        RuleResult(
+            result_id=str(uuid.uuid4()), run_id=run_id, rule_id=rule["rule_id"],
+            rule_name=rule["rule_name"], table_fqn=rule["table_fqn"],
+            layer=rule.get("layer", ""), status="ERROR",
+            total_records=0, failed_records=0, fail_pct=0, quality_score=0,
+            severity=rule.get("severity", "MEDIUM"), is_cde_rule=rule.get("is_cde_rule", False),
+            remediation_suggestion=message,
+        )
+        for rule in rules
+    ]
+    return ExecutionRunResponse(
+        run_id=run_id, connection_id=connection_id, run_timestamp=run_timestamp,
+        total_rules=len(results), passed=0, failed=0, errors=len(results),
+        overall_quality_score=0, results=results,
+    )
 
 
 def run_all_rules(
