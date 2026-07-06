@@ -1,6 +1,5 @@
 // DataTrust — Screen: Anomaly Inbox + business explanation + fingerprinting
 (function () {
-  const D = window.DT;
 
   // ── Thresholds configuration panel ─────────────────────────────────────────
   const ThresholdsPanel = ({ onClose, connectionId }) => {
@@ -20,9 +19,11 @@
         .catch(() => {});
     }, [connectionId]);
 
+    const invalid = [vol, dist, fresh].some(v => !(Number(v) > 0));
     const save = () => {
-      const body = { connection_id: connectionId, vol_pct: Number(vol), dist_pct: Number(dist), freshness_hours: Number(fresh) };
-      (window.DTApi?.saveThresholds ? window.DTApi.saveThresholds(body) : Promise.resolve())
+      if (invalid) { toast("Thresholds must be positive numbers", { kind: "warning" }); return; }
+      if (!window.DTApi?.saveThresholds) { toast("Backend unavailable — thresholds not saved", { kind: "error" }); return; }
+      window.DTApi.saveThresholds({ connection_id: connectionId, vol_pct: Number(vol), dist_pct: Number(dist), freshness_hours: Number(fresh) })
         .then(() => { toast(`Thresholds saved — volume: ${vol}%, distribution: ${dist}%, freshness: ${fresh}h`, { kind: "success" }); onClose(); })
         .catch(() => { toast("Failed to save thresholds", { kind: "error" }); });
     };
@@ -33,50 +34,79 @@
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20, marginTop: 16 }}>
           <div>
             <label style={{ fontSize: 12, color: "var(--fg-2)", fontWeight: 600, display: "block", marginBottom: 6 }}>Volume deviation %</label>
-            <Input type="number" value={vol} onChange={e => setVol(e.target.value)} />
+            {/* Input's onChange passes the VALUE, not an event (see primitives.jsx) —
+                the old `e => setVol(e.target.value)` threw on every keystroke and
+                crashed the whole screen to the error boundary. */}
+            <Input type="number" value={vol} onChange={setVol} />
             <div style={{ fontSize: 11, color: "var(--fg-3)", marginTop: 4 }}>Alert when row count shifts by more than this %</div>
           </div>
           <div>
             <label style={{ fontSize: 12, color: "var(--fg-2)", fontWeight: 600, display: "block", marginBottom: 6 }}>Distribution shift %</label>
-            <Input type="number" value={dist} onChange={e => setDist(e.target.value)} />
+            <Input type="number" value={dist} onChange={setDist} />
             <div style={{ fontSize: 11, color: "var(--fg-3)", marginTop: 4 }}>Alert when null rate or value spread shifts by this %</div>
           </div>
           <div>
             <label style={{ fontSize: 12, color: "var(--fg-2)", fontWeight: 600, display: "block", marginBottom: 6 }}>Freshness window (hours)</label>
-            <Input type="number" value={fresh} onChange={e => setFresh(e.target.value)} />
+            <Input type="number" value={fresh} onChange={setFresh} />
             <div style={{ fontSize: 11, color: "var(--fg-3)", marginTop: 4 }}>Alert when table data is older than this many hours</div>
           </div>
         </div>
         <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
-          <Button size="sm" variant="primary" icon="check" onClick={save}>Save thresholds</Button>
+          <Button size="sm" variant="primary" icon="check" disabled={invalid} onClick={save}>Save thresholds</Button>
           <Button size="sm" variant="ghost" onClick={onClose}>Cancel</Button>
         </div>
       </Card>
     );
   };
 
-  const Explanation = ({ data, anomalyId }) => {
-    // When a real API explanation is available, render it; otherwise fall back to demo content
-    const sections = data
-      ? [
-          ["What happened",   data.what_happened  || data.summary || ""],
-          ["Why it matters",  data.why_it_matters || data.business_impact || ""],
-        ].filter(([, v]) => v)
-      : [
-          ["What happened", "Today's order dataset contains 1.84 million records — 57% fewer than the daily average of 4.3 million."],
-          ["Likely root cause", "The OMS extract arrived 85 minutes late; the Silver net_revenue step failed, filtering 206K records."],
-          ["Business impact", "Finance Revenue Dashboard is showing only 42% of today's orders. 3 ML models have incomplete training data."],
-        ];
+  const Explanation = ({ data, anomalyId, anomaly, loading, error, connectionId }) => {
+    if (loading) {
+      return (
+        <div style={{ marginTop: 14, background: "#fff", border: "1px solid var(--grey-200)", borderRadius: 12, padding: 24, textAlign: "center", color: "var(--fg-3)", fontSize: 13 }}>
+          Generating business explanation…
+        </div>
+      );
+    }
+    if (error) {
+      return (
+        <div style={{ marginTop: 14, background: "var(--red-50)", border: "1px solid var(--red-200)", borderRadius: 12, padding: 18, color: "var(--red-700)", fontSize: 13 }}>
+          Could not generate an explanation — {error}
+        </div>
+      );
+    }
+    if (!data) return null;
 
-    const aiActions = data?.recommended_actions;
+    const sections = [
+      ["What happened",  data.what_happened  || data.summary || ""],
+      ["Why it matters", data.why_it_matters || data.business_impact || ""],
+    ].filter(([, v]) => v);
+    const aiActions = data.recommended_actions;
+
+    const createAnomalyTask = (extraTitle) => {
+      window.DTApi?.createTask?.({
+        title: `${extraTitle || "Anomaly"}: ${anomaly?.type || "Unknown"} on ${anomaly?.table || "table"}`,
+        description: anomaly?.desc || null,
+        priority: (anomaly?.sev === "HIGH" || anomaly?.sev === "CRITICAL") ? anomaly.sev : "MEDIUM",
+        related_entity_type: "anomaly",
+        related_entity_id: anomalyId,
+        connection_id: connectionId || null,
+      })
+        .then(() => toast("Task created in Task Board", { kind: "success" }))
+        .catch(() => toast("Failed to create task — check backend", { kind: "error" }));
+    };
 
     return (
     <div style={{ marginTop: 14, background: "#fff", border: "1px solid var(--grey-200)", borderRadius: 12, padding: 18 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
         <i data-lucide="file-text" style={{ width: 16, height: 16, color: "var(--navy-500)" }}></i>
         <span style={{ fontFamily: "var(--font-doc-head)", fontWeight: 700, fontSize: 14 }}>Business explanation</span>
-        {data ? <Chip intent="brand" size="sm" icon="sparkles">AI-generated</Chip> : <Chip intent="danger" size="sm" variant="fill">CRITICAL</Chip>}
+        {data.fallback
+          ? <Chip intent="neutral" size="sm" icon="shield">Auto-generated (AI unavailable)</Chip>
+          : <Chip intent="brand" size="sm" icon="sparkles">AI-generated</Chip>}
       </div>
+      {sections.length === 0 && (
+        <div style={{ fontSize: 13, color: "var(--fg-3)", marginBottom: 12 }}>No explanation content was returned for this anomaly.</div>
+      )}
       {sections.map(([k, v]) => (
         <div key={k} style={{ marginBottom: 12 }}>
           <Eyebrow style={{ marginBottom: 4 }}>{k}</Eyebrow>
@@ -84,40 +114,34 @@
         </div>
       ))}
       <div style={{ display: "flex", gap: 16, padding: 14, background: "var(--red-50)", borderRadius: 10, marginBottom: 12, flexWrap: "wrap" }}>
-        {!data && (
-          <div><Eyebrow color="var(--red-600)">Est. revenue undercount</Eyebrow>
-            <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 26, color: "var(--red-500)", marginTop: 2 }}>$221.9M</div>
-          </div>
-        )}
         <div style={{ flex: 1 }}><Eyebrow color="var(--red-600)">Recommended actions</Eyebrow>
           <ol style={{ margin: "4px 0 0", paddingLeft: 18, fontSize: 12.5, color: "var(--fg-1)", lineHeight: 1.7 }}>
             {aiActions && aiActions.length > 0
               ? aiActions.map((action, i) => <li key={i}>{action}</li>)
-              : <>
-                  <li>Confirm OMS extract completed fully (~4.4M rows expected)</li>
-                  <li>Re-run Bronze orders pipeline for 2024-11-05</li>
-                  <li>Fix Silver net_revenue step and re-run Silver</li>
-                  <li>Notify Finance not to publish today's dashboard</li>
-                </>
+              : <li style={{ color: "var(--fg-3)", listStyle: "none", marginLeft: -18 }}>No recommended actions were generated for this anomaly.</li>
             }
           </ol>
         </div>
       </div>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <Button size="sm" variant="primary" icon="user-check" onClick={() => toast("Assigned to Deepa Nair", { kind: "success" })}>Accept & assign</Button>
+        <Button size="sm" variant="primary" icon="user-check" onClick={() => createAnomalyTask("Anomaly")}>Accept & create task</Button>
         <Button size="sm" variant="soft" icon="share-2" onClick={() => {
           window.DTApi?.shareAnomaly?.(anomalyId, { channel: "#data-quality" })
             .then(() => toast("Explanation shared to #data-quality", { kind: "success" }))
             .catch(() => toast("Share failed — check backend", { kind: "error" }));
         }}>Share to Slack</Button>
-        <Button size="sm" variant="ghost" icon="pencil" onClick={() => toast("Edit mode — annotation will be saved to audit trail", { kind: "info" })}>Edit explanation</Button>
-        <Button size="sm" variant="ghost" icon="building-2" onClick={() => toast("Sent to Finance team", { kind: "info" })}>Send to Finance</Button>
+        <span title="Editing explanations isn't wired to a backend annotation endpoint yet">
+          <Button size="sm" variant="ghost" icon="pencil" disabled>Edit explanation</Button>
+        </span>
+        <span title="No Finance notification integration is configured yet">
+          <Button size="sm" variant="ghost" icon="building-2" disabled>Send to Finance</Button>
+        </span>
       </div>
     </div>
     );
   };
 
-  const Fingerprint = ({ items = [] }) => (
+  const Fingerprint = ({ items = [], anomaly, anomalyId, connectionId }) => (
     <div style={{ marginTop: 12, background: "linear-gradient(180deg, var(--purple-50), #fff)", border: "1px solid var(--purple-200)", borderRadius: 12, padding: 18 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
         <i data-lucide="brain" style={{ width: 16, height: 16, color: "var(--purple-500)" }}></i>
@@ -145,20 +169,40 @@
         </div>
       ))}
       <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
-        <Button size="sm" variant="primary" icon="zap" onClick={() => toast("Suggested resolution applied · Re-run Bronze + Silver · ETA ~50 min", { kind: "success" })}>Apply suggested resolution</Button>
-        <Button size="sm" variant="soft" icon="user-plus" onClick={() => toast("Assigned to Deepa Nair", { kind: "info" })}>Assign to Deepa Nair</Button>
+        <span title="No pipeline re-run integration is wired yet — trigger the re-run manually in your orchestrator">
+          <Button size="sm" variant="primary" icon="zap" disabled>Apply suggested resolution</Button>
+        </span>
+        <Button size="sm" variant="soft" icon="user-plus" onClick={() => {
+          window.DTApi?.createTask?.({
+            title: `Anomaly (recurring pattern): ${anomaly?.type || "Unknown"} on ${anomaly?.table || "table"}`,
+            description: anomaly?.desc || null,
+            priority: (anomaly?.sev === "HIGH" || anomaly?.sev === "CRITICAL") ? anomaly.sev : "MEDIUM",
+            related_entity_type: "anomaly",
+            related_entity_id: anomalyId,
+            connection_id: connectionId || null,
+          })
+            .then(() => toast("Task created in Task Board", { kind: "success" }))
+            .catch(() => toast("Failed to create task — check backend", { kind: "error" }));
+        }}>Create task</Button>
       </div>
     </div>
   );
 
   const Anomalies = () => {
-    const { ackedAnomalies, setAckedAnomalies, activeConnectionId, refreshAnomalyCount } = useApp();
+    const { ackedAnomalies, setAckedAnomalies, activeConnectionId, refreshAnomalyCount, go, setActiveTableFqn } = useApp();
     const [expanded, setExpanded] = React.useState(null); // id
+    const [escalatedIds, setEscalatedIds] = React.useState({}); // id -> true once a task exists
     const [tab, setTab] = React.useState({}); // id -> 'explain' | 'fingerprint'
     const [anomalies, setAnomalies] = React.useState([]);
     const [explanations, setExplanations] = React.useState({}); // id -> explanation object
+    const [explainLoading, setExplainLoading] = React.useState({}); // id -> bool
+    const [explainError, setExplainError] = React.useState({}); // id -> message
     const [fingerprints, setFingerprints] = React.useState([]);
-    const [loading, setLoading] = React.useState(false);
+    // Start in the loading state (not false): effects run AFTER the first paint, so a
+    // false initial value flashes the "All clear" zero-state (or a previous
+    // connection's rows) for a beat before the fetch even starts — the reader sees
+    // wrong data first, then the correction. First paint must be the spinner.
+    const [loading, setLoading] = React.useState(!!window.DTApi);
     const [inboxError, setInboxError] = React.useState(null);
     const [showThresholds, setShowThresholds] = React.useState(false);
     useIcons();
@@ -167,7 +211,7 @@
       id: a.anomaly_id || a.id, sev: a.severity || "MEDIUM",
       type: a.anomaly_type || "Unknown", table: a.table_fqn || "",
       layer: (a.layer || "SILVER").toUpperCase(),
-      time: a.detected_at ? new Date(a.detected_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—",
+      time: a.detected_at ? new Date(a.detected_at).toLocaleDateString([], { month: "short", day: "numeric" }) + " · " + new Date(a.detected_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—",
       desc: a.description || "", history: a.history_values || null,
       hasFingerprint: a.has_fingerprint || false,
     });
@@ -176,6 +220,11 @@
       if (!window.DTApi) return;
       setLoading(true);
       setInboxError(null);
+      // Clear the previous connection's rows immediately — leaving them on screen
+      // while the new connection's inbox loads reads as wrong data, not as caching.
+      setAnomalies([]);
+      setFingerprints([]);
+      setExpanded(null);
       window.DTApi.getFingerprints?.(activeConnectionId)
         .then(rows => { if (rows) setFingerprints(rows); })
         .catch(() => {});
@@ -205,14 +254,22 @@
       toast("Anomaly acknowledged · alert suppressed for 4 hours", { kind: "info" });
       window.DTApi?.acknowledgeAnomaly?.(id, { note: "Suppressed for 4 hours" })
         .then(() => refreshAnomalyCount?.())
-        .catch(() => { refreshAnomalyCount?.(); });
+        .catch(() => {
+          // The server still counts it open — showing it acked would be a lie.
+          setAckedAnomalies(a => { const next = { ...a }; delete next[id]; return next; });
+          toast("Acknowledge failed — the anomaly is still open", { kind: "error" });
+          refreshAnomalyCount?.();
+        });
     };
 
     const explainAnomaly = (id) => {
-      if (!window.DTApi || explanations[id]) return;
+      if (!window.DTApi || explanations[id] || explainLoading[id]) return;
+      setExplainLoading(prev => ({ ...prev, [id]: true }));
+      setExplainError(prev => ({ ...prev, [id]: null }));
       window.DTApi.explainAnomaly(id)
         .then(r => setExplanations(prev => ({ ...prev, [id]: r })))
-        .catch(() => {});
+        .catch(err => setExplainError(prev => ({ ...prev, [id]: err?.message || "check backend" })))
+        .finally(() => setExplainLoading(prev => ({ ...prev, [id]: false })));
     };
 
     return (
@@ -232,7 +289,9 @@
         )}
 
         {loading && (
-          <Card style={{ textAlign: "center", padding: 32 }}>
+          <Card style={{ textAlign: "center", padding: 40 }}>
+            <span className="dt-spin" style={{ width: 22, height: 22, border: "2.5px solid var(--brand-ring)",
+              borderTopColor: "var(--brand)", borderRadius: "50%", display: "inline-block", marginBottom: 12 }}></span>
             <div style={{ color: "var(--fg-3)", fontSize: 13 }}>Loading anomaly inbox…</div>
           </Card>
         )}
@@ -267,7 +326,7 @@
                     </div>
                     {a.history && (
                       <div style={{ width: 180, flexShrink: 0 }}>
-                        <BarSeries data={a.history.map((v, i) => ({ label: i === a.history.length - 1 ? "Today" : `D-${a.history.length - 1 - i}`, value: v }))} height={56} highlightLast />
+                        <BarSeries data={a.history.map((v, i) => ({ label: i === a.history.length - 1 ? "Latest" : `−${a.history.length - 1 - i}`, value: v }))} height={56} highlightLast />
                       </div>
                     )}
                     <span style={{ fontSize: 11, color: "var(--fg-3)", flexShrink: 0 }}>{a.time}</span>
@@ -276,9 +335,31 @@
                     <Button size="sm" variant={open && cur === "explain" ? "primary" : "soft"} icon="file-text" onClick={() => { setExpanded(open && cur === "explain" ? null : a.id); setTab(t => ({ ...t, [a.id]: "explain" })); explainAnomaly(a.id); }}>Explain in business terms</Button>
                     {a.hasFingerprint && <Button size="sm" variant={open && cur === "fingerprint" ? "primary" : "soft"} icon="brain" onClick={() => { setExpanded(a.id); setTab(t => ({ ...t, [a.id]: "fingerprint" })); }}>Fingerprint match</Button>}
                     <Button size="sm" variant="ghost" icon="check" onClick={() => ack(a.id)}>Acknowledge</Button>
-                    <Button size="sm" variant="ghost" icon="siren" onClick={() => toast(`${a.type} on ${a.table || "table"} escalated to pipeline owner · ticket created`, { kind: "warning" })}>Escalate</Button>
+                    <Button size="sm" variant="ghost" icon="siren" disabled={!!escalatedIds[a.id]} onClick={() => {
+                      window.DTApi?.createTask?.({
+                        title: `ESCALATED: ${a.type} on ${a.table || "table"}`,
+                        description: a.desc || null,
+                        priority: "CRITICAL",
+                        related_entity_type: "anomaly",
+                        related_entity_id: a.id,
+                        connection_id: activeConnectionId || null,
+                      })
+                        .then(() => {
+                          setEscalatedIds(prev => ({ ...prev, [a.id]: true }));
+                          toast(`${a.type} on ${a.table || "table"} escalated · task created in Task Board`, { kind: "warning" });
+                        })
+                        .catch(() => toast("Escalation failed — check backend", { kind: "error" }));
+                    }}>{escalatedIds[a.id] ? "Escalated" : "Escalate"}</Button>
+                    {a.table && (
+                      <Button size="sm" variant="ghost" icon="network" title="Open the Impact Graph with this table selected — see what feeds it and what it feeds"
+                        onClick={() => { setActiveTableFqn?.(a.table); go("impact"); }}>
+                        View impact
+                      </Button>
+                    )}
                   </div>
-                  {open && (cur === "explain" ? <Explanation data={explanations[a.id]} anomalyId={a.id} /> : <Fingerprint items={fingerprints} />)}
+                  {open && (cur === "explain"
+                    ? <Explanation data={explanations[a.id]} anomalyId={a.id} anomaly={a} loading={explainLoading[a.id]} error={explainError[a.id]} connectionId={activeConnectionId} />
+                    : <Fingerprint items={fingerprints.filter(f => !f.table || f.table === a.table)} anomaly={a} anomalyId={a.id} connectionId={activeConnectionId} />)}
                 </div>
               </Card>
             );

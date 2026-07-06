@@ -4,7 +4,12 @@
   const STC  = { fail: "var(--red-500)",    warn: "var(--yellow-500)", ok: "var(--green-500)"  };
   const STBG = { fail: "var(--red-50)",     warn: "var(--yellow-50)",  ok: "var(--green-50)"   };
   const LAYER_COL = { RAW: 0, BRONZE: 1, SILVER: 2, GOLD: 3, REPORT: 4, MODEL: 4 };
-  const LAYER_LABEL = { 0: "RAW", 1: "BRONZE", 2: "SILVER", 3: "GOLD", 4: "REPORTS / MODELS" };
+  const LAYER_LABEL = { 0: "RAW", 1: "BRONZE", 2: "SILVER", 3: "GOLD", 4: "REPORTS / MODELS", 5: "UNCLASSIFIED" };
+  // A table with an UNKNOWN layer must not silently wear the REPORTS / MODELS
+  // banner (seen live: DuckDB main.* tables under "REPORTS / MODELS") — give it
+  // an honest UNCLASSIFIED column instead. Actual report/model NODE TYPES still
+  // belong in column 4 even without a layer value.
+  const colForNode = (n) => LAYER_COL[n.layer] ?? ((n.node_type === "report" || n.node_type === "model") ? 4 : 5);
   const NODE_W = 240, NODE_H = 84, COL_GAP = 180, ROW_GAP = 20, PAD_X = 20, PAD_Y = 48;
   const STALE_DAYS = 30;
 
@@ -34,7 +39,7 @@
     expandedTiers = expandedTiers || new Set();
     const colMap = {};
     nodes.forEach(n => {
-      const ci = LAYER_COL[n.layer] ?? 4;
+      const ci = colForNode(n);
       if (!colMap[ci]) colMap[ci] = [];
       colMap[ci].push(n);
     });
@@ -70,6 +75,24 @@
       tierCi[colRank] = ci;
     });
     return { layoutNodes, canvasW, canvasH, tierLabels, tierHidden, tierCi };
+  }
+
+  // ── Transitive reach — the blast radius (downstream) and root-cause trail
+  //    (upstream) of one node, computed over confirmed edges. This is what a
+  //    data engineer actually needs from the graph during an incident: not the
+  //    direct neighbors, the FULL set of tables that can be affected/at fault.
+  function computeReach(extId, edges) {
+    const fwd = {}, back = {};
+    edges.forEach(e => {
+      (fwd[e.source_ext_id] = fwd[e.source_ext_id] || []).push(e.target_ext_id);
+      (back[e.target_ext_id] = back[e.target_ext_id] || []).push(e.source_ext_id);
+    });
+    const bfs = (start, adj) => {
+      const seen = new Set(); const q = [...(adj[start] || [])];
+      while (q.length) { const cur = q.shift(); if (seen.has(cur)) continue; seen.add(cur); q.push(...(adj[cur] || [])); }
+      return seen;
+    };
+    return { down: bfs(extId, fwd), up: bfs(extId, back) };
   }
 
   // ── DFS — compute root-to-leaf paths ─────────────────────────────────────
@@ -202,7 +225,18 @@
         {err && <div style={{ marginTop: 8, color: "var(--red-500)", fontSize: 12.5 }}>{err}</div>}
         {result && (
           <div style={{ marginTop: 12, padding: 12, background: "var(--grey-50)", borderRadius: 8, fontSize: 12.5, lineHeight: 1.8 }}>
-            <div><strong>{result.fk_edges_found}</strong> edge(s) confirmed from foreign keys ({result.fk_schemas_scanned.length} schema(s) scanned)</div>
+            {result.fk_error && (
+              <div style={{ color: "var(--red-600)" }}>{result.fk_error}</div>
+            )}
+            <div>
+              <strong>{result.fk_edges_found}</strong> edge(s) confirmed from foreign keys ({result.fk_schemas_scanned.length} schema(s) scanned)
+              {result.fk_edges_found === 0 && result.fk_schemas_scanned.length > 0 && (
+                <span style={{ color: "var(--fg-3)" }}>
+                  {" "}— the scanned database(s) declare no FK constraints (common in warehouse/medallion schemas, where
+                  cross-database pipelines can't use FKs). Query history and a dbt manifest are the discovery paths here.
+                </span>
+              )}
+            </div>
             {result.dbt_provided && (
               <div><strong>{result.dbt_edges_found}</strong> edge(s) confirmed from dbt manifest ({result.dbt_models_scanned} model(s) scanned)</div>
             )}
@@ -297,6 +331,7 @@
     const [edges, setEdges] = React.useState([]);
     const [loading, setLoading] = React.useState(true);
     const [busyId, setBusyId] = React.useState(null);
+    const [bulkBusy, setBulkBusy] = React.useState(false);
     useIcons();
 
     const load = React.useCallback(() => {
@@ -327,10 +362,36 @@
 
     if (loading || edges.length === 0) return null;
 
+    // Reviewing a discovery batch one row at a time is a real time sink (13
+    // suggestions from a single run, seen live). Approve-all still respects the
+    // backend's per-edge cycle re-check — an edge that would now close a cycle
+    // fails individually and stays in the queue with an error toast.
+    const approveAll = async () => {
+      setBulkBusy(true);
+      let ok = 0, failed = 0;
+      for (const e of [...edges]) {
+        try {
+          await window.DTApi.approveLineageEdge(e.edge_id);
+          ok++;
+          setEdges(es => es.filter(x => x.edge_id !== e.edge_id));
+        } catch (err) { failed++; }
+      }
+      setBulkBusy(false);
+      toast(failed
+        ? `${ok} edge(s) confirmed · ${failed} failed (likely cycle conflicts) — review the remaining rows`
+        : `All ${ok} suggested edge(s) confirmed`, { kind: failed ? "warning" : "success" });
+      onReviewed?.();
+    };
+
     return (
       <Card style={{ marginTop: 16, border: "1.5px solid var(--yellow-200)" }}>
         <SectionTitle icon="search-check"
-          sub="Discovered by parsing recent query history — a wrong edge is worse than a missing one, so these require your confirmation before appearing in the graph.">
+          sub="Discovered by parsing recent query history — a wrong edge is worse than a missing one, so these require your confirmation before appearing in the graph."
+          right={edges.length > 1 && (
+            <Button size="sm" variant="primary" icon="check-check" disabled={bulkBusy || busyId} onClick={approveAll}>
+              {bulkBusy ? "Approving…" : `Approve all (${edges.length})`}
+            </Button>
+          )}>
           Suggested edges ({edges.length})
         </SectionTitle>
         <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 10 }}>
@@ -501,7 +562,24 @@
   // ── Node Detail Panel ─────────────────────────────────────────────────────
   const SEVERITY_INTENT = { low: "success", medium: "warning", high: "warning", critical: "danger" };
 
-  const NodePanel = ({ node, connectionId, go, onClose, onUpdate, onDelete }) => {
+  const NodePanel = ({ node, connectionId, go, onClose, onUpdate, onDelete, edges = [], nodes = [], onJump, onViewReport, reach = null }) => {
+    // Direct neighbors from the confirmed graph — the first thing a data engineer
+    // needs when a table goes red: what feeds it (root-cause direction) and what
+    // it feeds (blast-radius direction). Clicking a neighbor jumps the panel there.
+    const byExt = React.useMemo(() => Object.fromEntries(nodes.map(x => [x.external_id, x])), [nodes]);
+    const upstream   = edges.filter(e => e.target_ext_id === node.external_id).map(e => byExt[e.source_ext_id]).filter(Boolean);
+    const downstream = edges.filter(e => e.source_ext_id === node.external_id).map(e => byExt[e.target_ext_id]).filter(Boolean);
+    const neighborChip = (n) => (
+      <button key={n.node_id} onClick={() => onJump?.(n)}
+        title={`Jump to ${n.label}`}
+        style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11.5, fontFamily: "var(--font-mono, monospace)",
+          color: "var(--fg-1)", background: STBG[n.health_status] || "var(--grey-50)",
+          border: `1px solid ${STC[n.health_status] || "var(--grey-200)"}`, borderRadius: 999,
+          padding: "3px 10px", cursor: "pointer" }}>
+        <span style={{ width: 7, height: 7, borderRadius: "50%", background: STC[n.health_status] || "var(--grey-300)", flexShrink: 0 }}></span>
+        {n.label}
+      </button>
+    );
     const [editing, setEditing] = React.useState(false);
     const [note, setNote] = React.useState(node.note || "");
     const [health, setHealth] = React.useState(node.health_status);
@@ -551,6 +629,24 @@
             </div>
           </div>
         </div>
+        <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "var(--fg-3)", letterSpacing: ".04em", marginBottom: 6 }}>
+              FED BY ({upstream.length} direct{reach && reach.up.size > upstream.length ? ` · ${reach.up.size} total upstream` : ""}) — root-cause direction
+            </div>
+            {upstream.length
+              ? <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>{upstream.map(neighborChip)}</div>
+              : <div style={{ fontSize: 12, color: "var(--fg-3)" }}>No known upstream feeds — this is a source (or lineage is incomplete).</div>}
+          </div>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "var(--fg-3)", letterSpacing: ".04em", marginBottom: 6 }}>
+              FEEDS INTO ({downstream.length} direct{reach && reach.down.size > downstream.length ? ` · ${reach.down.size} total downstream` : ""}) — blast radius
+            </div>
+            {downstream.length
+              ? <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>{downstream.map(neighborChip)}</div>
+              : <div style={{ fontSize: 12, color: "var(--fg-3)" }}>No known downstream dependents recorded yet.</div>}
+          </div>
+        </div>
         {node.sub_label && <div style={{ marginTop: 8, fontSize: 12.5, color: "var(--fg-2)" }}>{node.sub_label}</div>}
         {node.note && !editing && <div style={{ marginTop: 6, fontSize: 12, color: STC[node.health_status] || "var(--fg-3)", fontWeight: 500 }}>{node.note}</div>}
         {editing ? (
@@ -578,7 +674,7 @@
             </Button>
             <Button size="sm" variant="outline" icon="edit-2" onClick={() => setEditing(true)}>Edit</Button>
             {canDrillDown && (
-              <Button size="sm" variant="outline" icon="bar-chart-2" onClick={() => go("profiling")}>View Report</Button>
+              <Button size="sm" variant="outline" icon="bar-chart-2" onClick={() => { onViewReport?.(node.external_id); go("profiling"); }}>View Report</Button>
             )}
             <Button size="sm" variant="outline" icon="trash-2" onClick={() => onDelete(node.node_id)}
               style={{ color: "var(--red-500)", borderColor: "var(--red-200)" }}>Delete</Button>
@@ -608,7 +704,7 @@
 
   // ── Main Screen ───────────────────────────────────────────────────────────
   const Impact = () => {
-    const { activeConnectionId, go } = useApp();
+    const { activeConnectionId, go, activeTableFqn, setActiveTableFqn } = useApp();
     const [step, setStep] = React.useState(0);
     const [graphData, setGraphData] = React.useState(null);   // null = not yet loaded
     const [loading, setLoading] = React.useState(true);
@@ -652,8 +748,9 @@
       try {
         const data = await window.DTApi.getConnectionLineage(activeConnectionId);
         setGraphData(data && data.nodes && data.nodes.length > 0 ? data : { source_table: "", nodes: [], edges: [] });
-      } catch (_) {
+      } catch (e) {
         setGraphData({ source_table: "", nodes: [], edges: [] });
+        toast("Could not load the lineage graph — " + (e?.message || "check backend"), { kind: "error" });
       }
       if (!silent) setLoading(false);
     }, [activeConnectionId]);
@@ -671,7 +768,7 @@
         await window.DTApi.seedLineage(activeConnectionId);
         await loadGraph();
       } catch (e) {
-        alert("Seed failed: " + e.message);
+        toast("Seed failed: " + e.message, { kind: "error" });
       } finally {
         setSeeding(false);
       }
@@ -707,6 +804,17 @@
       }).map(n => n.external_id));
     }, [graphData, filter, search]);
 
+    // Selecting a node spotlights its full transitive reach: everything it can
+    // break (downstream) and everything that can have broken it (upstream).
+    const reach = React.useMemo(() => {
+      if (!selectedNode || !graphData?.edges) return null;
+      return computeReach(selectedNode.external_id, graphData.edges);
+    }, [selectedNode, graphData]);
+    const inSpotlight = React.useCallback((extId) => {
+      if (!reach) return true;
+      return extId === selectedNode.external_id || reach.down.has(extId) || reach.up.has(extId);
+    }, [reach, selectedNode]);
+
     const counts = React.useMemo(() => {
       const nonRoot = graphData?.nodes?.filter(n => !n.is_source) || [];
       return { fail: nonRoot.filter(n => n.health_status === "fail").length, warn: nonRoot.filter(n => n.health_status === "warn").length };
@@ -733,6 +841,32 @@
       if (!ln) return false;
       return ln.colRank === 0 ? step >= 1 : ln.colRank === 1 ? step >= 2 : step >= 3;
     };
+
+    // Cross-module handoff: "View impact" on an anomaly (or any screen that sets
+    // activeTableFqn before navigating here) lands with that table's node already
+    // selected, so FED BY / FEEDS INTO answer the incident question immediately.
+    // Once per mount (ref guard) — background graph reloads must not re-select a
+    // node the user has since deselected.
+    const autoSelectedRef = React.useRef(false);
+    React.useEffect(() => {
+      if (autoSelectedRef.current || !activeTableFqn || !graphData?.nodes?.length) return;
+      autoSelectedRef.current = true;
+      const match = graphData.nodes.find(n => n.external_id === activeTableFqn);
+      if (match) {
+        setSelectedNode(match);
+        // The panel renders below the graph canvas — bring it into view so the
+        // FED BY / FEEDS INTO answer is the first thing the arriving user sees.
+        setTimeout(() => document.getElementById("impact-node-panel")?.scrollIntoView({ behavior: "smooth", block: "center" }), 450);
+      } else {
+        toast(`${activeTableFqn} isn't in the lineage graph yet — run Discover lineage or seed from profiling reports.`, { kind: "info" });
+      }
+    }, [graphData, activeTableFqn]);
+
+    React.useEffect(() => {
+      const onKey = (e) => { if (e.key === "Escape") setSelectedNode(null); };
+      window.addEventListener("keydown", onKey);
+      return () => window.removeEventListener("keydown", onKey);
+    }, []);
 
     const hasNodes = graphData?.nodes?.length > 0;
 
@@ -840,7 +974,13 @@
           <SuggestedEdgesPanel
             connectionId={activeConnectionId}
             refreshKey={suggestedRefreshKey}
-            onReviewed={() => loadGraph(true)}
+            onReviewed={() => {
+              loadGraph(true);
+              // The coverage card keys off this too — without the bump its
+              // pending/approved/rejected counts and completeness % sit stale
+              // after every review action (seen live: "16 pending" after 2 reviews).
+              setSuggestedRefreshKey(k => k + 1);
+            }}
           />
         )}
 
@@ -887,7 +1027,8 @@
                       if (!src || !tgt) return null;
                       const isActive = step > src.colRank;
                       const tgtNode = graphData.nodes.find(n => n.external_id === e.target_ext_id);
-                      const dimmed = (search || filter !== "all") && !filteredIds.has(e.source_ext_id) && !filteredIds.has(e.target_ext_id);
+                      const dimmed = ((search || filter !== "all") && !filteredIds.has(e.source_ext_id) && !filteredIds.has(e.target_ext_id))
+                        || (reach && !(inSpotlight(e.source_ext_id) && inSpotlight(e.target_ext_id)));
                       const x1 = src.x + src.w, y1 = src.y + src.h / 2;
                       const x2 = tgt.x,          y2 = tgt.y + tgt.h / 2;
                       const mx = (x1 + x2) / 2;
@@ -909,7 +1050,8 @@
                     const ln = layout.layoutNodes[n.external_id];
                     if (!ln) return null;
                     const active = nodeActive(n.external_id);
-                    const dimmed = (filter !== "all" || search) && !filteredIds.has(n.external_id);
+                    const dimmed = ((filter !== "all" || search) && !filteredIds.has(n.external_id))
+                      || (reach && !inSpotlight(n.external_id));
                     const isSelected = selectedNode?.external_id === n.external_id;
                     return (
                       <div key={n.node_id}
@@ -947,9 +1089,15 @@
 
             {/* ── Node detail panel ── */}
             {selectedNode && (
+              <div id="impact-node-panel">
               <NodePanel
                 node={selectedNode}
                 connectionId={activeConnectionId}
+                edges={graphData.edges}
+                nodes={graphData.nodes}
+                reach={reach}
+                onJump={(n) => setSelectedNode(n)}
+                onViewReport={(fqn) => setActiveTableFqn?.(fqn)}
                 go={go}
                 onClose={() => setSelectedNode(null)}
                 onUpdate={async (nodeId, data) => {
@@ -965,6 +1113,7 @@
                   await loadGraph();
                 }}
               />
+              </div>
             )}
 
             {/* ── Lineage paths ── */}

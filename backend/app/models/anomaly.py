@@ -35,6 +35,9 @@ class AnomalyExplanationResponse(BaseModel):
     why_it_matters: str
     how_bad: str
     recommended_actions: list[str]
+    # True when the LLM was unavailable and a rule-based template produced this
+    # text — the UI must not label such content "AI-generated".
+    fallback: bool = False
 
 
 class AnomalyScanRequest(BaseModel):

@@ -75,6 +75,25 @@ def chat(messages: list[dict], **overrides) -> str:
     return content or ""
 
 
+def chat_with_usage(messages: list[dict], **overrides) -> tuple[str, dict | None]:
+    """Synchronous completion — returns (content, usage_dict | None).
+
+    usage_dict keys: input_tokens, output_tokens. Returns None for usage when the
+    provider does not report it. Sync counterpart of achat_with_usage(), for the
+    (still-synchronous) rule_agent.py call sites.
+    """
+    kwargs = _build_kwargs(**overrides)
+    response = litellm.completion(messages=messages, **kwargs)
+    content = response.choices[0].message.content or ""
+    usage: dict | None = None
+    if hasattr(response, "usage") and response.usage is not None:
+        usage = {
+            "input_tokens": getattr(response.usage, "prompt_tokens", None),
+            "output_tokens": getattr(response.usage, "completion_tokens", None),
+        }
+    return content, usage
+
+
 def parse_llm_json(raw: str | None):
     """Parse JSON from an LLM response.
 

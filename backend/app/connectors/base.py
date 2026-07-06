@@ -42,6 +42,66 @@ class QueryLogEntry:
     query_text: str
     executed_at: str | None = None   # ISO string, best-effort — platforms vary in precision
     execution_count: int = 1
+    # Database the statement executed in (cross-DB SQL Server Query Store) — lets
+    # the lineage parser resolve unqualified 'dbo.table' references to the right
+    # database. None when the source is server-wide (plan cache) or single-DB.
+    database: str | None = None
+
+
+# ── Permission-error surfacing (shared by every feature that queries the
+#    customer's database) ────────────────────────────────────────────────────
+# The product contract: a permission denial must NEVER surface as a raw driver
+# string or be silently swallowed into an empty result — it must say what was
+# denied and give the exact GRANT statement to hand to a DBA.
+
+_PERMISSION_MARKERS = (
+    "permission was denied",
+    "permission denied",
+    "does not have permission",
+    "access denied",
+    "access is denied",
+    "insufficient privileges",   # snowflake / databricks phrasing
+    "not authorized",            # snowflake phrasing
+)
+
+
+def is_permission_error(exc: Exception | str) -> bool:
+    low = str(exc).lower()
+    return any(m in low for m in _PERMISSION_MARKERS)
+
+
+_GRANT_TEMPLATES = {
+    # action -> platform -> template ({obj} = object name, {login} = login/user)
+    "select": {
+        "sqlserver": "GRANT SELECT ON {obj} TO [{login}];",
+        "postgres": "GRANT SELECT ON {obj} TO {login};",
+        "snowflake": "GRANT SELECT ON TABLE {obj} TO ROLE <role_of_{login}>;",
+        "databricks": "GRANT SELECT ON TABLE {obj} TO `{login}`;",
+    },
+    "metadata": {
+        "sqlserver": "GRANT VIEW DEFINITION ON DATABASE::[{obj}] TO [{login}];",
+        "postgres": "GRANT USAGE ON SCHEMA {obj} TO {login};",
+        "snowflake": "GRANT USAGE ON SCHEMA {obj} TO ROLE <role_of_{login}>;",
+        "databricks": "GRANT USE SCHEMA ON SCHEMA {obj} TO `{login}`;",
+    },
+}
+
+
+def permission_denied_message(action: str, obj: str | None, login: str | None,
+                              platform: str = "sqlserver") -> str:
+    """Actionable message for a denied database permission: names what was
+    denied and the exact statement a DBA should run. Falls back to a generic
+    but still directive sentence for platforms without a template."""
+    login = login or "<login>"
+    obj_display = obj or "<object>"
+    verbs = {"select": "read", "metadata": "read the schema catalog of"}
+    template = _GRANT_TEMPLATES.get(action, {}).get(platform)
+    grant = template.format(obj=obj_display, login=login) if template else \
+        f"grant the '{action}' privilege on {obj_display} to {login}"
+    return (
+        f"Permission denied: the connection's login '{login}' cannot {verbs.get(action, action)} "
+        f"{obj_display}. Ask a DBA to run: {grant}"
+    )
 
 
 class BaseConnector(ABC):

@@ -1,0 +1,2587 @@
+- generic [ref=f5e3]:
+  - complementary [ref=f5e4]:
+    - generic [ref=f5e5]:
+      - img [ref=f5e5090]
+      - generic [ref=f5e8]:
+        - generic [ref=f5e9]: DataTrust
+        - generic [ref=f5e10]: AGENTIC DQ PLATFORM
+    - generic [ref=f5e11] [cursor=pointer]:
+      - generic [ref=f5e12]: ⬡
+      - generic [ref=f5e13]:
+        - generic [ref=f5e14]: My Connection demo
+        - generic [ref=f5e15]: Active connection
+      - img [ref=f5e5093]
+    - generic [ref=f5e17]:
+      - generic [ref=f5e18]: Workflow
+      - button "Workspace Home" [ref=f5e19] [cursor=pointer]:
+        - img [ref=f5e5096]
+        - generic [ref=f5e21]: Workspace Home
+      - button "Profiling 1" [ref=f5e22] [cursor=pointer]:
+        - img [ref=f5e5101]
+        - generic [ref=f5e24]: Profiling
+        - generic [ref=f5e25]: "1"
+      - button "Dictionary & CDEs 2" [ref=f5e26] [cursor=pointer]:
+        - img [ref=f5e5108]
+        - generic [ref=f5e28]: Dictionary & CDEs
+        - generic [ref=f5e29]: "2"
+      - button "Rule Studio 3" [ref=f5e30] [cursor=pointer]:
+        - img [ref=f5e5111]
+        - generic [ref=f5e32]: Rule Studio
+        - generic [ref=f5e33]: "3"
+      - button "DQ Execution 4" [ref=f5e34] [cursor=pointer]:
+        - img [ref=f5e5114]
+        - generic [ref=f5e36]: DQ Execution
+        - generic [ref=f5e37]: "4"
+    - generic [ref=f5e38]:
+      - generic [ref=f5e39]: Monitoring
+      - button "Anomaly Inbox 14" [ref=f5e248] [cursor=pointer]:
+        - img [ref=f5e5117]
+        - generic [ref=f5e42]: Anomaly Inbox
+        - generic [ref=f5e254]: "14"
+      - button "Impact Graph" [ref=f5e43] [cursor=pointer]:
+        - img [ref=f5e5122]
+        - generic [ref=f5e45]: Impact Graph
+      - button "Trust Dashboard" [ref=f5e46] [cursor=pointer]:
+        - img [ref=f5e5127]
+        - generic [ref=f5e48]: Trust Dashboard
+    - generic [ref=f5e49]:
+      - generic [ref=f5e50]: Intelligence
+      - button "Pre-run Advisory" [ref=f5e51] [cursor=pointer]:
+        - img [ref=f5e5130]
+        - generic [ref=f5e53]: Pre-run Advisory
+      - button "Trust Receipt" [ref=f5e54] [cursor=pointer]:
+        - img [ref=f5e5133]
+        - generic [ref=f5e56]: Trust Receipt
+    - generic [ref=f5e57]:
+      - generic [ref=f5e58]: Admin
+      - button "Connections" [ref=f5e59] [cursor=pointer]:
+        - img [ref=f5e5135]
+        - generic [ref=f5e61]: Connections
+    - generic [ref=f5e62]:
+      - generic [ref=f5e63]: Operate
+      - button "Scenario Simulator" [ref=f5e64] [cursor=pointer]:
+        - img [ref=f5e5137]
+        - generic [ref=f5e66]: Scenario Simulator
+      - button "Task Board" [ref=f5e68] [cursor=pointer]:
+        - img [ref=f5e5142]
+        - generic [ref=f5e70]: Task Board
+      - button "Daily Summary" [ref=f5e71] [cursor=pointer]:
+        - img [ref=f5e5145]
+        - generic [ref=f5e73]: Daily Summary
+    - generic [ref=f5e74]:
+      - generic [ref=f5e76]: SK
+      - generic [ref=f5e78]:
+        - generic [ref=f5e79]: shweta katkar
+        - generic [ref=f5e80]: shweta.katkar@pal.tech
+      - button "Sign out" [ref=f5e81] [cursor=pointer]:
+        - img [ref=f5e5148]
+  - generic [ref=f5e83]:
+    - banner [ref=f5e84]:
+      - generic [ref=f5e85]:
+        - generic [ref=f5e86]:
+          - generic [ref=f5e87]: My Connection demo
+          - generic [ref=f5e88]: /
+          - generic [ref=f5e89]: Workflow
+        - generic [ref=f5e90]: Rule Studio
+      - generic [ref=f5e91]: Pipeline · Issues detected
+      - generic [ref=f5e94]:
+        - generic [ref=f5e95]: TRUST SCORE
+        - generic [ref=f5e96]: 12/100
+      - button "Notifications" [ref=f5e97] [cursor=pointer]:
+        - img [ref=f5e5151]
+    - main [ref=f5e99]:
+      - generic [ref=f5e484]:
+        - generic [ref=f5e486]:
+          - button "All tables 84" [ref=f5e1029] [cursor=pointer]:
+            - generic [ref=f5e489]: All tables
+            - generic [ref=f5e490]: "84"
+          - generic [ref=f5e491]:
+            - button "BRONZE 15" [ref=f5e492] [cursor=pointer]:
+              - img [ref=f5e493]
+              - generic [ref=f5e495]: BRONZE
+              - generic [ref=f5e496]: "15"
+            - generic [ref=f5e497]:
+              - button "BrzLoadLog 15" [ref=f5e1030] [cursor=pointer]:
+                - generic [ref=f5e499]: BrzLoadLog
+                - generic [ref=f5e1031]: "15"
+              - generic [ref=f5e500]:
+                - generic [ref=f5e1032]: 5 pending
+                - button "Generate" [ref=f5e501] [cursor=pointer]:
+                  - img [ref=f5e502]
+                  - text: Generate
+            - generic [ref=f5e504]:
+              - button "br_categories 12" [ref=f5e1033] [cursor=pointer]:
+                - generic [ref=f5e506]: br_categories
+                - generic [ref=f5e1034]: "12"
+              - button "Generate" [ref=f5e508] [cursor=pointer]:
+                - img [ref=f5e509]
+                - text: Generate
+            - generic [ref=f5e511]:
+              - button "br_customers 18" [ref=f5e1035] [cursor=pointer]:
+                - generic [ref=f5e513]: br_customers
+                - generic [ref=f5e1036]: "18"
+              - generic [ref=f5e514]:
+                - generic [ref=f5e1037]: 15 pending
+                - button "Generate" [ref=f5e515] [cursor=pointer]:
+                  - img [ref=f5e516]
+                  - text: Generate
+            - generic [ref=f5e518]:
+              - button "br_inventory 12" [ref=f5e1038] [cursor=pointer]:
+                - generic [ref=f5e520]: br_inventory
+                - generic [ref=f5e1039]: "12"
+              - generic [ref=f5e521]:
+                - generic [ref=f5e1040]: 9 pending
+                - button "Generate" [ref=f5e522] [cursor=pointer]:
+                  - img [ref=f5e523]
+                  - text: Generate
+            - generic [ref=f5e525]:
+              - button "br_order_items 26" [ref=f5e1041] [cursor=pointer]:
+                - generic [ref=f5e527]: br_order_items
+                - generic [ref=f5e1042]: "26"
+              - generic [ref=f5e528]:
+                - generic [ref=f5e1043]: 22 pending
+                - button "Generate" [ref=f5e529] [cursor=pointer]:
+                  - img [ref=f5e530]
+                  - text: Generate
+            - generic [ref=f5e532]:
+              - button "br_orders" [ref=f5e533] [cursor=pointer]:
+                - generic [ref=f5e534]: br_orders
+              - button "Generate" [ref=f5e536] [cursor=pointer]:
+                - img [ref=f5e537]
+                - text: Generate
+            - generic [ref=f5e539]:
+              - button "br_payments" [ref=f5e540] [cursor=pointer]:
+                - generic [ref=f5e541]: br_payments
+              - button "Generate" [ref=f5e543] [cursor=pointer]:
+                - img [ref=f5e544]
+                - text: Generate
+            - generic [ref=f5e546]:
+              - button "br_procurement" [ref=f5e547] [cursor=pointer]:
+                - generic [ref=f5e548]: br_procurement
+              - button "Generate" [ref=f5e550] [cursor=pointer]:
+                - img [ref=f5e551]
+                - text: Generate
+            - generic [ref=f5e553]:
+              - button "br_products" [ref=f5e554] [cursor=pointer]:
+                - generic [ref=f5e555]: br_products
+              - button "Generate" [ref=f5e557] [cursor=pointer]:
+                - img [ref=f5e558]
+                - text: Generate
+            - generic [ref=f5e560]:
+              - button "br_promotions" [ref=f5e561] [cursor=pointer]:
+                - generic [ref=f5e562]: br_promotions
+              - button "Generate" [ref=f5e564] [cursor=pointer]:
+                - img [ref=f5e565]
+                - text: Generate
+            - generic [ref=f5e567]:
+              - button "br_returns" [ref=f5e568] [cursor=pointer]:
+                - generic [ref=f5e569]: br_returns
+              - button "Generate" [ref=f5e571] [cursor=pointer]:
+                - img [ref=f5e572]
+                - text: Generate
+            - generic [ref=f5e574]:
+              - button "br_reviews" [ref=f5e575] [cursor=pointer]:
+                - generic [ref=f5e576]: br_reviews
+              - button "Generate" [ref=f5e578] [cursor=pointer]:
+                - img [ref=f5e579]
+                - text: Generate
+            - generic [ref=f5e581]:
+              - button "br_shipments" [ref=f5e582] [cursor=pointer]:
+                - generic [ref=f5e583]: br_shipments
+              - button "Generate" [ref=f5e585] [cursor=pointer]:
+                - img [ref=f5e586]
+                - text: Generate
+            - generic [ref=f5e588]:
+              - button "br_suppliers" [ref=f5e589] [cursor=pointer]:
+                - generic [ref=f5e590]: br_suppliers
+              - button "Generate" [ref=f5e592] [cursor=pointer]:
+                - img [ref=f5e593]
+                - text: Generate
+            - generic [ref=f5e595]:
+              - button "br_warehouses 1" [ref=f5e1044] [cursor=pointer]:
+                - generic [ref=f5e597]: br_warehouses
+                - generic [ref=f5e1045]: "1"
+              - button "Generate" [ref=f5e599] [cursor=pointer]:
+                - img [ref=f5e600]
+                - text: Generate
+          - generic [ref=f5e602]:
+            - button "RAW 24" [ref=f5e603] [cursor=pointer]:
+              - img [ref=f5e604]
+              - generic [ref=f5e606]: RAW
+              - generic [ref=f5e607]: "24"
+            - generic [ref=f5e608]:
+              - button "RawLoadLog" [ref=f5e609] [cursor=pointer]:
+                - generic [ref=f5e610]: RawLoadLog
+              - button "Generate" [ref=f5e612] [cursor=pointer]:
+                - img [ref=f5e613]
+                - text: Generate
+            - generic [ref=f5e615]:
+              - button "RawWatermark" [ref=f5e616] [cursor=pointer]:
+                - generic [ref=f5e617]: RawWatermark
+              - button "Generate" [ref=f5e619] [cursor=pointer]:
+                - img [ref=f5e620]
+                - text: Generate
+            - generic [ref=f5e622]:
+              - button "Deals" [ref=f5e623] [cursor=pointer]:
+                - generic [ref=f5e624]: Deals
+              - button "Generate" [ref=f5e626] [cursor=pointer]:
+                - img [ref=f5e627]
+                - text: Generate
+            - generic [ref=f5e629]:
+              - button "Members" [ref=f5e630] [cursor=pointer]:
+                - generic [ref=f5e631]: Members
+              - button "Generate" [ref=f5e633] [cursor=pointer]:
+                - img [ref=f5e634]
+                - text: Generate
+            - generic [ref=f5e636]:
+              - button "ProcurementOrders" [ref=f5e637] [cursor=pointer]:
+                - generic [ref=f5e638]: ProcurementOrders
+              - button "Generate" [ref=f5e640] [cursor=pointer]:
+                - img [ref=f5e641]
+                - text: Generate
+            - generic [ref=f5e643]:
+              - button "ProductCatalog" [ref=f5e644] [cursor=pointer]:
+                - generic [ref=f5e645]: ProductCatalog
+              - button "Generate" [ref=f5e647] [cursor=pointer]:
+                - img [ref=f5e648]
+                - text: Generate
+            - generic [ref=f5e650]:
+              - button "ProductCategories" [ref=f5e651] [cursor=pointer]:
+                - generic [ref=f5e652]: ProductCategories
+              - button "Generate" [ref=f5e654] [cursor=pointer]:
+                - img [ref=f5e655]
+                - text: Generate
+            - generic [ref=f5e657]:
+              - button "ProductReviews" [ref=f5e658] [cursor=pointer]:
+                - generic [ref=f5e659]: ProductReviews
+              - button "Generate" [ref=f5e661] [cursor=pointer]:
+                - img [ref=f5e662]
+                - text: Generate
+            - generic [ref=f5e664]:
+              - button "Returns" [ref=f5e665] [cursor=pointer]:
+                - generic [ref=f5e666]: Returns
+              - button "Generate" [ref=f5e668] [cursor=pointer]:
+                - img [ref=f5e669]
+                - text: Generate
+            - generic [ref=f5e671]:
+              - button "SalesOrderLines" [ref=f5e672] [cursor=pointer]:
+                - generic [ref=f5e673]: SalesOrderLines
+              - button "Generate" [ref=f5e675] [cursor=pointer]:
+                - img [ref=f5e676]
+                - text: Generate
+            - generic [ref=f5e678]:
+              - button "SalesOrders" [ref=f5e679] [cursor=pointer]:
+                - generic [ref=f5e680]: SalesOrders
+              - button "Generate" [ref=f5e682] [cursor=pointer]:
+                - img [ref=f5e683]
+                - text: Generate
+            - generic [ref=f5e685]:
+              - button "Shipments" [ref=f5e686] [cursor=pointer]:
+                - generic [ref=f5e687]: Shipments
+              - button "Generate" [ref=f5e689] [cursor=pointer]:
+                - img [ref=f5e690]
+                - text: Generate
+            - generic [ref=f5e692]:
+              - button "StockLedger" [ref=f5e693] [cursor=pointer]:
+                - generic [ref=f5e694]: StockLedger
+              - button "Generate" [ref=f5e696] [cursor=pointer]:
+                - img [ref=f5e697]
+                - text: Generate
+            - generic [ref=f5e699]:
+              - button "Suppliers" [ref=f5e700] [cursor=pointer]:
+                - generic [ref=f5e701]: Suppliers
+              - button "Generate" [ref=f5e703] [cursor=pointer]:
+                - img [ref=f5e704]
+                - text: Generate
+            - generic [ref=f5e706]:
+              - button "Transactions" [ref=f5e707] [cursor=pointer]:
+                - generic [ref=f5e708]: Transactions
+              - button "Generate" [ref=f5e710] [cursor=pointer]:
+                - img [ref=f5e711]
+                - text: Generate
+            - generic [ref=f5e713]:
+              - button "Warehouses" [ref=f5e714] [cursor=pointer]:
+                - generic [ref=f5e715]: Warehouses
+              - button "Generate" [ref=f5e717] [cursor=pointer]:
+                - img [ref=f5e718]
+                - text: Generate
+            - generic [ref=f5e720]:
+              - button "Categories" [ref=f5e721] [cursor=pointer]:
+                - generic [ref=f5e722]: Categories
+              - button "Generate" [ref=f5e724] [cursor=pointer]:
+                - img [ref=f5e725]
+                - text: Generate
+            - generic [ref=f5e727]:
+              - button "Customers" [ref=f5e728] [cursor=pointer]:
+                - generic [ref=f5e729]: Customers
+              - button "Generate" [ref=f5e731] [cursor=pointer]:
+                - img [ref=f5e732]
+                - text: Generate
+            - generic [ref=f5e734]:
+              - button "OrderItems" [ref=f5e735] [cursor=pointer]:
+                - generic [ref=f5e736]: OrderItems
+              - button "Generate" [ref=f5e738] [cursor=pointer]:
+                - img [ref=f5e739]
+                - text: Generate
+            - generic [ref=f5e741]:
+              - button "Orders" [ref=f5e742] [cursor=pointer]:
+                - generic [ref=f5e743]: Orders
+              - button "Generate" [ref=f5e745] [cursor=pointer]:
+                - img [ref=f5e746]
+                - text: Generate
+            - generic [ref=f5e748]:
+              - button "Payments" [ref=f5e749] [cursor=pointer]:
+                - generic [ref=f5e750]: Payments
+              - button "Generate" [ref=f5e752] [cursor=pointer]:
+                - img [ref=f5e753]
+                - text: Generate
+            - generic [ref=f5e755]:
+              - button "Products" [ref=f5e756] [cursor=pointer]:
+                - generic [ref=f5e757]: Products
+              - button "Generate" [ref=f5e759] [cursor=pointer]:
+                - img [ref=f5e760]
+                - text: Generate
+            - generic [ref=f5e762]:
+              - button "Promotions" [ref=f5e763] [cursor=pointer]:
+                - generic [ref=f5e764]: Promotions
+              - button "Generate" [ref=f5e766] [cursor=pointer]:
+                - img [ref=f5e767]
+                - text: Generate
+            - generic [ref=f5e769]:
+              - button "Reviews" [ref=f5e770] [cursor=pointer]:
+                - generic [ref=f5e771]: Reviews
+              - button "Generate" [ref=f5e773] [cursor=pointer]:
+                - img [ref=f5e774]
+                - text: Generate
+          - generic [ref=f5e776]:
+            - button "SILVER 16" [ref=f5e1046] [cursor=pointer]:
+              - img [ref=f5e778]
+              - generic [ref=f5e780]: SILVER
+              - generic [ref=f5e781]: "16"
+            - generic [ref=f5e782]:
+              - button "SilverLoadLog" [ref=f5e783] [cursor=pointer]:
+                - generic [ref=f5e784]: SilverLoadLog
+              - button "Generate" [ref=f5e786] [cursor=pointer]:
+                - img [ref=f5e787]
+                - text: Generate
+            - generic [ref=f5e789]:
+              - button "dim_category" [ref=f5e790] [cursor=pointer]:
+                - generic [ref=f5e791]: dim_category
+              - button "Generate" [ref=f5e793] [cursor=pointer]:
+                - img [ref=f5e794]
+                - text: Generate
+            - generic [ref=f5e796]:
+              - button "dim_customer" [ref=f5e797] [cursor=pointer]:
+                - generic [ref=f5e798]: dim_customer
+              - button "Generate" [ref=f5e800] [cursor=pointer]:
+                - img [ref=f5e801]
+                - text: Generate
+            - generic [ref=f5e803]:
+              - button "dim_date" [ref=f5e804] [cursor=pointer]:
+                - generic [ref=f5e805]: dim_date
+              - button "Generate" [ref=f5e807] [cursor=pointer]:
+                - img [ref=f5e808]
+                - text: Generate
+            - generic [ref=f5e810]:
+              - button "dim_location" [ref=f5e811] [cursor=pointer]:
+                - generic [ref=f5e812]: dim_location
+              - button "Generate" [ref=f5e814] [cursor=pointer]:
+                - img [ref=f5e815]
+                - text: Generate
+            - generic [ref=f5e817]:
+              - button "dim_payment_method" [ref=f5e818] [cursor=pointer]:
+                - generic [ref=f5e819]: dim_payment_method
+              - button "Generate" [ref=f5e821] [cursor=pointer]:
+                - img [ref=f5e822]
+                - text: Generate
+            - generic [ref=f5e824]:
+              - button "dim_product" [ref=f5e825] [cursor=pointer]:
+                - generic [ref=f5e826]: dim_product
+              - button "Generate" [ref=f5e828] [cursor=pointer]:
+                - img [ref=f5e829]
+                - text: Generate
+            - generic [ref=f5e831]:
+              - button "dim_promotion" [ref=f5e832] [cursor=pointer]:
+                - generic [ref=f5e833]: dim_promotion
+              - button "Generate" [ref=f5e835] [cursor=pointer]:
+                - img [ref=f5e836]
+                - text: Generate
+            - generic [ref=f5e838]:
+              - button "dim_supplier" [ref=f5e839] [cursor=pointer]:
+                - generic [ref=f5e840]: dim_supplier
+              - button "Generate" [ref=f5e842] [cursor=pointer]:
+                - img [ref=f5e843]
+                - text: Generate
+            - generic [ref=f5e845]:
+              - button "dim_warehouse" [ref=f5e846] [cursor=pointer]:
+                - generic [ref=f5e847]: dim_warehouse
+              - button "Generate" [ref=f5e849] [cursor=pointer]:
+                - img [ref=f5e850]
+                - text: Generate
+            - generic [ref=f5e852]:
+              - button "fact_inventory_snapshot" [ref=f5e853] [cursor=pointer]:
+                - generic [ref=f5e854]: fact_inventory_snapshot
+              - button "Generate" [ref=f5e856] [cursor=pointer]:
+                - img [ref=f5e857]
+                - text: Generate
+            - generic [ref=f5e859]:
+              - button "fact_procurement" [ref=f5e860] [cursor=pointer]:
+                - generic [ref=f5e861]: fact_procurement
+              - button "Generate" [ref=f5e863] [cursor=pointer]:
+                - img [ref=f5e864]
+                - text: Generate
+            - generic [ref=f5e866]:
+              - button "fact_returns" [ref=f5e867] [cursor=pointer]:
+                - generic [ref=f5e868]: fact_returns
+              - button "Generate" [ref=f5e870] [cursor=pointer]:
+                - img [ref=f5e871]
+                - text: Generate
+            - generic [ref=f5e873]:
+              - button "fact_sales" [ref=f5e874] [cursor=pointer]:
+                - generic [ref=f5e875]: fact_sales
+              - button "Generate" [ref=f5e877] [cursor=pointer]:
+                - img [ref=f5e878]
+                - text: Generate
+            - generic [ref=f5e880]:
+              - button "fact_shipments" [ref=f5e881] [cursor=pointer]:
+                - generic [ref=f5e882]: fact_shipments
+              - button "Generate" [ref=f5e884] [cursor=pointer]:
+                - img [ref=f5e885]
+                - text: Generate
+            - generic [ref=f5e1047]:
+              - button "br_customers 18" [ref=f5e1048] [cursor=pointer]:
+                - generic [ref=f5e1049]: br_customers
+                - generic [ref=f5e1050]: "18"
+              - generic [ref=f5e1052]: 15 pending
+        - generic [ref=f5e887]:
+          - generic [ref=f5e888]:
+            - generic [ref=f5e889]:
+              - img [ref=f5e5154]
+              - generic [ref=f5e893]:
+                - generic [ref=f5e894]: Rule Studio — My Connection demo
+                - generic [ref=f5e895]: 84 rules · every rule needs explicit human review before activating.
+              - generic [ref=f5e896]:
+                - generic [ref=f5e897]: 51 pending
+                - generic [ref=f5e898]: 28 active
+            - generic [ref=f5e900]:
+              - generic [ref=f5e901]:
+                - generic [ref=f5e902]: Layer
+                - button "ALL" [ref=f5e903] [cursor=pointer]
+                - button "RAW" [ref=f5e904] [cursor=pointer]
+                - button "BRONZE" [ref=f5e905] [cursor=pointer]
+                - button "SILVER" [ref=f5e906] [cursor=pointer]
+                - button "GOLD" [ref=f5e907] [cursor=pointer]
+                - generic [ref=f5e909]: Status
+                - button "All" [ref=f5e910] [cursor=pointer]
+                - button "Pending" [ref=f5e911] [cursor=pointer]
+                - button "Approved" [ref=f5e912] [cursor=pointer]
+                - button "Active" [ref=f5e913] [cursor=pointer]
+                - button "Snoozed" [ref=f5e914] [cursor=pointer]
+                - button "Rejected" [ref=f5e915] [cursor=pointer]
+              - generic [ref=f5e916]:
+                - generic [ref=f5e917]: Type
+                - button "All" [ref=f5e918] [cursor=pointer]
+                - button "Null" [ref=f5e919] [cursor=pointer]
+                - button "Range" [ref=f5e920] [cursor=pointer]
+                - button "Format" [ref=f5e921] [cursor=pointer]
+                - button "FK" [ref=f5e922] [cursor=pointer]
+                - button "Volume" [ref=f5e923] [cursor=pointer]
+                - button "Custom" [ref=f5e924] [cursor=pointer]
+                - textbox "Search rules…" [ref=f5e925]
+            - generic [ref=f5e926]:
+              - button "Generate all tables" [ref=f5e927] [cursor=pointer]:
+                - img [ref=f5e5157]
+                - text: Generate all tables
+              - button "Run all" [ref=f5e931] [cursor=pointer]:
+                - img [ref=f5e5160]
+                - text: Run all
+              - button "Bulk approve LOW" [ref=f5e935] [cursor=pointer]:
+                - img [ref=f5e5163]
+                - text: Bulk approve LOW
+          - generic [ref=f5e1065]:
+            - generic [ref=f5e1067]:
+              - generic [ref=f5e1068]: "1"
+              - generic [ref=f5e1069]:
+                - generic [ref=f5e1070]:
+                  - generic [ref=f5e1071]: cde_source_system_not_null
+                  - generic [ref=f5e1072]: BRONZE
+                  - generic [ref=f5e1073]: CRITICAL
+                  - generic [ref=f5e1075]: "Null"
+                  - generic [ref=f5e1076]: CDE
+                - generic [ref=f5e1078]:
+                  - img [ref=f5e5166]
+                  - generic [ref=f5e1081]: BronzeDB.br_order_items · Brz_SourceSystem
+                - generic [ref=f5e1082]: ISNULL(Brz_SourceSystem, '') = ''
+                - generic [ref=f5e1083]:
+                  - img [ref=f5e5168]
+                  - generic [ref=f5e1086]: ⚠️ Unverified column reference ('Brz_SourceSystem' not found in profiled schema) — review before approving. SourceSystem must not be null for all rows in the CDE layer.
+              - generic [ref=f5e1087]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e1088]:
+                  - img [ref=f5e5170]
+                - button "Approve" [ref=f5e1091] [cursor=pointer]:
+                  - img [ref=f5e5172]
+                - button "Edit" [ref=f5e1094] [cursor=pointer]:
+                  - img [ref=f5e5174]
+                - button "Snooze" [ref=f5e1098] [cursor=pointer]:
+                  - img [ref=f5e1099]
+                - button "Reject" [ref=f5e1102] [cursor=pointer]:
+                  - img [ref=f5e5177]
+            - generic [ref=f5e1133]:
+              - generic [ref=f5e1134]: "2"
+              - generic [ref=f5e1135]:
+                - generic [ref=f5e1136]:
+                  - generic [ref=f5e1137]: cde_load_timestamp_not_null
+                  - generic [ref=f5e1138]: BRONZE
+                  - generic [ref=f5e1139]: LOW
+                  - generic [ref=f5e1141]: "Null"
+                - generic [ref=f5e1142]:
+                  - img [ref=f5e5180]
+                  - generic [ref=f5e1145]: BronzeDB.br_order_items · Brz_LoadedAt
+                - generic [ref=f5e1146]: ISNULL(Brz_LoadedAt, '9999-12-31 00:00:00.000') = '9999-12-31 00:00:00.000'
+                - generic [ref=f5e1147]:
+                  - img [ref=f5e5182]
+                  - generic [ref=f5e1150]: Brz_LoadedAt must not be null.
+              - generic [ref=f5e1151]:
+                - button "Run this rule" [ref=f5e4115] [cursor=pointer]:
+                  - img [ref=f5e5184]
+                - generic [ref=f5e4118]:
+                  - img [ref=f5e5186]
+                  - text: Approved
+            - generic [ref=f5e1107]:
+              - generic [ref=f5e1108]: "3"
+              - generic [ref=f5e1109]:
+                - generic [ref=f5e1110]:
+                  - generic [ref=f5e1111]: cde_batch_id_not_null
+                  - generic [ref=f5e1112]: BRONZE
+                  - generic [ref=f5e1113]: LOW
+                  - generic [ref=f5e1115]: "Null"
+                - generic [ref=f5e1116]:
+                  - img [ref=f5e5188]
+                  - generic [ref=f5e1119]: BronzeDB.br_order_items · Brz_BatchID
+                - generic [ref=f5e1120]: ISNULL(Brz_BatchID, 0) = 0
+                - generic [ref=f5e1121]:
+                  - img [ref=f5e5190]
+                  - generic [ref=f5e1124]: Brz_BatchID must not be null.
+              - generic [ref=f5e1125]:
+                - button "Run this rule" [ref=f5e1126] [cursor=pointer]:
+                  - img [ref=f5e5192]
+                - generic [ref=f5e1129]:
+                  - img [ref=f5e5194]
+                  - text: Approved
+            - generic [ref=f5e1171]:
+              - generic [ref=f5e1172]: "4"
+              - generic [ref=f5e1173]:
+                - generic [ref=f5e1174]:
+                  - generic [ref=f5e1175]: cde_line_total_non_negative
+                  - generic [ref=f5e1176]: BRONZE
+                  - generic [ref=f5e1177]: MEDIUM
+                  - generic [ref=f5e1179]: Range
+                  - generic [ref=f5e1180]: CDE
+                - generic [ref=f5e1182]:
+                  - img [ref=f5e5196]
+                  - generic [ref=f5e1185]: BronzeDB.br_order_items · Brz_LineTotal
+                - generic [ref=f5e1186]: ISNULL(Brz_LineTotal, 0) >= 0 AND Brz_LineTotal <= MAX(Brz_LineTotal)
+                - generic [ref=f5e1187]:
+                  - img [ref=f5e5198]
+                  - generic [ref=f5e1190]: ⚠️ Unverified column reference ('Brz_LineTotal' not found in profiled schema) — review before approving. LineTotal must be greater than or equal to zero.
+              - generic [ref=f5e1191]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e1192]:
+                  - img [ref=f5e5200]
+                - button "Approve" [ref=f5e1195] [cursor=pointer]:
+                  - img [ref=f5e5202]
+                - button "Edit" [ref=f5e1198] [cursor=pointer]:
+                  - img [ref=f5e5204]
+                - button "Snooze" [ref=f5e1202] [cursor=pointer]:
+                  - img [ref=f5e1203]
+                - button "Reject" [ref=f5e1206] [cursor=pointer]:
+                  - img [ref=f5e5207]
+            - generic [ref=f5e1211]:
+              - generic [ref=f5e1212]: "5"
+              - generic [ref=f5e1213]:
+                - generic [ref=f5e1214]:
+                  - generic [ref=f5e1215]: cde_line_discrepancy_flagged_on_mismatch
+                  - generic [ref=f5e1216]: BRONZE
+                  - generic [ref=f5e1217]: MEDIUM
+                  - generic [ref=f5e1219]: Custom
+                  - generic [ref=f5e1220]: CDE
+                - generic [ref=f5e1222]:
+                  - img [ref=f5e5210]
+                  - generic [ref=f5e1225]: BronzeDB.br_order_items
+                - generic [ref=f5e1226]: (ISNULL(Brz_Quantity, 0) * ISNULL(Brz_UnitPrice, 0)) <> Brz_LineTotalCalc OR (Brz_Discrepancy = 1)
+                - generic [ref=f5e1227]:
+                  - img [ref=f5e5212]
+                  - generic [ref=f5e1230]: LineDiscrepancy must be set to 1 if LineTotalCalc does not match Quantity * UnitPrice.
+              - generic [ref=f5e1231]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e1232]:
+                  - img [ref=f5e5214]
+                - button "Approve" [ref=f5e1235] [cursor=pointer]:
+                  - img [ref=f5e5216]
+                - button "Edit" [ref=f5e1238] [cursor=pointer]:
+                  - img [ref=f5e5218]
+                - button "Snooze" [ref=f5e1242] [cursor=pointer]:
+                  - img [ref=f5e1243]
+                - button "Reject" [ref=f5e1246] [cursor=pointer]:
+                  - img [ref=f5e5221]
+            - generic [ref=f5e1251]:
+              - generic [ref=f5e1252]: "6"
+              - generic [ref=f5e1253]:
+                - generic [ref=f5e1254]:
+                  - generic [ref=f5e1255]: cde_line_total_calc_matches_formula
+                  - generic [ref=f5e1256]: BRONZE
+                  - generic [ref=f5e1257]: HIGH
+                  - generic [ref=f5e1259]: Custom
+                - generic [ref=f5e1260]:
+                  - img [ref=f5e5224]
+                  - generic [ref=f5e1263]: BronzeDB.br_order_items
+                - generic [ref=f5e1264]: (ISNULL(Brz_Quantity, 0) * ISNULL(Brz_UnitPrice, 0)) = Brz_LineTotalCalc
+                - generic [ref=f5e1265]:
+                  - img [ref=f5e5226]
+                  - generic [ref=f5e1268]: LineTotalCalc must equal Quantity multiplied by UnitPrice.
+              - generic [ref=f5e1269]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e1270]:
+                  - img [ref=f5e5228]
+                - button "Approve" [ref=f5e1273] [cursor=pointer]:
+                  - img [ref=f5e5230]
+                - button "Edit" [ref=f5e1276] [cursor=pointer]:
+                  - img [ref=f5e5232]
+                - button "Snooze" [ref=f5e1280] [cursor=pointer]:
+                  - img [ref=f5e1281]
+                - button "Reject" [ref=f5e1284] [cursor=pointer]:
+                  - img [ref=f5e5235]
+            - generic [ref=f5e1289]:
+              - generic [ref=f5e1290]: "7"
+              - generic [ref=f5e1291]:
+                - generic [ref=f5e1292]:
+                  - generic [ref=f5e1293]: cde_discount_non_negative
+                  - generic [ref=f5e1294]: BRONZE
+                  - generic [ref=f5e1295]: MEDIUM
+                  - generic [ref=f5e1297]: Range
+                  - generic [ref=f5e1298]: CDE
+                - generic [ref=f5e1300]:
+                  - img [ref=f5e5238]
+                  - generic [ref=f5e1303]: BronzeDB.br_order_items · Brz_Discount
+                - generic [ref=f5e1304]: ISNULL(Brz_Discount, 0) >= 0 AND Brz_Discount <= MAX(Brz_Discount)
+                - generic [ref=f5e1305]:
+                  - img [ref=f5e5240]
+                  - generic [ref=f5e1308]: ⚠️ Unverified column reference ('Brz_Discount' not found in profiled schema) — review before approving. Discount must be greater than or equal to zero.
+              - generic [ref=f5e1309]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e1310]:
+                  - img [ref=f5e5242]
+                - button "Approve" [ref=f5e1313] [cursor=pointer]:
+                  - img [ref=f5e5244]
+                - button "Edit" [ref=f5e1316] [cursor=pointer]:
+                  - img [ref=f5e5246]
+                - button "Snooze" [ref=f5e1320] [cursor=pointer]:
+                  - img [ref=f5e1321]
+                - button "Reject" [ref=f5e1324] [cursor=pointer]:
+                  - img [ref=f5e5249]
+            - generic [ref=f5e1329]:
+              - generic [ref=f5e1330]: "8"
+              - generic [ref=f5e1331]:
+                - generic [ref=f5e1332]:
+                  - generic [ref=f5e1333]: cde_unit_price_positive_or_zero
+                  - generic [ref=f5e1334]: BRONZE
+                  - generic [ref=f5e1335]: HIGH
+                  - generic [ref=f5e1337]: Range
+                  - generic [ref=f5e1338]: CDE
+                - generic [ref=f5e1340]:
+                  - img [ref=f5e5252]
+                  - generic [ref=f5e1343]: BronzeDB.br_order_items · Brz_UnitPrice
+                - generic [ref=f5e1344]: ISNULL(Brz_UnitPrice, 0) >= 0 AND Brz_UnitPrice <= MAX(Brz_UnitPrice)
+                - generic [ref=f5e1345]:
+                  - img [ref=f5e5254]
+                  - generic [ref=f5e1348]: ⚠️ Unverified column reference ('Brz_UnitPrice' not found in profiled schema) — review before approving. UnitPrice must be greater than or equal to zero.
+              - generic [ref=f5e1349]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e1350]:
+                  - img [ref=f5e5256]
+                - button "Approve" [ref=f5e1353] [cursor=pointer]:
+                  - img [ref=f5e5258]
+                - button "Edit" [ref=f5e1356] [cursor=pointer]:
+                  - img [ref=f5e5260]
+                - button "Snooze" [ref=f5e1360] [cursor=pointer]:
+                  - img [ref=f5e1361]
+                - button "Reject" [ref=f5e1364] [cursor=pointer]:
+                  - img [ref=f5e5263]
+            - generic [ref=f5e1369]:
+              - generic [ref=f5e1370]: "9"
+              - generic [ref=f5e1371]:
+                - generic [ref=f5e1372]:
+                  - generic [ref=f5e1373]: cde_quantity_positive_or_zero
+                  - generic [ref=f5e1374]: BRONZE
+                  - generic [ref=f5e1375]: HIGH
+                  - generic [ref=f5e1377]: Range
+                  - generic [ref=f5e1378]: CDE
+                - generic [ref=f5e1380]:
+                  - img [ref=f5e5266]
+                  - generic [ref=f5e1383]: BronzeDB.br_order_items · Brz_Quantity
+                - generic [ref=f5e1384]: ISNULL(Brz_Quantity, 0) >= 0 AND Brz_Quantity <= MAX(Brz_Quantity)
+                - generic [ref=f5e1385]:
+                  - img [ref=f5e5268]
+                  - generic [ref=f5e1388]: ⚠️ Unverified column reference ('Brz_Quantity' not found in profiled schema) — review before approving. Quantity must be greater than or equal to zero.
+              - generic [ref=f5e1389]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e1390]:
+                  - img [ref=f5e5270]
+                - button "Approve" [ref=f5e1393] [cursor=pointer]:
+                  - img [ref=f5e5272]
+                - button "Edit" [ref=f5e1396] [cursor=pointer]:
+                  - img [ref=f5e5274]
+                - button "Snooze" [ref=f5e1400] [cursor=pointer]:
+                  - img [ref=f5e1401]
+                - button "Reject" [ref=f5e1404] [cursor=pointer]:
+                  - img [ref=f5e5277]
+            - generic [ref=f5e1409]:
+              - generic [ref=f5e1410]: "10"
+              - generic [ref=f5e1411]:
+                - generic [ref=f5e1412]:
+                  - generic [ref=f5e1413]: cde_line_item_id_not_null
+                  - generic [ref=f5e1414]: BRONZE
+                  - generic [ref=f5e1415]: CRITICAL
+                  - generic [ref=f5e1417]: "Null"
+                  - generic [ref=f5e1418]: CDE
+                - generic [ref=f5e1420]:
+                  - img [ref=f5e5280]
+                  - generic [ref=f5e1423]: BronzeDB.br_order_items · Brz_LineItemID
+                - generic [ref=f5e1424]: ISNULL(Brz_LineItemID, 0) = 0
+                - generic [ref=f5e1425]:
+                  - img [ref=f5e5282]
+                  - generic [ref=f5e1428]: LineItemID must not be null for all rows in the CDE layer.
+              - generic [ref=f5e1429]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e1430]:
+                  - img [ref=f5e5284]
+                - button "Approve" [ref=f5e1433] [cursor=pointer]:
+                  - img [ref=f5e5286]
+                - button "Edit" [ref=f5e1436] [cursor=pointer]:
+                  - img [ref=f5e5288]
+                - button "Snooze" [ref=f5e1440] [cursor=pointer]:
+                  - img [ref=f5e1441]
+                - button "Reject" [ref=f5e1444] [cursor=pointer]:
+                  - img [ref=f5e5291]
+            - generic [ref=f5e1449]:
+              - generic [ref=f5e1450]: "11"
+              - generic [ref=f5e1451]:
+                - generic [ref=f5e1452]:
+                  - generic [ref=f5e1453]: cde_source_product_id_not_null
+                  - generic [ref=f5e1454]: BRONZE
+                  - generic [ref=f5e1455]: CRITICAL
+                  - generic [ref=f5e1457]: "Null"
+                  - generic [ref=f5e1458]: CDE
+                - generic [ref=f5e1460]:
+                  - img [ref=f5e5294]
+                  - generic [ref=f5e1463]: BronzeDB.br_order_items · Brz_SourceProductID
+                - generic [ref=f5e1464]: ISNULL(Brz_SourceProductID, 0) = 0
+                - generic [ref=f5e1465]:
+                  - img [ref=f5e5296]
+                  - generic [ref=f5e1468]: ⚠️ Unverified column reference ('Brz_SourceProductID' not found in profiled schema) — review before approving. SourceProductID must not be null for all rows in the CDE layer.
+              - generic [ref=f5e1469]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e1470]:
+                  - img [ref=f5e5298]
+                - button "Approve" [ref=f5e1473] [cursor=pointer]:
+                  - img [ref=f5e5300]
+                - button "Edit" [ref=f5e1476] [cursor=pointer]:
+                  - img [ref=f5e5302]
+                - button "Snooze" [ref=f5e1480] [cursor=pointer]:
+                  - img [ref=f5e1481]
+                - button "Reject" [ref=f5e1484] [cursor=pointer]:
+                  - img [ref=f5e5305]
+            - generic [ref=f5e1489]:
+              - generic [ref=f5e1490]: "12"
+              - generic [ref=f5e1491]:
+                - generic [ref=f5e1492]:
+                  - generic [ref=f5e1493]: cde_source_order_id_not_null
+                  - generic [ref=f5e1494]: BRONZE
+                  - generic [ref=f5e1495]: CRITICAL
+                  - generic [ref=f5e1497]: "Null"
+                  - generic [ref=f5e1498]: CDE
+                - generic [ref=f5e1500]:
+                  - img [ref=f5e5308]
+                  - generic [ref=f5e1503]: BronzeDB.br_order_items · Brz_SourceOrderID
+                - generic [ref=f5e1504]: ISNULL(Brz_SourceOrderID, 0) = 0
+                - generic [ref=f5e1505]:
+                  - img [ref=f5e5310]
+                  - generic [ref=f5e1508]: ⚠️ Unverified column reference ('Brz_SourceOrderID' not found in profiled schema) — review before approving. SourceOrderID must not be null for all rows in the CDE layer.
+              - generic [ref=f5e1509]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e1510]:
+                  - img [ref=f5e5312]
+                - button "Approve" [ref=f5e1513] [cursor=pointer]:
+                  - img [ref=f5e5314]
+                - button "Edit" [ref=f5e1516] [cursor=pointer]:
+                  - img [ref=f5e5316]
+                - button "Snooze" [ref=f5e1520] [cursor=pointer]:
+                  - img [ref=f5e1521]
+                - button "Reject" [ref=f5e1524] [cursor=pointer]:
+                  - img [ref=f5e5319]
+            - generic [ref=f5e1529]:
+              - generic [ref=f5e1530]: "13"
+              - generic [ref=f5e1531]:
+                - generic [ref=f5e1532]:
+                  - generic [ref=f5e1533]: cde_source_line_item_id_not_null
+                  - generic [ref=f5e1534]: BRONZE
+                  - generic [ref=f5e1535]: CRITICAL
+                  - generic [ref=f5e1537]: "Null"
+                  - generic [ref=f5e1538]: CDE
+                - generic [ref=f5e1540]:
+                  - img [ref=f5e5322]
+                  - generic [ref=f5e1543]: BronzeDB.br_order_items · Brz_SourceLineItemID
+                - generic [ref=f5e1544]: ISNULL(Brz_SourceLineItemID, 0) = 0
+                - generic [ref=f5e1545]:
+                  - img [ref=f5e5324]
+                  - generic [ref=f5e1548]: ⚠️ Unverified column reference ('Brz_SourceLineItemID' not found in profiled schema) — review before approving. SourceLineItemID must not be null for all rows in the CDE layer.
+              - generic [ref=f5e1549]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e1550]:
+                  - img [ref=f5e5326]
+                - button "Approve" [ref=f5e1553] [cursor=pointer]:
+                  - img [ref=f5e5328]
+                - button "Edit" [ref=f5e1556] [cursor=pointer]:
+                  - img [ref=f5e5330]
+                - button "Snooze" [ref=f5e1560] [cursor=pointer]:
+                  - img [ref=f5e1561]
+                - button "Reject" [ref=f5e1564] [cursor=pointer]:
+                  - img [ref=f5e5333]
+            - generic [ref=f5e1569]:
+              - generic [ref=f5e1570]: "14"
+              - generic [ref=f5e1571]:
+                - generic [ref=f5e1572]:
+                  - generic [ref=f5e1573]: brz_lineitemid_not_null
+                  - generic [ref=f5e1574]: BRONZE
+                  - generic [ref=f5e1575]: CRITICAL
+                  - generic [ref=f5e1577]: "Null"
+                  - generic [ref=f5e1578]: CDE
+                - generic [ref=f5e1580]:
+                  - img [ref=f5e5336]
+                  - generic [ref=f5e1583]: BronzeDB.br_order_items · Brz_LineItemID
+                - generic [ref=f5e1584]: ISNULL(Brz_LineItemID, 0) = 0
+                - generic [ref=f5e1585]:
+                  - img [ref=f5e5338]
+                  - generic [ref=f5e1588]: Ensures the primary key LineItemID is never null.
+              - generic [ref=f5e1589]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e1590]:
+                  - img [ref=f5e5340]
+                - button "Approve" [ref=f5e1593] [cursor=pointer]:
+                  - img [ref=f5e5342]
+                - button "Edit" [ref=f5e1596] [cursor=pointer]:
+                  - img [ref=f5e5344]
+                - button "Snooze" [ref=f5e1600] [cursor=pointer]:
+                  - img [ref=f5e1601]
+                - button "Reject" [ref=f5e1604] [cursor=pointer]:
+                  - img [ref=f5e5347]
+            - generic [ref=f5e1729]:
+              - generic [ref=f5e1730]: "15"
+              - generic [ref=f5e1731]:
+                - generic [ref=f5e1732]:
+                  - generic [ref=f5e1733]: brz_loadedat_not_null
+                  - generic [ref=f5e1734]: BRONZE
+                  - generic [ref=f5e1735]: LOW
+                  - generic [ref=f5e1737]: "Null"
+                  - generic [ref=f5e1738]: CDE
+                - generic [ref=f5e1740]:
+                  - img [ref=f5e5350]
+                  - generic [ref=f5e1743]: BronzeDB.br_order_items · Brz_LoadedAt
+                - generic [ref=f5e1744]: (ISNULL(Brz_LoadedAt, '9999-12-31 00:00:00.000') <> '9999-12-31 00:00:00.000')
+                - generic [ref=f5e1745]:
+                  - img [ref=f5e5352]
+                  - generic [ref=f5e1748]: Ensures the load timestamp is never null.
+              - generic [ref=f5e1749]:
+                - button "Run this rule" [ref=f5e4287] [cursor=pointer]:
+                  - img [ref=f5e5354]
+                - generic [ref=f5e4290]:
+                  - img [ref=f5e5356]
+                  - text: Approved
+            - generic [ref=f5e1649]:
+              - generic [ref=f5e1650]: "16"
+              - generic [ref=f5e1651]:
+                - generic [ref=f5e1652]:
+                  - generic [ref=f5e1653]: line_discrepancy_flagged_on_mismatch
+                  - generic [ref=f5e1654]: BRONZE
+                  - generic [ref=f5e1655]: MEDIUM
+                  - generic [ref=f5e1657]: Custom
+                  - generic [ref=f5e1658]: CDE
+                - generic [ref=f5e1660]:
+                  - img [ref=f5e5358]
+                  - generic [ref=f5e1663]: BronzeDB.br_order_items
+                - generic [ref=f5e1664]: (Brz_LineItemID = SourceLineItemID) AND (ISNULL(LineTotalCalc, 0) <> ISNULL(Quantity, 0) * ISNULL(UnitPrice, 0))
+                - generic [ref=f5e1665]:
+                  - img [ref=f5e5360]
+                  - generic [ref=f5e1668]: Ensures LineDiscrepancy is set to 1 if the calculated total does not match expected values.
+              - generic [ref=f5e1669]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e1670]:
+                  - img [ref=f5e5362]
+                - button "Approve" [ref=f5e1673] [cursor=pointer]:
+                  - img [ref=f5e5364]
+                - button "Edit" [ref=f5e1676] [cursor=pointer]:
+                  - img [ref=f5e5366]
+                - button "Snooze" [ref=f5e1680] [cursor=pointer]:
+                  - img [ref=f5e1681]
+                - button "Reject" [ref=f5e1684] [cursor=pointer]:
+                  - img [ref=f5e5369]
+            - generic [ref=f5e1689]:
+              - generic [ref=f5e1690]: "17"
+              - generic [ref=f5e1691]:
+                - generic [ref=f5e1692]:
+                  - generic [ref=f5e1693]: discount_not_exceeds_unit_price
+                  - generic [ref=f5e1694]: BRONZE
+                  - generic [ref=f5e1695]: MEDIUM
+                  - generic [ref=f5e1697]: Range
+                  - generic [ref=f5e1698]: CDE
+                - generic [ref=f5e1700]:
+                  - img [ref=f5e5372]
+                  - generic [ref=f5e1703]: BronzeDB.br_order_items
+                - generic [ref=f5e1704]: (Brz_LineItemID = SourceLineItemID) AND (ISNULL(Discount, 0) <= ISNULL(UnitPrice, 0))
+                - generic [ref=f5e1705]:
+                  - img [ref=f5e5374]
+                  - generic [ref=f5e1708]: Ensures discount amount does not exceed the unit price.
+              - generic [ref=f5e1709]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e1710]:
+                  - img [ref=f5e5376]
+                - button "Approve" [ref=f5e1713] [cursor=pointer]:
+                  - img [ref=f5e5378]
+                - button "Edit" [ref=f5e1716] [cursor=pointer]:
+                  - img [ref=f5e5380]
+                - button "Snooze" [ref=f5e1720] [cursor=pointer]:
+                  - img [ref=f5e1721]
+                - button "Reject" [ref=f5e1724] [cursor=pointer]:
+                  - img [ref=f5e5383]
+            - generic [ref=f5e1609]:
+              - generic [ref=f5e1610]: "18"
+              - generic [ref=f5e1611]:
+                - generic [ref=f5e1612]:
+                  - generic [ref=f5e1613]: line_total_calc_not_exceeds_unit_price_times_qty
+                  - generic [ref=f5e1614]: BRONZE
+                  - generic [ref=f5e1615]: LOW
+                  - generic [ref=f5e1617]: Range
+                  - generic [ref=f5e1618]: CDE
+                - generic [ref=f5e1620]:
+                  - img [ref=f5e5386]
+                  - generic [ref=f5e1623]: BronzeDB.br_order_items
+                - generic [ref=f5e1624]: (Brz_LineItemID = SourceLineItemID) AND (ISNULL(LineTotalCalc, 0) <= ISNULL(Quantity, 0) * ISNULL(UnitPrice, 0))
+                - generic [ref=f5e1625]:
+                  - img [ref=f5e5388]
+                  - generic [ref=f5e1628]: Ensures the calculated line total does not exceed quantity times unit price.
+              - generic [ref=f5e1629]:
+                - button "Run this rule" [ref=f5e4325] [cursor=pointer]:
+                  - img [ref=f5e5390]
+                - generic [ref=f5e4328]:
+                  - img [ref=f5e5392]
+                  - text: Approved
+            - generic [ref=f5e1769]:
+              - generic [ref=f5e1770]: "19"
+              - generic [ref=f5e1771]:
+                - generic [ref=f5e1772]:
+                  - generic [ref=f5e1773]: line_total_calc_not_null
+                  - generic [ref=f5e1774]: BRONZE
+                  - generic [ref=f5e1775]: MEDIUM
+                  - generic [ref=f5e1777]: Custom
+                  - generic [ref=f5e1778]: CDE
+                - generic [ref=f5e1780]:
+                  - img [ref=f5e5394]
+                  - generic [ref=f5e1783]: BronzeDB.br_order_items · LineTotalCalc
+                - generic [ref=f5e1784]: (Brz_LineItemID = SourceLineItemID) AND (ISNULL(LineTotalCalc, 0) <> 0)
+                - generic [ref=f5e1785]:
+                  - img [ref=f5e5396]
+                  - generic [ref=f5e1788]: Ensures the calculated line total is never null.
+              - generic [ref=f5e1789]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e1790]:
+                  - img [ref=f5e5398]
+                - button "Approve" [ref=f5e1793] [cursor=pointer]:
+                  - img [ref=f5e5400]
+                - button "Edit" [ref=f5e1796] [cursor=pointer]:
+                  - img [ref=f5e5402]
+                - button "Snooze" [ref=f5e1800] [cursor=pointer]:
+                  - img [ref=f5e1801]
+                - button "Reject" [ref=f5e1804] [cursor=pointer]:
+                  - img [ref=f5e5405]
+            - generic [ref=f5e1809]:
+              - generic [ref=f5e1810]: "20"
+              - generic [ref=f5e1811]:
+                - generic [ref=f5e1812]:
+                  - generic [ref=f5e1813]: line_total_calc_matches_formula
+                  - generic [ref=f5e1814]: BRONZE
+                  - generic [ref=f5e1815]: HIGH
+                  - generic [ref=f5e1817]: Custom
+                  - generic [ref=f5e1818]: CDE
+                - generic [ref=f5e1820]:
+                  - img [ref=f5e5408]
+                  - generic [ref=f5e1823]: BronzeDB.br_order_items
+                - generic [ref=f5e1824]: (Brz_LineItemID = SourceLineItemID) AND (ISNULL(LineTotalCalc, 0) = ISNULL(Quantity, 0) * ISNULL(UnitPrice, 0))
+                - generic [ref=f5e1825]:
+                  - img [ref=f5e5410]
+                  - generic [ref=f5e1828]: Validates that LineTotalCalc equals Quantity multiplied by UnitPrice.
+              - generic [ref=f5e1829]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e1830]:
+                  - img [ref=f5e5412]
+                - button "Approve" [ref=f5e1833] [cursor=pointer]:
+                  - img [ref=f5e5414]
+                - button "Edit" [ref=f5e1836] [cursor=pointer]:
+                  - img [ref=f5e5416]
+                - button "Snooze" [ref=f5e1840] [cursor=pointer]:
+                  - img [ref=f5e1841]
+                - button "Reject" [ref=f5e1844] [cursor=pointer]:
+                  - img [ref=f5e5419]
+            - generic [ref=f5e1849]:
+              - generic [ref=f5e1850]: "21"
+              - generic [ref=f5e1851]:
+                - generic [ref=f5e1852]:
+                  - generic [ref=f5e1853]: unit_price_positive_or_zero
+                  - generic [ref=f5e1854]: BRONZE
+                  - generic [ref=f5e1855]: HIGH
+                  - generic [ref=f5e1857]: Format
+                  - generic [ref=f5e1858]: CDE
+                - generic [ref=f5e1860]:
+                  - img [ref=f5e5422]
+                  - generic [ref=f5e1863]: BronzeDB.br_order_items · UnitPrice
+                - generic [ref=f5e1864]: (Brz_LineItemID = SourceLineItemID) AND (ISNULL(UnitPrice, 0) >= 0)
+                - generic [ref=f5e1865]:
+                  - img [ref=f5e5424]
+                  - generic [ref=f5e1868]: Ensures unit price is a valid non-negative number.
+              - generic [ref=f5e1869]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e1870]:
+                  - img [ref=f5e5426]
+                - button "Approve" [ref=f5e1873] [cursor=pointer]:
+                  - img [ref=f5e5428]
+                - button "Edit" [ref=f5e1876] [cursor=pointer]:
+                  - img [ref=f5e5430]
+                - button "Snooze" [ref=f5e1880] [cursor=pointer]:
+                  - img [ref=f5e1881]
+                - button "Reject" [ref=f5e1884] [cursor=pointer]:
+                  - img [ref=f5e5433]
+            - generic [ref=f5e1889]:
+              - generic [ref=f5e1890]: "22"
+              - generic [ref=f5e1891]:
+                - generic [ref=f5e1892]:
+                  - generic [ref=f5e1893]: quantity_positive_or_zero
+                  - generic [ref=f5e1894]: BRONZE
+                  - generic [ref=f5e1895]: HIGH
+                  - generic [ref=f5e1897]: Format
+                  - generic [ref=f5e1898]: CDE
+                - generic [ref=f5e1900]:
+                  - img [ref=f5e5436]
+                  - generic [ref=f5e1903]: BronzeDB.br_order_items · Quantity
+                - generic [ref=f5e1904]: (Brz_LineItemID = SourceLineItemID) AND (ISNULL(Quantity, 0) >= 0)
+                - generic [ref=f5e1905]:
+                  - img [ref=f5e5438]
+                  - generic [ref=f5e1908]: Ensures quantity is a valid non-negative integer.
+              - generic [ref=f5e1909]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e1910]:
+                  - img [ref=f5e5440]
+                - button "Approve" [ref=f5e1913] [cursor=pointer]:
+                  - img [ref=f5e5442]
+                - button "Edit" [ref=f5e1916] [cursor=pointer]:
+                  - img [ref=f5e5444]
+                - button "Snooze" [ref=f5e1920] [cursor=pointer]:
+                  - img [ref=f5e1921]
+                - button "Reject" [ref=f5e1924] [cursor=pointer]:
+                  - img [ref=f5e5447]
+            - generic [ref=f5e1929]:
+              - generic [ref=f5e1930]: "23"
+              - generic [ref=f5e1931]:
+                - generic [ref=f5e1932]:
+                  - generic [ref=f5e1933]: source_productid_not_null
+                  - generic [ref=f5e1934]: BRONZE
+                  - generic [ref=f5e1935]: CRITICAL
+                  - generic [ref=f5e1937]: "Null"
+                  - generic [ref=f5e1938]: CDE
+                - generic [ref=f5e1940]:
+                  - img [ref=f5e5450]
+                  - generic [ref=f5e1943]: BronzeDB.br_order_items · SourceProductID
+                - generic [ref=f5e1944]: ISNULL(SourceProductID, 0) = 0
+                - generic [ref=f5e1945]:
+                  - img [ref=f5e5452]
+                  - generic [ref=f5e1948]: Ensures the source product ID is never null.
+              - generic [ref=f5e1949]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e1950]:
+                  - img [ref=f5e5454]
+                - button "Approve" [ref=f5e1953] [cursor=pointer]:
+                  - img [ref=f5e5456]
+                - button "Edit" [ref=f5e1956] [cursor=pointer]:
+                  - img [ref=f5e5458]
+                - button "Snooze" [ref=f5e1960] [cursor=pointer]:
+                  - img [ref=f5e1961]
+                - button "Reject" [ref=f5e1964] [cursor=pointer]:
+                  - img [ref=f5e5461]
+            - generic [ref=f5e1969]:
+              - generic [ref=f5e1970]: "24"
+              - generic [ref=f5e1971]:
+                - generic [ref=f5e1972]:
+                  - generic [ref=f5e1973]: source_orderid_not_null
+                  - generic [ref=f5e1974]: BRONZE
+                  - generic [ref=f5e1975]: CRITICAL
+                  - generic [ref=f5e1977]: "Null"
+                  - generic [ref=f5e1978]: CDE
+                - generic [ref=f5e1980]:
+                  - img [ref=f5e5464]
+                  - generic [ref=f5e1983]: BronzeDB.br_order_items · SourceOrderID
+                - generic [ref=f5e1984]: ISNULL(SourceOrderID, 0) = 0
+                - generic [ref=f5e1985]:
+                  - img [ref=f5e5466]
+                  - generic [ref=f5e1988]: Ensures the source order ID is never null.
+              - generic [ref=f5e1989]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e1990]:
+                  - img [ref=f5e5468]
+                - button "Approve" [ref=f5e1993] [cursor=pointer]:
+                  - img [ref=f5e5470]
+                - button "Edit" [ref=f5e1996] [cursor=pointer]:
+                  - img [ref=f5e5472]
+                - button "Snooze" [ref=f5e2000] [cursor=pointer]:
+                  - img [ref=f5e2001]
+                - button "Reject" [ref=f5e2004] [cursor=pointer]:
+                  - img [ref=f5e5475]
+            - generic [ref=f5e2009]:
+              - generic [ref=f5e2010]: "25"
+              - generic [ref=f5e2011]:
+                - generic [ref=f5e2012]:
+                  - generic [ref=f5e2013]: source_lineitemid_not_null
+                  - generic [ref=f5e2014]: BRONZE
+                  - generic [ref=f5e2015]: CRITICAL
+                  - generic [ref=f5e2017]: "Null"
+                  - generic [ref=f5e2018]: CDE
+                - generic [ref=f5e2020]:
+                  - img [ref=f5e5478]
+                  - generic [ref=f5e2023]: BronzeDB.br_order_items · SourceLineItemID
+                - generic [ref=f5e2024]: ISNULL(SourceLineItemID, 0) = 0
+                - generic [ref=f5e2025]:
+                  - img [ref=f5e5480]
+                  - generic [ref=f5e2028]: Ensures the source line item ID is never null.
+              - generic [ref=f5e2029]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e2030]:
+                  - img [ref=f5e5482]
+                - button "Approve" [ref=f5e2033] [cursor=pointer]:
+                  - img [ref=f5e5484]
+                - button "Edit" [ref=f5e2036] [cursor=pointer]:
+                  - img [ref=f5e5486]
+                - button "Snooze" [ref=f5e2040] [cursor=pointer]:
+                  - img [ref=f5e2041]
+                - button "Reject" [ref=f5e2044] [cursor=pointer]:
+                  - img [ref=f5e5489]
+            - generic [ref=f5e2049]:
+              - generic [ref=f5e2050]: "26"
+              - generic [ref=f5e2051]:
+                - generic [ref=f5e2052]:
+                  - generic [ref=f5e2053]: source_system_not_null
+                  - generic [ref=f5e2054]: BRONZE
+                  - generic [ref=f5e2055]: CRITICAL
+                  - generic [ref=f5e2057]: "Null"
+                  - generic [ref=f5e2058]: CDE
+                - generic [ref=f5e2060]:
+                  - img [ref=f5e5492]
+                  - generic [ref=f5e2063]: BronzeDB.br_order_items · SourceSystem
+                - generic [ref=f5e2064]: ISNULL(SourceSystem, '') = ''
+                - generic [ref=f5e2065]:
+                  - img [ref=f5e5494]
+                  - generic [ref=f5e2068]: Ensures the source system identifier is present.
+              - generic [ref=f5e2069]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e2070]:
+                  - img [ref=f5e5496]
+                - button "Approve" [ref=f5e2073] [cursor=pointer]:
+                  - img [ref=f5e5498]
+                - button "Edit" [ref=f5e2076] [cursor=pointer]:
+                  - img [ref=f5e5500]
+                - button "Snooze" [ref=f5e2080] [cursor=pointer]:
+                  - img [ref=f5e2081]
+                - button "Reject" [ref=f5e2084] [cursor=pointer]:
+                  - img [ref=f5e5503]
+            - generic [ref=f5e2089]:
+              - generic [ref=f5e2090]: "27"
+              - generic [ref=f5e2091]:
+                - generic [ref=f5e2092]:
+                  - generic [ref=f5e2093]: src_updated_date_not_before_loaded_at
+                  - generic [ref=f5e2094]: SILVER
+                  - generic [ref=f5e2095]: HIGH
+                  - generic [ref=f5e2097]: Custom
+                - generic [ref=f5e2098]:
+                  - img [ref=f5e5506]
+                  - generic [ref=f5e2101]: BronzeDB.br_customers · Src_UpdatedDate
+                - generic [ref=f5e2102]: "[Src_UpdatedDate] >= [Brz_LoadedAt]"
+                - generic [ref=f5e2103]:
+                  - img [ref=f5e5508]
+                  - generic [ref=f5e2106]: This rule validates data integrity by ensuring that records are updated after they have been loaded into the system. A violation indicates potential data corruption or processing errors where updates appear to precede ingestion.
+              - generic [ref=f5e2107]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e2108]:
+                  - img [ref=f5e5510]
+                - button "Approve" [ref=f5e2111] [cursor=pointer]:
+                  - img [ref=f5e5512]
+                - button "Edit" [ref=f5e2114] [cursor=pointer]:
+                  - img [ref=f5e5514]
+                - button "Snooze" [ref=f5e2118] [cursor=pointer]:
+                  - img [ref=f5e2119]
+                - button "Reject" [ref=f5e2122] [cursor=pointer]:
+                  - img [ref=f5e5517]
+            - generic [ref=f5e2127]:
+              - generic [ref=f5e2128]: "28"
+              - generic [ref=f5e2129]:
+                - generic [ref=f5e2130]:
+                  - generic [ref=f5e2131]: replenish_qty_non_negative
+                  - generic [ref=f5e2132]: BRONZE
+                  - generic [ref=f5e2133]: MEDIUM
+                  - generic [ref=f5e2135]: Range
+                  - generic [ref=f5e2136]: CDE
+                - generic [ref=f5e2138]:
+                  - img [ref=f5e5520]
+                  - generic [ref=f5e2141]: BronzeDB.br_inventory · ReplenishQty
+                - generic [ref=f5e2142]: "[dbo].[BronzeDB].[databricks].isnull([ReplenishQty], 0) >= 0"
+                - generic [ref=f5e2143]:
+                  - img [ref=f5e5522]
+                  - generic [ref=f5e2146]: ReplenishQty must be greater than or equal to zero.
+              - generic [ref=f5e2147]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e2148]:
+                  - img [ref=f5e5524]
+                - button "Approve" [ref=f5e2151] [cursor=pointer]:
+                  - img [ref=f5e5526]
+                - button "Edit" [ref=f5e2154] [cursor=pointer]:
+                  - img [ref=f5e5528]
+                - button "Snooze" [ref=f5e2158] [cursor=pointer]:
+                  - img [ref=f5e2159]
+                - button "Reject" [ref=f5e2162] [cursor=pointer]:
+                  - img [ref=f5e5531]
+            - generic [ref=f5e2167]:
+              - generic [ref=f5e2168]: "29"
+              - generic [ref=f5e2169]:
+                - generic [ref=f5e2170]:
+                  - generic [ref=f5e2171]: last_audit_date_not_null
+                  - generic [ref=f5e2172]: BRONZE
+                  - generic [ref=f5e2173]: MEDIUM
+                  - generic [ref=f5e2175]: "Null"
+                - generic [ref=f5e2176]:
+                  - img [ref=f5e5534]
+                  - generic [ref=f5e2179]: BronzeDB.br_inventory · LastAuditDate
+                - generic [ref=f5e2180]: "[dbo].[BronzeDB].[databricks].isnull([LastAuditDate], '9999-12-31') = [LastAuditDate]"
+                - generic [ref=f5e2181]:
+                  - img [ref=f5e5536]
+                  - generic [ref=f5e2184]: LastAuditDate must not be null.
+              - generic [ref=f5e2185]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e2186]:
+                  - img [ref=f5e5538]
+                - button "Approve" [ref=f5e2189] [cursor=pointer]:
+                  - img [ref=f5e5540]
+                - button "Edit" [ref=f5e2192] [cursor=pointer]:
+                  - img [ref=f5e5542]
+                - button "Snooze" [ref=f5e2196] [cursor=pointer]:
+                  - img [ref=f5e2197]
+                - button "Reject" [ref=f5e2200] [cursor=pointer]:
+                  - img [ref=f5e5545]
+            - generic [ref=f5e2245]:
+              - generic [ref=f5e2246]: "30"
+              - generic [ref=f5e2247]:
+                - generic [ref=f5e2248]:
+                  - generic [ref=f5e2249]: br_inventory_id_not_null
+                  - generic [ref=f5e2250]: BRONZE
+                  - generic [ref=f5e2251]: CRITICAL
+                  - generic [ref=f5e2253]: "Null"
+                  - generic [ref=f5e2254]: CDE
+                - generic [ref=f5e2256]:
+                  - img [ref=f5e5548]
+                  - generic [ref=f5e2259]: BronzeDB.br_inventory · Brz_InventoryID
+                - generic [ref=f5e2260]: "[dbo].[BronzeDB].[databricks].isnull([Brz_InventoryID], -1) = [Brz_InventoryID]"
+                - generic [ref=f5e2261]:
+                  - img [ref=f5e5550]
+                  - generic [ref=f5e2264]: Brz_InventoryID must not be null as it is a primary key identifier.
+              - generic [ref=f5e2265]:
+                - button "Run this rule" [ref=f5e2266] [cursor=pointer]:
+                  - img [ref=f5e5552]
+                - generic [ref=f5e2269]:
+                  - img [ref=f5e5554]
+                  - text: Approved
+            - generic [ref=f5e2273]:
+              - generic [ref=f5e2274]: "31"
+              - generic [ref=f5e2275]:
+                - generic [ref=f5e2276]:
+                  - generic [ref=f5e2277]: source_system_not_null
+                  - generic [ref=f5e2278]: BRONZE
+                  - generic [ref=f5e2279]: CRITICAL
+                  - generic [ref=f5e2281]: "Null"
+                  - generic [ref=f5e2282]: CDE
+                - generic [ref=f5e2284]:
+                  - img [ref=f5e5556]
+                  - generic [ref=f5e2287]: BronzeDB.br_inventory · SourceSystem
+                - generic [ref=f5e2288]: "[dbo].[BronzeDB].[databricks].isnull([SourceSystem], '') = [SourceSystem]"
+                - generic [ref=f5e2289]:
+                  - img [ref=f5e5558]
+                  - generic [ref=f5e2292]: SourceSystem must not be null as it identifies the data origin.
+              - generic [ref=f5e2293]:
+                - button "Run this rule" [ref=f5e2294] [cursor=pointer]:
+                  - img [ref=f5e5560]
+                - generic [ref=f5e2297]:
+                  - img [ref=f5e5562]
+                  - text: Approved
+            - generic [ref=f5e2205]:
+              - generic [ref=f5e2206]: "32"
+              - generic [ref=f5e2207]:
+                - generic [ref=f5e2208]:
+                  - generic [ref=f5e2209]: source_supplier_id_not_null
+                  - generic [ref=f5e2210]: BRONZE
+                  - generic [ref=f5e2211]: LOW
+                  - generic [ref=f5e2213]: "Null"
+                  - generic [ref=f5e2214]: CDE
+                - generic [ref=f5e2216]:
+                  - img [ref=f5e5564]
+                  - generic [ref=f5e2219]: BronzeDB.br_inventory · SourceSupplierID
+                - generic [ref=f5e2220]: "[dbo].[BronzeDB].[databricks].isnull([SourceSupplierID], -1) = [SourceSupplierID]"
+                - generic [ref=f5e2221]:
+                  - img [ref=f5e5566]
+                  - generic [ref=f5e2224]: SourceSupplierID must not be null.
+              - generic [ref=f5e2225]:
+                - button "Run this rule" [ref=f5e4505] [cursor=pointer]:
+                  - img [ref=f5e5568]
+                - generic [ref=f5e4508]:
+                  - img [ref=f5e5570]
+                  - text: Approved
+            - generic [ref=f5e2301]:
+              - generic [ref=f5e2302]: "33"
+              - generic [ref=f5e2303]:
+                - generic [ref=f5e2304]:
+                  - generic [ref=f5e2305]: bar_code_not_null
+                  - generic [ref=f5e2306]: BRONZE
+                  - generic [ref=f5e2307]: CRITICAL
+                  - generic [ref=f5e2309]: "Null"
+                  - generic [ref=f5e2310]: CDE
+                - generic [ref=f5e2312]:
+                  - img [ref=f5e5572]
+                  - generic [ref=f5e2315]: BronzeDB.br_inventory · BarCode
+                - generic [ref=f5e2316]: "[dbo].[BronzeDB].[databricks].isnull([BarCode], '') = [BarCode]"
+                - generic [ref=f5e2317]:
+                  - img [ref=f5e5574]
+                  - generic [ref=f5e2320]: BarCode must not be null as it uniquely identifies the inventory item.
+              - generic [ref=f5e2321]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e2322]:
+                  - img [ref=f5e5576]
+                - button "Approve" [ref=f5e2325] [cursor=pointer]:
+                  - img [ref=f5e5578]
+                - button "Edit" [ref=f5e2328] [cursor=pointer]:
+                  - img [ref=f5e5580]
+                - button "Snooze" [ref=f5e2332] [cursor=pointer]:
+                  - img [ref=f5e2333]
+                - button "Reject" [ref=f5e2336] [cursor=pointer]:
+                  - img [ref=f5e5583]
+            - generic [ref=f5e2341]:
+              - generic [ref=f5e2342]: "34"
+              - generic [ref=f5e2343]:
+                - generic [ref=f5e2344]:
+                  - generic [ref=f5e2345]: qty_on_hand_non_negative
+                  - generic [ref=f5e2346]: BRONZE
+                  - generic [ref=f5e2347]: HIGH
+                  - generic [ref=f5e2349]: Range
+                  - generic [ref=f5e2350]: CDE
+                - generic [ref=f5e2352]:
+                  - img [ref=f5e5586]
+                  - generic [ref=f5e2355]: BronzeDB.br_inventory · QtyOnHand
+                - generic [ref=f5e2356]: "[dbo].[BronzeDB].[databricks].isnull([QtyOnHand], 0) >= 0"
+                - generic [ref=f5e2357]:
+                  - img [ref=f5e5588]
+                  - generic [ref=f5e2360]: QtyOnHand must be greater than or equal to zero.
+              - generic [ref=f5e2361]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e2362]:
+                  - img [ref=f5e5590]
+                - button "Approve" [ref=f5e2365] [cursor=pointer]:
+                  - img [ref=f5e5592]
+                - button "Edit" [ref=f5e2368] [cursor=pointer]:
+                  - img [ref=f5e5594]
+                - button "Snooze" [ref=f5e2372] [cursor=pointer]:
+                  - img [ref=f5e2373]
+                - button "Reject" [ref=f5e2376] [cursor=pointer]:
+                  - img [ref=f5e5597]
+            - generic [ref=f5e2381]:
+              - generic [ref=f5e2382]: "35"
+              - generic [ref=f5e2383]:
+                - generic [ref=f5e2384]:
+                  - generic [ref=f5e2385]: qty_reserved_non_negative
+                  - generic [ref=f5e2386]: BRONZE
+                  - generic [ref=f5e2387]: HIGH
+                  - generic [ref=f5e2389]: Range
+                  - generic [ref=f5e2390]: CDE
+                - generic [ref=f5e2392]:
+                  - img [ref=f5e5600]
+                  - generic [ref=f5e2395]: BronzeDB.br_inventory · QtyReserved
+                - generic [ref=f5e2396]: "[dbo].[BronzeDB].[databricks].isnull([QtyReserved], 0) >= 0"
+                - generic [ref=f5e2397]:
+                  - img [ref=f5e5602]
+                  - generic [ref=f5e2400]: QtyReserved must be greater than or equal to zero.
+              - generic [ref=f5e2401]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e2402]:
+                  - img [ref=f5e5604]
+                - button "Approve" [ref=f5e2405] [cursor=pointer]:
+                  - img [ref=f5e5606]
+                - button "Edit" [ref=f5e2408] [cursor=pointer]:
+                  - img [ref=f5e5608]
+                - button "Snooze" [ref=f5e2412] [cursor=pointer]:
+                  - img [ref=f5e2413]
+                - button "Reject" [ref=f5e2416] [cursor=pointer]:
+                  - img [ref=f5e5611]
+            - generic [ref=f5e2421]:
+              - generic [ref=f5e2422]: "36"
+              - generic [ref=f5e2423]:
+                - generic [ref=f5e2424]:
+                  - generic [ref=f5e2425]: qty_available_non_negative
+                  - generic [ref=f5e2426]: BRONZE
+                  - generic [ref=f5e2427]: HIGH
+                  - generic [ref=f5e2429]: Range
+                  - generic [ref=f5e2430]: CDE
+                - generic [ref=f5e2432]:
+                  - img [ref=f5e5614]
+                  - generic [ref=f5e2435]: BronzeDB.br_inventory · QtyAvailable
+                - generic [ref=f5e2436]: "[dbo].[BronzeDB].[databricks].isnull([QtyAvailable], 0) >= 0"
+                - generic [ref=f5e2437]:
+                  - img [ref=f5e5616]
+                  - generic [ref=f5e2440]: QtyAvailable must be greater than or equal to zero.
+              - generic [ref=f5e2441]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e2442]:
+                  - img [ref=f5e5618]
+                - button "Approve" [ref=f5e2445] [cursor=pointer]:
+                  - img [ref=f5e5620]
+                - button "Edit" [ref=f5e2448] [cursor=pointer]:
+                  - img [ref=f5e5622]
+                - button "Snooze" [ref=f5e2452] [cursor=pointer]:
+                  - img [ref=f5e2453]
+                - button "Reject" [ref=f5e2456] [cursor=pointer]:
+                  - img [ref=f5e5625]
+            - generic [ref=f5e2461]:
+              - generic [ref=f5e2462]: "37"
+              - generic [ref=f5e2463]:
+                - generic [ref=f5e2464]:
+                  - generic [ref=f5e2465]: qty_available_less_than_on_hand
+                  - generic [ref=f5e2466]: BRONZE
+                  - generic [ref=f5e2467]: MEDIUM
+                  - generic [ref=f5e2469]: Custom
+                - generic [ref=f5e2470]:
+                  - img [ref=f5e5628]
+                  - generic [ref=f5e2473]: BronzeDB.br_inventory
+                - generic [ref=f5e2474]: "[dbo].[BronzeDB].[databricks].isnull([QtyOnHand], 0) >= [dbo].[BronzeDB].[databricks].isnull([QtyAvailable], 0)"
+                - generic [ref=f5e2475]:
+                  - img [ref=f5e5630]
+                  - generic [ref=f5e2478]: QtyAvailable cannot exceed QtyOnHand.
+              - generic [ref=f5e2479]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e2480]:
+                  - img [ref=f5e5632]
+                - button "Approve" [ref=f5e2483] [cursor=pointer]:
+                  - img [ref=f5e5634]
+                - button "Edit" [ref=f5e2486] [cursor=pointer]:
+                  - img [ref=f5e5636]
+                - button "Snooze" [ref=f5e2490] [cursor=pointer]:
+                  - img [ref=f5e2491]
+                - button "Reject" [ref=f5e2494] [cursor=pointer]:
+                  - img [ref=f5e5639]
+            - generic [ref=f5e2499]:
+              - generic [ref=f5e2500]: "38"
+              - generic [ref=f5e2501]:
+                - generic [ref=f5e2502]:
+                  - generic [ref=f5e2503]: reorder_level_non_negative
+                  - generic [ref=f5e2504]: BRONZE
+                  - generic [ref=f5e2505]: MEDIUM
+                  - generic [ref=f5e2507]: Range
+                  - generic [ref=f5e2508]: CDE
+                - generic [ref=f5e2510]:
+                  - img [ref=f5e5642]
+                  - generic [ref=f5e2513]: BronzeDB.br_inventory · ReorderLevel
+                - generic [ref=f5e2514]: "[dbo].[BronzeDB].[databricks].isnull([ReorderLevel], 0) >= 0"
+                - generic [ref=f5e2515]:
+                  - img [ref=f5e5644]
+                  - generic [ref=f5e2518]: ReorderLevel must be greater than or equal to zero.
+              - generic [ref=f5e2519]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e2520]:
+                  - img [ref=f5e5646]
+                - button "Approve" [ref=f5e2523] [cursor=pointer]:
+                  - img [ref=f5e5648]
+                - button "Edit" [ref=f5e2526] [cursor=pointer]:
+                  - img [ref=f5e5650]
+                - button "Snooze" [ref=f5e2530] [cursor=pointer]:
+                  - img [ref=f5e2531]
+                - button "Reject" [ref=f5e2534] [cursor=pointer]:
+                  - img [ref=f5e5653]
+            - generic [ref=f5e2539]:
+              - generic [ref=f5e2540]: "39"
+              - generic [ref=f5e2541]:
+                - generic [ref=f5e2542]:
+                  - generic [ref=f5e2543]: last_stock_date_not_null
+                  - generic [ref=f5e2544]: BRONZE
+                  - generic [ref=f5e2545]: MEDIUM
+                  - generic [ref=f5e2547]: "Null"
+                - generic [ref=f5e2548]:
+                  - img [ref=f5e5656]
+                  - generic [ref=f5e2551]: BronzeDB.br_inventory · LastStockDate
+                - generic [ref=f5e2552]: "[dbo].[BronzeDB].[databricks].isnull([LastStockDate], '9999-12-31') = [LastStockDate]"
+                - generic [ref=f5e2553]:
+                  - img [ref=f5e5658]
+                  - generic [ref=f5e2556]: LastStockDate must not be null.
+              - generic [ref=f5e2557]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e2558]:
+                  - img [ref=f5e5660]
+                - button "Approve" [ref=f5e2561] [cursor=pointer]:
+                  - img [ref=f5e5662]
+                - button "Edit" [ref=f5e2564] [cursor=pointer]:
+                  - img [ref=f5e5664]
+                - button "Snooze" [ref=f5e2568] [cursor=pointer]:
+                  - img [ref=f5e2569]
+                - button "Reject" [ref=f5e2572] [cursor=pointer]:
+                  - img [ref=f5e5667]
+            - generic [ref=f5e2577]:
+              - generic [ref=f5e2578]: "40"
+              - generic [ref=f5e2579]:
+                - generic [ref=f5e2580]:
+                  - generic [ref=f5e2581]: Brz_BatchIDNotNullCheck
+                  - generic [ref=f5e2582]: BRONZE
+                  - generic [ref=f5e2583]: LOW
+                  - generic [ref=f5e2585]: "Null"
+                - generic [ref=f5e2586]:
+                  - img [ref=f5e5670]
+                  - generic [ref=f5e2589]: BronzeDB.br_customers · Brz_BatchID
+                - generic [ref=f5e2590]: ISNULL(Brz_BatchID, -1) = 0 OR ISNULL(Brz_BatchID, -2) = -2
+                - generic [ref=f5e2591]:
+                  - img [ref=f5e5672]
+                  - generic [ref=f5e2594]: Ensures Brz_BatchID is not null for all records.
+              - generic [ref=f5e2595]:
+                - button "Run this rule" [ref=f5e2596] [cursor=pointer]:
+                  - img [ref=f5e5674]
+                - generic [ref=f5e2599]:
+                  - img [ref=f5e5676]
+                  - text: Approved
+            - generic [ref=f5e2603]:
+              - generic [ref=f5e2604]: "41"
+              - generic [ref=f5e2605]:
+                - generic [ref=f5e2606]:
+                  - generic [ref=f5e2607]: CustomerIDNotNullCheck
+                  - generic [ref=f5e2608]: BRONZE
+                  - generic [ref=f5e2609]: CRITICAL
+                  - generic [ref=f5e2611]: "Null"
+                  - generic [ref=f5e2612]: CDE
+                - generic [ref=f5e2614]:
+                  - img [ref=f5e5678]
+                  - generic [ref=f5e2617]: BronzeDB.br_customers · Brz_CustomerID
+                - generic [ref=f5e2618]: ISNULL(Brz_CustomerID, -1) = 0
+                - generic [ref=f5e2619]:
+                  - img [ref=f5e5680]
+                  - generic [ref=f5e2622]: Ensures CustomerID is not null for all records.
+              - generic [ref=f5e2623]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e2624]:
+                  - img [ref=f5e5682]
+                - button "Approve" [ref=f5e2627] [cursor=pointer]:
+                  - img [ref=f5e5684]
+                - button "Edit" [ref=f5e2630] [cursor=pointer]:
+                  - img [ref=f5e5686]
+                - button "Snooze" [ref=f5e2634] [cursor=pointer]:
+                  - img [ref=f5e2635]
+                - button "Reject" [ref=f5e2638] [cursor=pointer]:
+                  - img [ref=f5e5689]
+            - generic [ref=f5e2643]:
+              - generic [ref=f5e2644]: "42"
+              - generic [ref=f5e2645]:
+                - generic [ref=f5e2646]:
+                  - generic [ref=f5e2647]: SourceSystemNotNullCheck
+                  - generic [ref=f5e2648]: BRONZE
+                  - generic [ref=f5e2649]: CRITICAL
+                  - generic [ref=f5e2651]: "Null"
+                  - generic [ref=f5e2652]: CDE
+                - generic [ref=f5e2654]:
+                  - img [ref=f5e5692]
+                  - generic [ref=f5e2657]: BronzeDB.br_customers · SourceSystem
+                - generic [ref=f5e2658]: ISNULL(SourceSystem, '') = ''
+                - generic [ref=f5e2659]:
+                  - img [ref=f5e5694]
+                  - generic [ref=f5e2662]: Ensures SourceSystem is not null for all records.
+              - generic [ref=f5e2663]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e2664]:
+                  - img [ref=f5e5696]
+                - button "Approve" [ref=f5e2667] [cursor=pointer]:
+                  - img [ref=f5e5698]
+                - button "Edit" [ref=f5e2670] [cursor=pointer]:
+                  - img [ref=f5e5700]
+                - button "Snooze" [ref=f5e2674] [cursor=pointer]:
+                  - img [ref=f5e2675]
+                - button "Reject" [ref=f5e2678] [cursor=pointer]:
+                  - img [ref=f5e5703]
+            - generic [ref=f5e2683]:
+              - generic [ref=f5e2684]: "43"
+              - generic [ref=f5e2685]:
+                - generic [ref=f5e2686]:
+                  - generic [ref=f5e2687]: CustomerIDUniquenessCheck
+                  - generic [ref=f5e2688]: BRONZE
+                  - generic [ref=f5e2689]: HIGH
+                  - generic [ref=f5e2691]: Volume
+                  - generic [ref=f5e2692]: CDE
+                - generic [ref=f5e2694]:
+                  - img [ref=f5e5706]
+                  - generic [ref=f5e2697]: BronzeDB.br_customers
+                - generic [ref=f5e2698]: (SELECT COUNT(*) FROM BronzeDB.br_customers GROUP BY Brz_CustomerID HAVING COUNT(*) > 1) = 0
+                - generic [ref=f5e2699]:
+                  - img [ref=f5e5708]
+                  - generic [ref=f5e2702]: Ensures CustomerID is unique across the dataset.
+              - generic [ref=f5e2703]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e2704]:
+                  - img [ref=f5e5710]
+                - button "Approve" [ref=f5e2707] [cursor=pointer]:
+                  - img [ref=f5e5712]
+                - button "Edit" [ref=f5e2710] [cursor=pointer]:
+                  - img [ref=f5e5714]
+                - button "Snooze" [ref=f5e2714] [cursor=pointer]:
+                  - img [ref=f5e2715]
+                - button "Reject" [ref=f5e2718] [cursor=pointer]:
+                  - img [ref=f5e5717]
+            - generic [ref=f5e2723]:
+              - generic [ref=f5e2724]: "44"
+              - generic [ref=f5e2725]:
+                - generic [ref=f5e2726]:
+                  - generic [ref=f5e2727]: SourceCustomerIDUniquenessCheck
+                  - generic [ref=f5e2728]: BRONZE
+                  - generic [ref=f5e2729]: HIGH
+                  - generic [ref=f5e2731]: Volume
+                  - generic [ref=f5e2732]: CDE
+                - generic [ref=f5e2734]:
+                  - img [ref=f5e5720]
+                  - generic [ref=f5e2737]: BronzeDB.br_customers
+                - generic [ref=f5e2738]: (SELECT COUNT(*) FROM BronzeDB.br_customers GROUP BY SourceCustomerID HAVING COUNT(*) > 1) = 0
+                - generic [ref=f5e2739]:
+                  - img [ref=f5e5722]
+                  - generic [ref=f5e2742]: Ensures SourceCustomerID is unique across the dataset.
+              - generic [ref=f5e2743]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e2744]:
+                  - img [ref=f5e5724]
+                - button "Approve" [ref=f5e2747] [cursor=pointer]:
+                  - img [ref=f5e5726]
+                - button "Edit" [ref=f5e2750] [cursor=pointer]:
+                  - img [ref=f5e5728]
+                - button "Snooze" [ref=f5e2754] [cursor=pointer]:
+                  - img [ref=f5e2755]
+                - button "Reject" [ref=f5e2758] [cursor=pointer]:
+                  - img [ref=f5e5731]
+            - generic [ref=f5e2763]:
+              - generic [ref=f5e2764]: "45"
+              - generic [ref=f5e2765]:
+                - generic [ref=f5e2766]:
+                  - generic [ref=f5e2767]: FirstNameNotNullCheck
+                  - generic [ref=f5e2768]: BRONZE
+                  - generic [ref=f5e2769]: HIGH
+                  - generic [ref=f5e2771]: "Null"
+                  - generic [ref=f5e2772]: CDE
+                - generic [ref=f5e2774]:
+                  - img [ref=f5e5734]
+                  - generic [ref=f5e2777]: BronzeDB.br_customers · FirstName
+                - generic [ref=f5e2778]: ISNULL(FirstName, '') = ''
+                - generic [ref=f5e2779]:
+                  - img [ref=f5e5736]
+                  - generic [ref=f5e2782]: Ensures FirstName is not null for all records.
+              - generic [ref=f5e2783]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e2784]:
+                  - img [ref=f5e5738]
+                - button "Approve" [ref=f5e2787] [cursor=pointer]:
+                  - img [ref=f5e5740]
+                - button "Edit" [ref=f5e2790] [cursor=pointer]:
+                  - img [ref=f5e5742]
+                - button "Snooze" [ref=f5e2794] [cursor=pointer]:
+                  - img [ref=f5e2795]
+                - button "Reject" [ref=f5e2798] [cursor=pointer]:
+                  - img [ref=f5e5745]
+            - generic [ref=f5e2803]:
+              - generic [ref=f5e2804]: "46"
+              - generic [ref=f5e2805]:
+                - generic [ref=f5e2806]:
+                  - generic [ref=f5e2807]: LastNameNotNullCheck
+                  - generic [ref=f5e2808]: BRONZE
+                  - generic [ref=f5e2809]: HIGH
+                  - generic [ref=f5e2811]: "Null"
+                  - generic [ref=f5e2812]: CDE
+                - generic [ref=f5e2814]:
+                  - img [ref=f5e5748]
+                  - generic [ref=f5e2817]: BronzeDB.br_customers · LastName
+                - generic [ref=f5e2818]: ISNULL(LastName, '') = ''
+                - generic [ref=f5e2819]:
+                  - img [ref=f5e5750]
+                  - generic [ref=f5e2822]: Ensures LastName is not null for all records.
+              - generic [ref=f5e2823]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e2824]:
+                  - img [ref=f5e5752]
+                - button "Approve" [ref=f5e2827] [cursor=pointer]:
+                  - img [ref=f5e5754]
+                - button "Edit" [ref=f5e2830] [cursor=pointer]:
+                  - img [ref=f5e5756]
+                - button "Snooze" [ref=f5e2834] [cursor=pointer]:
+                  - img [ref=f5e2835]
+                - button "Reject" [ref=f5e2838] [cursor=pointer]:
+                  - img [ref=f5e5759]
+            - generic [ref=f5e2843]:
+              - generic [ref=f5e2844]: "47"
+              - generic [ref=f5e2845]:
+                - generic [ref=f5e2846]:
+                  - generic [ref=f5e2847]: EmailNotNullCheck
+                  - generic [ref=f5e2848]: BRONZE
+                  - generic [ref=f5e2849]: HIGH
+                  - generic [ref=f5e2851]: "Null"
+                  - generic [ref=f5e2852]: CDE
+                - generic [ref=f5e2854]:
+                  - img [ref=f5e5762]
+                  - generic [ref=f5e2857]: BronzeDB.br_customers · Email
+                - generic [ref=f5e2858]: ISNULL(Email, '') = ''
+                - generic [ref=f5e2859]:
+                  - img [ref=f5e5764]
+                  - generic [ref=f5e2862]: Ensures Email is not null for all records.
+              - generic [ref=f5e2863]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e2864]:
+                  - img [ref=f5e5766]
+                - button "Approve" [ref=f5e2867] [cursor=pointer]:
+                  - img [ref=f5e5768]
+                - button "Edit" [ref=f5e2870] [cursor=pointer]:
+                  - img [ref=f5e5770]
+                - button "Snooze" [ref=f5e2874] [cursor=pointer]:
+                  - img [ref=f5e2875]
+                - button "Reject" [ref=f5e2878] [cursor=pointer]:
+                  - img [ref=f5e5773]
+            - generic [ref=f5e2883]:
+              - generic [ref=f5e2884]: "48"
+              - generic [ref=f5e2885]:
+                - generic [ref=f5e2886]:
+                  - generic [ref=f5e2887]: PhoneNotNullCheck
+                  - generic [ref=f5e2888]: BRONZE
+                  - generic [ref=f5e2889]: HIGH
+                  - generic [ref=f5e2891]: "Null"
+                  - generic [ref=f5e2892]: CDE
+                - generic [ref=f5e2894]:
+                  - img [ref=f5e5776]
+                  - generic [ref=f5e2897]: BronzeDB.br_customers · Phone
+                - generic [ref=f5e2898]: ISNULL(Phone, '') = ''
+                - generic [ref=f5e2899]:
+                  - img [ref=f5e5778]
+                  - generic [ref=f5e2902]: Ensures Phone is not null for all records.
+              - generic [ref=f5e2903]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e2904]:
+                  - img [ref=f5e5780]
+                - button "Approve" [ref=f5e2907] [cursor=pointer]:
+                  - img [ref=f5e5782]
+                - button "Edit" [ref=f5e2910] [cursor=pointer]:
+                  - img [ref=f5e5784]
+                - button "Snooze" [ref=f5e2914] [cursor=pointer]:
+                  - img [ref=f5e2915]
+                - button "Reject" [ref=f5e2918] [cursor=pointer]:
+                  - img [ref=f5e5787]
+            - generic [ref=f5e2923]:
+              - generic [ref=f5e2924]: "49"
+              - generic [ref=f5e2925]:
+                - generic [ref=f5e2926]:
+                  - generic [ref=f5e2927]: DateOfBirthNotNullCheck
+                  - generic [ref=f5e2928]: BRONZE
+                  - generic [ref=f5e2929]: HIGH
+                  - generic [ref=f5e2931]: "Null"
+                  - generic [ref=f5e2932]: CDE
+                - generic [ref=f5e2934]:
+                  - img [ref=f5e5790]
+                  - generic [ref=f5e2937]: BronzeDB.br_customers · DateOfBirth
+                - generic [ref=f5e2938]: ISNULL(DateOfBirth, '9999-12-31') = '9999-12-31'
+                - generic [ref=f5e2939]:
+                  - img [ref=f5e5792]
+                  - generic [ref=f5e2942]: Ensures DateOfBirth is not null for all records.
+              - generic [ref=f5e2943]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e2944]:
+                  - img [ref=f5e5794]
+                - button "Approve" [ref=f5e2947] [cursor=pointer]:
+                  - img [ref=f5e5796]
+                - button "Edit" [ref=f5e2950] [cursor=pointer]:
+                  - img [ref=f5e5798]
+                - button "Snooze" [ref=f5e2954] [cursor=pointer]:
+                  - img [ref=f5e2955]
+                - button "Reject" [ref=f5e2958] [cursor=pointer]:
+                  - img [ref=f5e5801]
+            - generic [ref=f5e2963]:
+              - generic [ref=f5e2964]: "50"
+              - generic [ref=f5e2965]:
+                - generic [ref=f5e2966]:
+                  - generic [ref=f5e2967]: GenderNotNullCheck
+                  - generic [ref=f5e2968]: BRONZE
+                  - generic [ref=f5e2969]: MEDIUM
+                  - generic [ref=f5e2971]: "Null"
+                - generic [ref=f5e2972]:
+                  - img [ref=f5e5804]
+                  - generic [ref=f5e2975]: BronzeDB.br_customers · Gender
+                - generic [ref=f5e2976]: ISNULL(Gender, '') = ''
+                - generic [ref=f5e2977]:
+                  - img [ref=f5e5806]
+                  - generic [ref=f5e2980]: Ensures Gender is not null for all records.
+              - generic [ref=f5e2981]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e2982]:
+                  - img [ref=f5e5808]
+                - button "Approve" [ref=f5e2985] [cursor=pointer]:
+                  - img [ref=f5e5810]
+                - button "Edit" [ref=f5e2988] [cursor=pointer]:
+                  - img [ref=f5e5812]
+                - button "Snooze" [ref=f5e2992] [cursor=pointer]:
+                  - img [ref=f5e2993]
+                - button "Reject" [ref=f5e2996] [cursor=pointer]:
+                  - img [ref=f5e5815]
+            - generic [ref=f5e3001]:
+              - generic [ref=f5e3002]: "51"
+              - generic [ref=f5e3003]:
+                - generic [ref=f5e3004]:
+                  - generic [ref=f5e3005]: LoyaltyTierNotNullCheck
+                  - generic [ref=f5e3006]: BRONZE
+                  - generic [ref=f5e3007]: MEDIUM
+                  - generic [ref=f5e3009]: "Null"
+                  - generic [ref=f5e3010]: CDE
+                - generic [ref=f5e3012]:
+                  - img [ref=f5e5818]
+                  - generic [ref=f5e3015]: BronzeDB.br_customers · LoyaltyTier
+                - generic [ref=f5e3016]: ISNULL(LoyaltyTier, '') = ''
+                - generic [ref=f5e3017]:
+                  - img [ref=f5e5820]
+                  - generic [ref=f5e3020]: Ensures LoyaltyTier is not null for all records.
+              - generic [ref=f5e3021]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e3022]:
+                  - img [ref=f5e5822]
+                - button "Approve" [ref=f5e3025] [cursor=pointer]:
+                  - img [ref=f5e5824]
+                - button "Edit" [ref=f5e3028] [cursor=pointer]:
+                  - img [ref=f5e5826]
+                - button "Snooze" [ref=f5e3032] [cursor=pointer]:
+                  - img [ref=f5e3033]
+                - button "Reject" [ref=f5e3036] [cursor=pointer]:
+                  - img [ref=f5e5829]
+            - generic [ref=f5e3041]:
+              - generic [ref=f5e3042]: "52"
+              - generic [ref=f5e3043]:
+                - generic [ref=f5e3044]:
+                  - generic [ref=f5e3045]: RegisteredDateNotNullCheck
+                  - generic [ref=f5e3046]: BRONZE
+                  - generic [ref=f5e3047]: MEDIUM
+                  - generic [ref=f5e3049]: "Null"
+                - generic [ref=f5e3050]:
+                  - img [ref=f5e5832]
+                  - generic [ref=f5e3053]: BronzeDB.br_customers · RegisteredDate
+                - generic [ref=f5e3054]: ISNULL(RegisteredDate, '9999-12-31 00:00:00') = '9999-12-31 00:00:00'
+                - generic [ref=f5e3055]:
+                  - img [ref=f5e5834]
+                  - generic [ref=f5e3058]: Ensures RegisteredDate is not null for all records.
+              - generic [ref=f5e3059]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e3060]:
+                  - img [ref=f5e5836]
+                - button "Approve" [ref=f5e3063] [cursor=pointer]:
+                  - img [ref=f5e5838]
+                - button "Edit" [ref=f5e3066] [cursor=pointer]:
+                  - img [ref=f5e5840]
+                - button "Snooze" [ref=f5e3070] [cursor=pointer]:
+                  - img [ref=f5e3071]
+                - button "Reject" [ref=f5e3074] [cursor=pointer]:
+                  - img [ref=f5e5843]
+            - generic [ref=f5e3079]:
+              - generic [ref=f5e3080]: "53"
+              - generic [ref=f5e3081]:
+                - generic [ref=f5e3082]:
+                  - generic [ref=f5e3083]: IsActiveNotNullCheck
+                  - generic [ref=f5e3084]: BRONZE
+                  - generic [ref=f5e3085]: MEDIUM
+                  - generic [ref=f5e3087]: "Null"
+                  - generic [ref=f5e3088]: CDE
+                - generic [ref=f5e3090]:
+                  - img [ref=f5e5846]
+                  - generic [ref=f5e3093]: BronzeDB.br_customers · IsActive
+                - generic [ref=f5e3094]: ISNULL(IsActive, 0) = 0 OR ISNULL(IsActive, -1) = -1
+                - generic [ref=f5e3095]:
+                  - img [ref=f5e5848]
+                  - generic [ref=f5e3098]: Ensures IsActive is not null for all records.
+              - generic [ref=f5e3099]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e3100]:
+                  - img [ref=f5e5850]
+                - button "Approve" [ref=f5e3103] [cursor=pointer]:
+                  - img [ref=f5e5852]
+                - button "Edit" [ref=f5e3106] [cursor=pointer]:
+                  - img [ref=f5e5854]
+                - button "Snooze" [ref=f5e3110] [cursor=pointer]:
+                  - img [ref=f5e3111]
+                - button "Reject" [ref=f5e3114] [cursor=pointer]:
+                  - img [ref=f5e5857]
+            - generic [ref=f5e3119]:
+              - generic [ref=f5e3120]: "54"
+              - generic [ref=f5e3121]:
+                - generic [ref=f5e3122]:
+                  - generic [ref=f5e3123]: CountryCodeNotNullCheck
+                  - generic [ref=f5e3124]: BRONZE
+                  - generic [ref=f5e3125]: MEDIUM
+                  - generic [ref=f5e3127]: "Null"
+                - generic [ref=f5e3128]:
+                  - img [ref=f5e5860]
+                  - generic [ref=f5e3131]: BronzeDB.br_customers · CountryCode
+                - generic [ref=f5e3132]: ISNULL(CountryCode, '') = ''
+                - generic [ref=f5e3133]:
+                  - img [ref=f5e5862]
+                  - generic [ref=f5e3136]: Ensures CountryCode is not null for all records.
+              - generic [ref=f5e3137]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e3138]:
+                  - img [ref=f5e5864]
+                - button "Approve" [ref=f5e3141] [cursor=pointer]:
+                  - img [ref=f5e5866]
+                - button "Edit" [ref=f5e3144] [cursor=pointer]:
+                  - img [ref=f5e5868]
+                - button "Snooze" [ref=f5e3148] [cursor=pointer]:
+                  - img [ref=f5e3149]
+                - button "Reject" [ref=f5e3152] [cursor=pointer]:
+                  - img [ref=f5e5871]
+            - generic [ref=f5e3157]:
+              - generic [ref=f5e3158]: "55"
+              - generic [ref=f5e3159]:
+                - generic [ref=f5e3160]:
+                  - generic [ref=f5e3161]: Brz_LoadedAtNotNullCheck
+                  - generic [ref=f5e3162]: BRONZE
+                  - generic [ref=f5e3163]: LOW
+                  - generic [ref=f5e3165]: "Null"
+                - generic [ref=f5e3166]:
+                  - img [ref=f5e5874]
+                  - generic [ref=f5e3169]: BronzeDB.br_customers · Brz_LoadedAt
+                - generic [ref=f5e3170]: ISNULL(Brz_LoadedAt, '9999-12-31 00:00:00') = '9999-12-31 00:00:00'
+                - generic [ref=f5e3171]:
+                  - img [ref=f5e5876]
+                  - generic [ref=f5e3174]: Ensures Brz_LoadedAt is not null for all records.
+              - generic [ref=f5e3175]:
+                - button "Run this rule" [ref=f5e3176] [cursor=pointer]:
+                  - img [ref=f5e5878]
+                - generic [ref=f5e3179]:
+                  - img [ref=f5e5880]
+                  - text: Approved
+            - generic [ref=f5e3183]:
+              - generic [ref=f5e3184]: "56"
+              - generic [ref=f5e3185]:
+                - generic [ref=f5e3186]:
+                  - generic [ref=f5e3187]: Src_UpdatedDateNotNullCheck
+                  - generic [ref=f5e3188]: BRONZE
+                  - generic [ref=f5e3189]: LOW
+                  - generic [ref=f5e3191]: "Null"
+                - generic [ref=f5e3192]:
+                  - img [ref=f5e5882]
+                  - generic [ref=f5e3195]: BronzeDB.br_customers · Src_UpdatedDate
+                - generic [ref=f5e3196]: ISNULL(Src_UpdatedDate, '9999-12-31 00:00:00') = '9999-12-31 00:00:00'
+                - generic [ref=f5e3197]:
+                  - img [ref=f5e5884]
+                  - generic [ref=f5e3200]: Ensures Src_UpdatedDate is not null for all records.
+              - generic [ref=f5e3201]:
+                - button "Run this rule" [ref=f5e3202] [cursor=pointer]:
+                  - img [ref=f5e5886]
+                - generic [ref=f5e3205]:
+                  - img [ref=f5e5888]
+                  - text: Approved
+            - generic [ref=f5e3209]:
+              - generic [ref=f5e3210]: "57"
+              - generic [ref=f5e3211]:
+                - generic [ref=f5e3212]:
+                  - generic [ref=f5e3213]: status_valid_values
+                  - generic [ref=f5e3214]: BRONZE
+                  - generic [ref=f5e3215]: MEDIUM
+                  - generic [ref=f5e3217]: Format
+                - generic [ref=f5e3218]:
+                  - img [ref=f5e5890]
+                  - generic [ref=f5e3221]: BronzeDB.BrzLoadLog · Status
+                - generic [ref=f5e3222]: (CASE WHEN Status IN ('SUCCESS', 'FAILED', 'PENDING') THEN TRUE ELSE FALSE END)
+                - generic [ref=f5e3223]:
+                  - img [ref=f5e5892]
+                  - generic [ref=f5e3226]: Status must contain only valid expected values.
+              - generic [ref=f5e3227]:
+                - button "Run this rule" [ref=f5e3228] [cursor=pointer]:
+                  - img [ref=f5e5894]
+                - generic [ref=f5e3231]:
+                  - img [ref=f5e5896]
+                  - text: Approved
+            - generic [ref=f5e3235]:
+              - generic [ref=f5e3236]: "58"
+              - generic [ref=f5e3237]:
+                - generic [ref=f5e3238]:
+                  - generic [ref=f5e3239]: notes_length_check
+                  - generic [ref=f5e3240]: BRONZE
+                  - generic [ref=f5e3241]: LOW
+                  - generic [ref=f5e3243]: Format
+                  - generic [ref=f5e3244]: Snoozed
+                - generic [ref=f5e3245]:
+                  - img [ref=f5e5898]
+                  - generic [ref=f5e3248]: BronzeDB.BrzLoadLog · Notes
+                - generic [ref=f5e3249]: (CASE WHEN LEN(Notes) > 1000 THEN FALSE ELSE TRUE END)
+                - generic [ref=f5e3250]:
+                  - img [ref=f5e5900]
+                  - generic [ref=f5e3253]: Notes length must not exceed 1000 characters.
+              - generic [ref=f5e3254]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e3255]:
+                  - img [ref=f5e5902]
+                - generic [ref=f5e3258]: Snoozed
+            - generic [ref=f5e3260]:
+              - generic [ref=f5e3261]: "59"
+              - generic [ref=f5e3262]:
+                - generic [ref=f5e3263]:
+                  - generic [ref=f5e3264]: run_duration_positive
+                  - generic [ref=f5e3265]: BRONZE
+                  - generic [ref=f5e3266]: HIGH
+                  - generic [ref=f5e3268]: Range
+                - generic [ref=f5e3269]:
+                  - img [ref=f5e5904]
+                  - generic [ref=f5e3272]: BronzeDB.BrzLoadLog
+                - generic [ref=f5e3273]: (CASE WHEN DATEDIFF(MINUTE, RunStartedAt, RunFinishedAt) < 0 THEN FALSE ELSE TRUE END)
+                - generic [ref=f5e3274]:
+                  - img [ref=f5e5906]
+                  - generic [ref=f5e3277]: RunFinishedAt must be greater than RunStartedAt to ensure a valid duration.
+              - generic [ref=f5e3278]:
+                - button "Run this rule" [ref=f5e3279] [cursor=pointer]:
+                  - img [ref=f5e5908]
+                - generic [ref=f5e3282]:
+                  - img [ref=f5e5910]
+                  - text: Approved
+            - generic [ref=f5e3286]:
+              - generic [ref=f5e3287]: "60"
+              - generic [ref=f5e3288]:
+                - generic [ref=f5e3289]:
+                  - generic [ref=f5e3290]: batch_id_not_null
+                  - generic [ref=f5e3291]: BRONZE
+                  - generic [ref=f5e3292]: LOW
+                  - generic [ref=f5e3294]: "Null"
+                - generic [ref=f5e3295]:
+                  - img [ref=f5e5912]
+                  - generic [ref=f5e3298]: BronzeDB.br_categories · Brz_BatchID
+                - generic [ref=f5e3299]: ISNULL(Brz_BatchID, 0) = 0
+                - generic [ref=f5e3300]:
+                  - img [ref=f5e5914]
+                  - generic [ref=f5e3303]: Brz_BatchID must not be null to track batch processing context.
+              - generic [ref=f5e3304]:
+                - button "Run this rule" [ref=f5e3305] [cursor=pointer]:
+                  - img [ref=f5e5916]
+                - generic [ref=f5e3308]:
+                  - img [ref=f5e5918]
+                  - text: Approved
+            - generic [ref=f5e3312]:
+              - generic [ref=f5e3313]: "61"
+              - generic [ref=f5e3314]:
+                - generic [ref=f5e3315]:
+                  - generic [ref=f5e3316]: category_name_length_check
+                  - generic [ref=f5e3317]: BRONZE
+                  - generic [ref=f5e3318]: LOW
+                  - generic [ref=f5e3320]: Format
+                  - generic [ref=f5e3321]: Snoozed
+                - generic [ref=f5e3322]:
+                  - img [ref=f5e5920]
+                  - generic [ref=f5e3325]: BronzeDB.br_categories · CategoryName
+                - generic [ref=f5e3326]: LEN(CategoryName) > 0
+                - generic [ref=f5e3327]:
+                  - img [ref=f5e5922]
+                  - generic [ref=f5e3330]: CategoryName must have a length greater than zero to ensure meaningful data.
+              - generic [ref=f5e3331]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e3332]:
+                  - img [ref=f5e5924]
+                - generic [ref=f5e3335]: Snoozed
+            - generic [ref=f5e3337]:
+              - generic [ref=f5e3338]: "62"
+              - generic [ref=f5e3339]:
+                - generic [ref=f5e3340]:
+                  - generic [ref=f5e3341]: source_category_id_positive
+                  - generic [ref=f5e3342]: BRONZE
+                  - generic [ref=f5e3343]: MEDIUM
+                  - generic [ref=f5e3345]: Range
+                - generic [ref=f5e3346]:
+                  - img [ref=f5e5926]
+                  - generic [ref=f5e3349]: BronzeDB.br_categories · SourceCategoryID
+                - generic [ref=f5e3350]: SourceCategoryID > 0
+                - generic [ref=f5e3351]:
+                  - img [ref=f5e5928]
+                  - generic [ref=f5e3354]: SourceCategoryID must be a positive integer to ensure valid upstream identification.
+              - generic [ref=f5e3355]:
+                - button "Run this rule" [ref=f5e3356] [cursor=pointer]:
+                  - img [ref=f5e5930]
+                - generic [ref=f5e3359]:
+                  - img [ref=f5e5932]
+                  - text: Approved
+            - generic [ref=f5e3363]:
+              - generic [ref=f5e3364]: "63"
+              - generic [ref=f5e3365]:
+                - generic [ref=f5e3366]:
+                  - generic [ref=f5e3367]: category_id_positive
+                  - generic [ref=f5e3368]: BRONZE
+                  - generic [ref=f5e3369]: MEDIUM
+                  - generic [ref=f5e3371]: Range
+                - generic [ref=f5e3372]:
+                  - img [ref=f5e5934]
+                  - generic [ref=f5e3375]: BronzeDB.br_categories · Brz_CategoryID
+                - generic [ref=f5e3376]: Brz_CategoryID > 0
+                - generic [ref=f5e3377]:
+                  - img [ref=f5e5936]
+                  - generic [ref=f5e3380]: CategoryID must be a positive integer to ensure valid identification.
+              - generic [ref=f5e3381]:
+                - button "Run this rule" [ref=f5e3382] [cursor=pointer]:
+                  - img [ref=f5e5938]
+                - generic [ref=f5e3385]:
+                  - img [ref=f5e5940]
+                  - text: Approved
+            - generic [ref=f5e3389]:
+              - generic [ref=f5e3390]: "64"
+              - generic [ref=f5e3391]:
+                - generic [ref=f5e3392]:
+                  - generic [ref=f5e3393]: parent_category_id_not_null
+                  - generic [ref=f5e3394]: BRONZE
+                  - generic [ref=f5e3395]: CRITICAL
+                  - generic [ref=f5e3397]: "Null"
+                - generic [ref=f5e3398]:
+                  - img [ref=f5e5942]
+                  - generic [ref=f5e3401]: BronzeDB.br_categories · ParentCategoryID
+                - generic [ref=f5e3402]: ISNULL(ParentCategoryID, 0) = 0
+                - generic [ref=f5e3403]:
+                  - img [ref=f5e5944]
+                  - generic [ref=f5e3406]: ParentCategoryID must not be null to establish the category hierarchy.
+              - generic [ref=f5e3407]:
+                - button "Run this rule" [ref=f5e3408] [cursor=pointer]:
+                  - img [ref=f5e5946]
+                - generic [ref=f5e3411]:
+                  - img [ref=f5e5948]
+                  - text: Approved
+            - generic [ref=f5e3415]:
+              - generic [ref=f5e3416]: "65"
+              - generic [ref=f5e3417]:
+                - generic [ref=f5e3418]:
+                  - generic [ref=f5e3419]: cde_isactive_not_null
+                  - generic [ref=f5e3420]: BRONZE
+                  - generic [ref=f5e3421]: LOW
+                  - generic [ref=f5e3423]: "Null"
+                  - generic [ref=f5e3424]: CDE
+                - generic [ref=f5e3426]:
+                  - img [ref=f5e5950]
+                  - generic [ref=f5e3429]: BronzeDB.br_categories · IsActive
+                - generic [ref=f5e3430]: ISNULL(IsActive, 0) = 0
+                - generic [ref=f5e3431]:
+                  - img [ref=f5e5952]
+                  - generic [ref=f5e3434]: IsActive must not be null to determine the active status of the category.
+              - generic [ref=f5e3435]:
+                - button "Run this rule" [ref=f5e3436] [cursor=pointer]:
+                  - img [ref=f5e5954]
+                - generic [ref=f5e3439]:
+                  - img [ref=f5e5956]
+                  - text: Approved
+            - generic [ref=f5e3443]:
+              - generic [ref=f5e3444]: "66"
+              - generic [ref=f5e3445]:
+                - generic [ref=f5e3446]:
+                  - generic [ref=f5e3447]: cde_source_category_id_not_null
+                  - generic [ref=f5e3448]: BRONZE
+                  - generic [ref=f5e3449]: MEDIUM
+                  - generic [ref=f5e3451]: "Null"
+                  - generic [ref=f5e3452]: CDE
+                - generic [ref=f5e3454]:
+                  - img [ref=f5e5958]
+                  - generic [ref=f5e3457]: BronzeDB.br_categories · SourceCategoryID
+                - generic [ref=f5e3458]: ISNULL(SourceCategoryID, 0) = 0
+                - generic [ref=f5e3459]:
+                  - img [ref=f5e5960]
+                  - generic [ref=f5e3462]: SourceCategoryID must not be null to validate upstream data integrity.
+              - generic [ref=f5e3463]:
+                - button "Run this rule" [ref=f5e3464] [cursor=pointer]:
+                  - img [ref=f5e5962]
+                - generic [ref=f5e3467]:
+                  - img [ref=f5e5964]
+                  - text: Approved
+            - generic [ref=f5e3471]:
+              - generic [ref=f5e3472]: "67"
+              - generic [ref=f5e3473]:
+                - generic [ref=f5e3474]:
+                  - generic [ref=f5e3475]: cde_source_system_not_null
+                  - generic [ref=f5e3476]: BRONZE
+                  - generic [ref=f5e3477]: MEDIUM
+                  - generic [ref=f5e3479]: "Null"
+                  - generic [ref=f5e3480]: CDE
+                - generic [ref=f5e3482]:
+                  - img [ref=f5e5966]
+                  - generic [ref=f5e3485]: BronzeDB.br_categories · SourceSystem
+                - generic [ref=f5e3486]: ISNULL(SourceSystem, '') = ''
+                - generic [ref=f5e3487]:
+                  - img [ref=f5e5968]
+                  - generic [ref=f5e3490]: SourceSystem must not be null to track data origin.
+              - generic [ref=f5e3491]:
+                - button "Run this rule" [ref=f5e3492] [cursor=pointer]:
+                  - img [ref=f5e5970]
+                - generic [ref=f5e3495]:
+                  - img [ref=f5e5972]
+                  - text: Approved
+            - generic [ref=f5e3499]:
+              - generic [ref=f5e3500]: "68"
+              - generic [ref=f5e3501]:
+                - generic [ref=f5e3502]:
+                  - generic [ref=f5e3503]: cde_category_id_not_null
+                  - generic [ref=f5e3504]: BRONZE
+                  - generic [ref=f5e3505]: HIGH
+                  - generic [ref=f5e3507]: "Null"
+                  - generic [ref=f5e3508]: CDE
+                - generic [ref=f5e3510]:
+                  - img [ref=f5e5974]
+                  - generic [ref=f5e3513]: BronzeDB.br_categories · Brz_CategoryID
+                - generic [ref=f5e3514]: ISNULL(Brz_CategoryID, 0) = 0
+                - generic [ref=f5e3515]:
+                  - img [ref=f5e5976]
+                  - generic [ref=f5e3518]: CategoryID must not be null to uniquely identify the category.
+              - generic [ref=f5e3519]:
+                - button "Run this rule" [ref=f5e3520] [cursor=pointer]:
+                  - img [ref=f5e5978]
+                - generic [ref=f5e3523]:
+                  - img [ref=f5e5980]
+                  - text: Approved
+            - generic [ref=f5e3527]:
+              - generic [ref=f5e3528]: "69"
+              - generic [ref=f5e3529]:
+                - generic [ref=f5e3530]:
+                  - generic [ref=f5e3531]: cde_category_name_not_null
+                  - generic [ref=f5e3532]: BRONZE
+                  - generic [ref=f5e3533]: HIGH
+                  - generic [ref=f5e3535]: "Null"
+                  - generic [ref=f5e3536]: CDE
+                - generic [ref=f5e3538]:
+                  - img [ref=f5e5982]
+                  - generic [ref=f5e3541]: BronzeDB.br_categories · CategoryName
+                - generic [ref=f5e3542]: ISNULL(CategoryName, '') = ''
+                - generic [ref=f5e3543]:
+                  - img [ref=f5e5984]
+                  - generic [ref=f5e3546]: CategoryName must not be null to ensure data completeness for categorization.
+              - generic [ref=f5e3547]:
+                - button "Run this rule" [ref=f5e3548] [cursor=pointer]:
+                  - img [ref=f5e5986]
+                - generic [ref=f5e3551]:
+                  - img [ref=f5e5988]
+                  - text: Approved
+            - generic [ref=f5e3555]:
+              - generic [ref=f5e3556]: "70"
+              - generic [ref=f5e3557]:
+                - generic [ref=f5e3558]:
+                  - generic [ref=f5e3559]: loaded_at_not_null
+                  - generic [ref=f5e3560]: BRONZE
+                  - generic [ref=f5e3561]: LOW
+                  - generic [ref=f5e3563]: "Null"
+                - generic [ref=f5e3564]:
+                  - img [ref=f5e5990]
+                  - generic [ref=f5e3567]: BronzeDB.br_categories · Brz_LoadedAt
+                - generic [ref=f5e3568]: ISNULL(Brz_LoadedAt, '9999-12-31 23:59:59') = '9999-12-31 23:59:59'
+                - generic [ref=f5e3569]:
+                  - img [ref=f5e5992]
+                  - generic [ref=f5e3572]: Brz_LoadedAt must not be null to track data ingestion time.
+              - generic [ref=f5e3573]:
+                - button "Run this rule" [ref=f5e3574] [cursor=pointer]:
+                  - img [ref=f5e5994]
+                - generic [ref=f5e3577]:
+                  - img [ref=f5e5996]
+                  - text: Approved
+            - generic [ref=f5e3581]:
+              - generic [ref=f5e3582]: "71"
+              - generic [ref=f5e3583]:
+                - generic [ref=f5e3584]:
+                  - generic [ref=f5e3585]: created_date_not_future
+                  - generic [ref=f5e3586]: BRONZE
+                  - generic [ref=f5e3587]: LOW
+                  - generic [ref=f5e3589]: Custom
+                  - generic [ref=f5e3590]: Snoozed
+                - generic [ref=f5e3591]:
+                  - img [ref=f5e5998]
+                  - generic [ref=f5e3594]: BronzeDB.br_categories · Src_CreatedDate
+                - generic [ref=f5e3595]: Src_CreatedDate <= GETDATE()
+                - generic [ref=f5e3596]:
+                  - img [ref=f5e6000]
+                  - generic [ref=f5e3599]: Src_CreatedDate must not be in the future to ensure data validity.
+              - generic [ref=f5e3600]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e3601]:
+                  - img [ref=f5e6002]
+                - generic [ref=f5e3604]: Snoozed
+            - generic [ref=f5e3606]:
+              - generic [ref=f5e3607]: "72"
+              - generic [ref=f5e3608]:
+                - generic [ref=f5e3609]:
+                  - generic [ref=f5e3610]: cde_run_finished_at_not_null
+                  - generic [ref=f5e3611]: BRONZE
+                  - generic [ref=f5e3612]: CRITICAL
+                  - generic [ref=f5e3614]: "Null"
+                  - generic [ref=f5e3615]: CDE
+                - generic [ref=f5e3617]:
+                  - img [ref=f5e6004]
+                  - generic [ref=f5e3620]: BronzeDB.BrzLoadLog · RunFinishedAt
+                - generic [ref=f5e3621]: ISNULL(RunFinishedAt, '9999-12-31 00:00:00.000')
+                - generic [ref=f5e3622]:
+                  - img [ref=f5e6006]
+                  - generic [ref=f5e3625]: RunFinishedAt must not be null as it is a critical data element.
+              - generic [ref=f5e3626]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e3627]:
+                  - img [ref=f5e6008]
+                - button "Approve" [ref=f5e3630] [cursor=pointer]:
+                  - img [ref=f5e6010]
+                - button "Edit" [ref=f5e3633] [cursor=pointer]:
+                  - img [ref=f5e6012]
+                - button "Snooze" [ref=f5e3637] [cursor=pointer]:
+                  - img [ref=f5e3638]
+                - button "Reject" [ref=f5e3641] [cursor=pointer]:
+                  - img [ref=f5e6015]
+            - generic [ref=f5e3646]:
+              - generic [ref=f5e3647]: "73"
+              - generic [ref=f5e3648]:
+                - generic [ref=f5e3649]:
+                  - generic [ref=f5e3650]: status_valid_length
+                  - generic [ref=f5e3651]: BRONZE
+                  - generic [ref=f5e3652]: MEDIUM
+                  - generic [ref=f5e3654]: Format
+                - generic [ref=f5e3655]:
+                  - img [ref=f5e6018]
+                  - generic [ref=f5e3658]: BronzeDB.BrzLoadLog · Status
+                - generic [ref=f5e3659]: LEN(Status) >= 1 AND LEN(Status) <= 50
+                - generic [ref=f5e3660]:
+                  - img [ref=f5e6020]
+                  - generic [ref=f5e3663]: Status string length must be between 1 and 50 characters
+              - generic [ref=f5e3664]:
+                - button "Run this rule" [ref=f5e3665] [cursor=pointer]:
+                  - img [ref=f5e6022]
+                - generic [ref=f5e3668]:
+                  - img [ref=f5e6024]
+                  - text: Approved
+            - generic [ref=f5e3672]:
+              - generic [ref=f5e3673]: "74"
+              - generic [ref=f5e3674]:
+                - generic [ref=f5e3675]:
+                  - generic [ref=f5e3676]: notes_valid_length
+                  - generic [ref=f5e3677]: BRONZE
+                  - generic [ref=f5e3678]: LOW
+                  - generic [ref=f5e3680]: Format
+                - generic [ref=f5e3681]:
+                  - img [ref=f5e6026]
+                  - generic [ref=f5e3684]: BronzeDB.BrzLoadLog · Notes
+                - generic [ref=f5e3685]: LEN(Notes) >= 1 AND LEN(Notes) <= 1000
+                - generic [ref=f5e3686]:
+                  - img [ref=f5e6028]
+                  - generic [ref=f5e3689]: Notes string length must be between 1 and 1000 characters
+              - generic [ref=f5e3690]:
+                - button "Run this rule" [ref=f5e3691] [cursor=pointer]:
+                  - img [ref=f5e6030]
+                - generic [ref=f5e3694]:
+                  - img [ref=f5e6032]
+                  - text: Approved
+            - generic [ref=f5e3698]:
+              - generic [ref=f5e3699]: "75"
+              - generic [ref=f5e3700]:
+                - generic [ref=f5e3701]:
+                  - generic [ref=f5e3702]: batch_id_matches_raw
+                  - generic [ref=f5e3703]: BRONZE
+                  - generic [ref=f5e3704]: MEDIUM
+                  - generic [ref=f5e3706]: Custom
+                - generic [ref=f5e3707]:
+                  - img [ref=f5e6034]
+                  - generic [ref=f5e3710]: BronzeDB.BrzLoadLog
+                - generic [ref=f5e3711]: BatchID = RawBatchID
+                - generic [ref=f5e3712]:
+                  - img [ref=f5e6036]
+                  - generic [ref=f5e3715]: BatchID and RawBatchID must be equal
+              - generic [ref=f5e3716]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e3717]:
+                  - img [ref=f5e6038]
+                - button "Approve" [ref=f5e3720] [cursor=pointer]:
+                  - img [ref=f5e6040]
+                - button "Edit" [ref=f5e3723] [cursor=pointer]:
+                  - img [ref=f5e6042]
+                - button "Snooze" [ref=f5e3727] [cursor=pointer]:
+                  - img [ref=f5e3728]
+                - button "Reject" [ref=f5e3731] [cursor=pointer]:
+                  - img [ref=f5e6045]
+            - generic [ref=f5e3736]:
+              - generic [ref=f5e3737]: "76"
+              - generic [ref=f5e3738]:
+                - generic [ref=f5e3739]:
+                  - generic [ref=f5e3740]: cde_notes_not_null
+                  - generic [ref=f5e3741]: BRONZE
+                  - generic [ref=f5e3742]: CRITICAL
+                  - generic [ref=f5e3744]: "Null"
+                  - generic [ref=f5e3745]: CDE
+                - generic [ref=f5e3747]:
+                  - img [ref=f5e6048]
+                  - generic [ref=f5e3750]: BronzeDB.BrzLoadLog · Notes
+                - generic [ref=f5e3751]: ISNULL(Notes, '')
+                - generic [ref=f5e3752]:
+                  - img [ref=f5e6050]
+                  - generic [ref=f5e3755]: Notes must not be null as it is a critical data element.
+              - generic [ref=f5e3756]:
+                - button "Run this rule" [ref=f5e3757] [cursor=pointer]:
+                  - img [ref=f5e6052]
+                - generic [ref=f5e3760]:
+                  - img [ref=f5e6054]
+                  - text: Approved
+            - generic [ref=f5e3764]:
+              - generic [ref=f5e3765]: "77"
+              - generic [ref=f5e3766]:
+                - generic [ref=f5e3767]:
+                  - generic [ref=f5e3768]: cde_status_not_null
+                  - generic [ref=f5e3769]: BRONZE
+                  - generic [ref=f5e3770]: CRITICAL
+                  - generic [ref=f5e3772]: "Null"
+                  - generic [ref=f5e3773]: CDE
+                - generic [ref=f5e3775]:
+                  - img [ref=f5e6056]
+                  - generic [ref=f5e3778]: BronzeDB.BrzLoadLog · Status
+                - generic [ref=f5e3779]: ISNULL(Status, '')
+                - generic [ref=f5e3780]:
+                  - img [ref=f5e6058]
+                  - generic [ref=f5e3783]: Status must not be null as it is a critical data element.
+              - generic [ref=f5e3784]:
+                - button "Run this rule" [ref=f5e3785] [cursor=pointer]:
+                  - img [ref=f5e6060]
+                - generic [ref=f5e3788]:
+                  - img [ref=f5e6062]
+                  - text: Approved
+            - generic [ref=f5e3792]:
+              - generic [ref=f5e3793]: "78"
+              - generic [ref=f5e3794]:
+                - generic [ref=f5e3795]:
+                  - generic [ref=f5e3796]: cde_raw_batch_id_not_null
+                  - generic [ref=f5e3797]: BRONZE
+                  - generic [ref=f5e3798]: CRITICAL
+                  - generic [ref=f5e3800]: "Null"
+                  - generic [ref=f5e3801]: CDE
+                - generic [ref=f5e3803]:
+                  - img [ref=f5e6064]
+                  - generic [ref=f5e3806]: BronzeDB.BrzLoadLog · RawBatchID
+                - generic [ref=f5e3807]: ISNULL(RawBatchID, 0)
+                - generic [ref=f5e3808]:
+                  - img [ref=f5e6066]
+                  - generic [ref=f5e3811]: RawBatchID must not be null as it is a critical data element.
+              - generic [ref=f5e3812]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e3813]:
+                  - img [ref=f5e6068]
+                - generic [ref=f5e3816]: Rejected
+            - generic [ref=f5e3818]:
+              - generic [ref=f5e3819]: "79"
+              - generic [ref=f5e3820]:
+                - generic [ref=f5e3821]:
+                  - generic [ref=f5e3822]: cde_run_started_at_not_null
+                  - generic [ref=f5e3823]: BRONZE
+                  - generic [ref=f5e3824]: CRITICAL
+                  - generic [ref=f5e3826]: "Null"
+                  - generic [ref=f5e3827]: CDE
+                - generic [ref=f5e3829]:
+                  - img [ref=f5e6070]
+                  - generic [ref=f5e3832]: BronzeDB.BrzLoadLog · RunStartedAt
+                - generic [ref=f5e3833]: ISNULL(RunStartedAt, '9999-12-31 00:00:00.000')
+                - generic [ref=f5e3834]:
+                  - img [ref=f5e6072]
+                  - generic [ref=f5e3837]: RunStartedAt must not be null as it is a critical data element.
+              - generic [ref=f5e3838]:
+                - button "Run this rule" [ref=f5e3839] [cursor=pointer]:
+                  - img [ref=f5e6074]
+                - generic [ref=f5e3842]:
+                  - img [ref=f5e6076]
+                  - text: Approved
+            - generic [ref=f5e3846]:
+              - generic [ref=f5e3847]: "80"
+              - generic [ref=f5e3848]:
+                - generic [ref=f5e3849]:
+                  - generic [ref=f5e3850]: cde_batch_id_not_null
+                  - generic [ref=f5e3851]: BRONZE
+                  - generic [ref=f5e3852]: CRITICAL
+                  - generic [ref=f5e3854]: "Null"
+                  - generic [ref=f5e3855]: CDE
+                - generic [ref=f5e3857]:
+                  - img [ref=f5e6078]
+                  - generic [ref=f5e3860]: BronzeDB.BrzLoadLog · BatchID
+                - generic [ref=f5e3861]: ISNULL(BatchID, 0)
+                - generic [ref=f5e3862]:
+                  - img [ref=f5e6080]
+                  - generic [ref=f5e3865]: BatchID must not be null as it is a critical data element.
+              - generic [ref=f5e3866]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e3867]:
+                  - img [ref=f5e6082]
+                - generic [ref=f5e3870]: Rejected
+            - generic [ref=f5e3872]:
+              - generic [ref=f5e3873]: "81"
+              - generic [ref=f5e3874]:
+                - generic [ref=f5e3875]:
+                  - generic [ref=f5e3876]: run_started_before_finished
+                  - generic [ref=f5e3877]: BRONZE
+                  - generic [ref=f5e3878]: HIGH
+                  - generic [ref=f5e3880]: Custom
+                - generic [ref=f5e3881]:
+                  - img [ref=f5e6084]
+                  - generic [ref=f5e3884]: BronzeDB.BrzLoadLog
+                - generic [ref=f5e3885]: RunStartedAt < RunFinishedAt
+                - generic [ref=f5e3886]:
+                  - img [ref=f5e6086]
+                  - generic [ref=f5e3889]: RunStartedAt must be earlier than RunFinishedAt
+              - generic [ref=f5e3890]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e3891]:
+                  - img [ref=f5e6088]
+                - button "Approve" [ref=f5e3894] [cursor=pointer]:
+                  - img [ref=f5e6090]
+                - button "Edit" [ref=f5e3897] [cursor=pointer]:
+                  - img [ref=f5e6092]
+                - button "Snooze" [ref=f5e3901] [cursor=pointer]:
+                  - img [ref=f5e3902]
+                - button "Reject" [ref=f5e3905] [cursor=pointer]:
+                  - img [ref=f5e6095]
+            - generic [ref=f5e3910]:
+              - generic [ref=f5e3911]: "82"
+              - generic [ref=f5e3912]:
+                - generic [ref=f5e3913]:
+                  - generic [ref=f5e3914]: raw_batch_id_positive
+                  - generic [ref=f5e3915]: BRONZE
+                  - generic [ref=f5e3916]: HIGH
+                  - generic [ref=f5e3918]: Range
+                - generic [ref=f5e3919]:
+                  - img [ref=f5e6098]
+                  - generic [ref=f5e3922]: BronzeDB.BrzLoadLog · RawBatchID
+                - generic [ref=f5e3923]: (CASE WHEN RawBatchID <= 0 THEN FALSE ELSE TRUE END)
+                - generic [ref=f5e3924]:
+                  - img [ref=f5e6100]
+                  - generic [ref=f5e3927]: RawBatchID must be a positive integer.
+              - generic [ref=f5e3928]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e3929]:
+                  - img [ref=f5e6102]
+                - button "Approve" [ref=f5e3932] [cursor=pointer]:
+                  - img [ref=f5e6104]
+                - button "Edit" [ref=f5e3935] [cursor=pointer]:
+                  - img [ref=f5e6106]
+                - button "Snooze" [ref=f5e3939] [cursor=pointer]:
+                  - img [ref=f5e3940]
+                - button "Reject" [ref=f5e3943] [cursor=pointer]:
+                  - img [ref=f5e6109]
+            - generic [ref=f5e3948]:
+              - generic [ref=f5e3949]: "83"
+              - generic [ref=f5e3950]:
+                - generic [ref=f5e3951]:
+                  - generic [ref=f5e3952]: batch_id_positive
+                  - generic [ref=f5e3953]: BRONZE
+                  - generic [ref=f5e3954]: HIGH
+                  - generic [ref=f5e3956]: Range
+                - generic [ref=f5e3957]:
+                  - img [ref=f5e6112]
+                  - generic [ref=f5e3960]: BronzeDB.BrzLoadLog · BatchID
+                - generic [ref=f5e3961]: (CASE WHEN BatchID <= 0 THEN FALSE ELSE TRUE END)
+                - generic [ref=f5e3962]:
+                  - img [ref=f5e6114]
+                  - generic [ref=f5e3965]: BatchID must be a positive integer.
+              - generic [ref=f5e3966]:
+                - button "Approve this rule before running it against live data" [disabled] [ref=f5e3967]:
+                  - img [ref=f5e6116]
+                - button "Approve" [ref=f5e3970] [cursor=pointer]:
+                  - img [ref=f5e6118]
+                - button "Edit" [ref=f5e3973] [cursor=pointer]:
+                  - img [ref=f5e6120]
+                - button "Snooze" [ref=f5e3977] [cursor=pointer]:
+                  - img [ref=f5e3978]
+                - button "Reject" [ref=f5e3981] [cursor=pointer]:
+                  - img [ref=f5e6123]
+            - generic [ref=f5e3986]:
+              - generic [ref=f5e3987]: "84"
+              - generic [ref=f5e3988]:
+                - generic [ref=f5e3989]:
+                  - generic [ref=f5e3990]: no_null_warehouse_name
+                  - generic [ref=f5e3991]: BRONZE
+                  - generic [ref=f5e3992]: HIGH
+                  - generic [ref=f5e3994]: Custom
+                - generic [ref=f5e3995]:
+                  - img [ref=f5e6126]
+                  - generic [ref=f5e3998]: BronzeDB.br_warehouses · warehouse_name
+                - generic [ref=f5e3999]: warehouse_name IS NOT NULL
+                - generic [ref=f5e4000]:
+                  - img [ref=f5e6128]
+                  - generic [ref=f5e4003]: Warehouse name must not be null
+              - generic [ref=f5e4004]:
+                - button "Run this rule" [ref=f5e4005] [cursor=pointer]:
+                  - img [ref=f5e6130]
+                - generic [ref=f5e4008]:
+                  - img [ref=f5e6132]
+                  - text: Approved
+          - generic [ref=f5e939]:
+            - generic [ref=f5e940]:
+              - img [ref=f5e6134]
+              - generic [ref=f5e944]:
+                - generic [ref=f5e945]: Natural language → DQ rule
+                - generic [ref=f5e946]: Type a plain-English quality expectation. The agent converts it into a structured, reviewable DQ rule.
+            - generic [ref=f5e947]:
+              - generic [ref=f5e949]:
+                - img [ref=f5e6137]
+                - textbox "e.g. revenue should never be negative" [ref=f5e952]: A single order's net revenue should never exceed $25,000
+              - button "Convert to rule" [ref=f5e953] [cursor=pointer]:
+                - img [ref=f5e6139]
+                - text: Convert to rule
+            - generic [ref=f5e957]:
+              - button "revenue should never be negative" [ref=f5e958] [cursor=pointer]
+              - button "emails must be valid format" [ref=f5e959] [cursor=pointer]
+              - button "order_id must be unique" [ref=f5e960] [cursor=pointer]
+          - button "Activate rule set & run checks" [ref=f5e962] [cursor=pointer]:
+            - text: Activate rule set & run checks
+            - img [ref=f5e6142]

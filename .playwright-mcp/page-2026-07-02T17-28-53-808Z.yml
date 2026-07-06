@@ -1,0 +1,877 @@
+- generic [ref=f8e3]:
+  - complementary [ref=f8e4]:
+    - generic [ref=f8e5]:
+      - img [ref=f8e5013]
+      - generic [ref=f8e8]:
+        - generic [ref=f8e9]: DataTrust
+        - generic [ref=f8e10]: AGENTIC DQ PLATFORM
+    - generic [ref=f8e11] [cursor=pointer]:
+      - generic [ref=f8e12]: ⬡
+      - generic [ref=f8e13]:
+        - generic [ref=f8e14]: My Connection demo
+        - generic [ref=f8e15]: Active connection
+      - img [ref=f8e5016]
+    - generic [ref=f8e17]:
+      - generic [ref=f8e18]: Workflow
+      - button "Workspace Home" [ref=f8e19] [cursor=pointer]:
+        - img [ref=f8e5019]
+        - generic [ref=f8e21]: Workspace Home
+      - button "Profiling 1" [ref=f8e22] [cursor=pointer]:
+        - img [ref=f8e5024]
+        - generic [ref=f8e24]: Profiling
+        - generic [ref=f8e25]: "1"
+      - button "Dictionary & CDEs 2" [ref=f8e26] [cursor=pointer]:
+        - img [ref=f8e5031]
+        - generic [ref=f8e28]: Dictionary & CDEs
+        - generic [ref=f8e29]: "2"
+      - button "Rule Studio 3" [ref=f8e30] [cursor=pointer]:
+        - img [ref=f8e5034]
+        - generic [ref=f8e32]: Rule Studio
+        - generic [ref=f8e33]: "3"
+      - button "DQ Execution 4" [ref=f8e34] [cursor=pointer]:
+        - img [ref=f8e5037]
+        - generic [ref=f8e36]: DQ Execution
+        - generic [ref=f8e37]: "4"
+    - generic [ref=f8e38]:
+      - generic [ref=f8e39]: Monitoring
+      - button "Anomaly Inbox 14" [ref=f8e248] [cursor=pointer]:
+        - img [ref=f8e5040]
+        - generic [ref=f8e42]: Anomaly Inbox
+        - generic [ref=f8e254]: "14"
+      - button "Impact Graph" [ref=f8e43] [cursor=pointer]:
+        - img [ref=f8e5045]
+        - generic [ref=f8e45]: Impact Graph
+      - button "Trust Dashboard" [ref=f8e46] [cursor=pointer]:
+        - img [ref=f8e5050]
+        - generic [ref=f8e48]: Trust Dashboard
+    - generic [ref=f8e49]:
+      - generic [ref=f8e50]: Intelligence
+      - button "Pre-run Advisory" [ref=f8e51] [cursor=pointer]:
+        - img [ref=f8e5053]
+        - generic [ref=f8e53]: Pre-run Advisory
+      - button "Trust Receipt" [ref=f8e54] [cursor=pointer]:
+        - img [ref=f8e5056]
+        - generic [ref=f8e56]: Trust Receipt
+    - generic [ref=f8e57]:
+      - generic [ref=f8e58]: Admin
+      - button "Connections" [ref=f8e59] [cursor=pointer]:
+        - img [ref=f8e5058]
+        - generic [ref=f8e61]: Connections
+    - generic [ref=f8e62]:
+      - generic [ref=f8e63]: Operate
+      - button "Scenario Simulator" [ref=f8e64] [cursor=pointer]:
+        - img [ref=f8e5060]
+        - generic [ref=f8e66]: Scenario Simulator
+      - button "Task Board" [ref=f8e68] [cursor=pointer]:
+        - img [ref=f8e5065]
+        - generic [ref=f8e70]: Task Board
+      - button "Daily Summary" [ref=f8e71] [cursor=pointer]:
+        - img [ref=f8e5068]
+        - generic [ref=f8e73]: Daily Summary
+    - generic [ref=f8e74]:
+      - generic [ref=f8e76]: SK
+      - generic [ref=f8e78]:
+        - generic [ref=f8e79]: shweta katkar
+        - generic [ref=f8e80]: shweta.katkar@pal.tech
+      - button "Sign out" [ref=f8e81] [cursor=pointer]:
+        - img [ref=f8e5071]
+  - generic [ref=f8e83]:
+    - banner [ref=f8e84]:
+      - generic [ref=f8e85]:
+        - generic [ref=f8e86]:
+          - generic [ref=f8e87]: My Connection demo
+          - generic [ref=f8e88]: /
+          - generic [ref=f8e89]: Workflow
+        - generic [ref=f8e90]: DQ Execution
+      - generic [ref=f8e91]: Pipeline · Issues detected
+      - generic [ref=f8e94]:
+        - generic [ref=f8e95]: TRUST SCORE
+        - generic [ref=f8e96]: 12/100
+      - button "Notifications" [ref=f8e97] [cursor=pointer]:
+        - img [ref=f8e5074]
+    - main [ref=f8e99]:
+      - generic [ref=f8e3945]:
+        - generic [ref=f8e3947]:
+          - generic [ref=f8e3948]:
+            - generic [ref=f8e3949]: Execution results
+            - generic [ref=f8e3950]: "Run #c14ab7bd · all layers"
+            - generic [ref=f8e3951]:
+              - text: Jul 2, 05:28 PM · 31 rules ·
+              - strong [ref=f8e3952]: 16 failed
+              - text: ·
+              - strong [ref=f8e3953]: 10 couldn't run
+            - generic [ref=f8e3954]:
+              - generic [ref=f8e3955]: Overall quality
+              - generic [ref=f8e3956]: "11.5"
+          - button "Re-run checks" [ref=f8e3957] [cursor=pointer]:
+            - img [ref=f8e5077]
+            - text: Re-run checks
+        - generic [ref=f8e3964]:
+          - generic [ref=f8e3965]:
+            - generic [ref=f8e3966]: BRONZE
+            - generic [ref=f8e3967]: "17"
+          - generic [ref=f8e3970]:
+            - text: 5/31 passed ·
+            - generic [ref=f8e3971]: 16 failed
+          - button "Run layer" [ref=f8e3972] [cursor=pointer]:
+            - img [ref=f8e5082]
+            - text: Run layer
+        - generic [ref=f8e3976]:
+          - generic [ref=f8e3978]:
+            - img [ref=f8e5085]
+            - generic [ref=f8e3983]: Rule results
+          - generic [ref=f8e3984]:
+            - generic [ref=f8e3985]: Status
+            - button "All" [ref=f8e3986] [cursor=pointer]
+            - button "Failed" [ref=f8e3987] [cursor=pointer]
+            - button "Passed" [ref=f8e3988] [cursor=pointer]
+            - button "Error" [ref=f8e3989] [cursor=pointer]
+            - button "Expected" [ref=f8e3990] [cursor=pointer]
+            - generic [ref=f8e3992]: Layer
+            - button "ALL" [ref=f8e3993] [cursor=pointer]
+            - button "RAW" [ref=f8e3994] [cursor=pointer]
+            - button "BRONZE" [ref=f8e3995] [cursor=pointer]
+            - button "SILVER" [ref=f8e3996] [cursor=pointer]
+            - button "GOLD" [ref=f8e3997] [cursor=pointer]
+          - table [ref=f8e3999]:
+            - rowgroup [ref=f8e4000]:
+              - row "Rule Layer Status Fail count Fail % Severity" [ref=f8e4001]:
+                - columnheader "Rule" [ref=f8e4002]
+                - columnheader "Layer" [ref=f8e4003]
+                - columnheader "Status" [ref=f8e4004]
+                - columnheader "Fail count" [ref=f8e4005]
+                - columnheader "Fail %" [ref=f8e4006]
+                - columnheader "Severity" [ref=f8e4007]
+                - columnheader [ref=f8e4008]
+            - rowgroup [ref=f8e4009]:
+              - row "cde_load_timestamp_not_null BronzeDB.br_order_items The system detected that over nine thousand records in our order items table are missing a timestamp indicating when they were created or updated. While this is currently marked as low severity because it does not block immediate reporting, these gaps could cause confusion if we try to analyze the chronological flow of orders later on. The data team should first verify whether these timestamps were intentionally omitted during ingestion and then either populate them from source logs or flag the affected records for manual review before they impact downstream analytics. BRONZE FAIL 9,004 100% LOW Records" [ref=f8e4098]:
+                - cell "cde_load_timestamp_not_null BronzeDB.br_order_items The system detected that over nine thousand records in our order items table are missing a timestamp indicating when they were created or updated. While this is currently marked as low severity because it does not block immediate reporting, these gaps could cause confusion if we try to analyze the chronological flow of orders later on. The data team should first verify whether these timestamps were intentionally omitted during ingestion and then either populate them from source logs or flag the affected records for manual review before they impact downstream analytics." [ref=f8e4099]:
+                  - text: cde_load_timestamp_not_null
+                  - generic [ref=f8e4100]:
+                    - generic [ref=f8e4102]: BronzeDB.br_order_items
+                    - generic [ref=f8e4103]: The system detected that over nine thousand records in our order items table are missing a timestamp indicating when they were created or updated. While this is currently marked as low severity because it does not block immediate reporting, these gaps could cause confusion if we try to analyze the chronological flow of orders later on. The data team should first verify whether these timestamps were intentionally omitted during ingestion and then either populate them from source logs or flag the affected records for manual review before they impact downstream analytics.
+                - cell "BRONZE" [ref=f8e4104]:
+                  - generic [ref=f8e4105]: BRONZE
+                - cell "FAIL" [ref=f8e4106]:
+                  - generic [ref=f8e4107]:
+                    - img [ref=f8e5088]
+                    - text: FAIL
+                - cell "9,004" [ref=f8e4111]
+                - cell "100%" [ref=f8e4112]
+                - cell "LOW" [ref=f8e4113]:
+                  - generic [ref=f8e4114]: LOW
+                - cell "Records" [ref=f8e4116]:
+                  - generic [ref=f8e4117]:
+                    - button "Records" [active] [ref=f8e4118] [cursor=pointer]:
+                      - img [ref=f8e5091]
+                      - text: Records
+                    - button "Re-run this rule" [ref=f8e4122] [cursor=pointer]:
+                      - img [ref=f8e5094]
+              - row "cde_category_id_not_null CDE BronzeDB.br_categories The system flagged nineteen records in our category master table where a required unique identifier was missing entirely, which is critical because every product listing relies on this ID to be correctly categorized and searched by customers. This gap risks disrupting the entire catalog experience if left unaddressed, as products without valid categories could become invisible or mislabeled for shoppers. The data team should immediately investigate these specific rows in our source database to determine why they were created empty before we can safely proceed with any further processing. BRONZE FAIL 19 100% HIGH Records" [ref=f8e4125]:
+                - cell "cde_category_id_not_null CDE BronzeDB.br_categories The system flagged nineteen records in our category master table where a required unique identifier was missing entirely, which is critical because every product listing relies on this ID to be correctly categorized and searched by customers. This gap risks disrupting the entire catalog experience if left unaddressed, as products without valid categories could become invisible or mislabeled for shoppers. The data team should immediately investigate these specific rows in our source database to determine why they were created empty before we can safely proceed with any further processing." [ref=f8e4126]:
+                  - text: cde_category_id_not_null
+                  - generic [ref=f8e4127]:
+                    - generic [ref=f8e4128]:
+                      - generic [ref=f8e4129]: CDE
+                      - generic [ref=f8e4130]: BronzeDB.br_categories
+                    - generic [ref=f8e4131]: The system flagged nineteen records in our category master table where a required unique identifier was missing entirely, which is critical because every product listing relies on this ID to be correctly categorized and searched by customers. This gap risks disrupting the entire catalog experience if left unaddressed, as products without valid categories could become invisible or mislabeled for shoppers. The data team should immediately investigate these specific rows in our source database to determine why they were created empty before we can safely proceed with any further processing.
+                - cell "BRONZE" [ref=f8e4132]:
+                  - generic [ref=f8e4133]: BRONZE
+                - cell "FAIL" [ref=f8e4134]:
+                  - generic [ref=f8e4135]:
+                    - img [ref=f8e5096]
+                    - text: FAIL
+                - cell "19" [ref=f8e4139]
+                - cell "100%" [ref=f8e4140]
+                - cell "HIGH" [ref=f8e4141]:
+                  - generic [ref=f8e4142]: HIGH
+                - cell "Records" [ref=f8e4144]:
+                  - generic [ref=f8e4145]:
+                    - button "Records" [ref=f8e4146] [cursor=pointer]:
+                      - img [ref=f8e5099]
+                      - text: Records
+                    - button "Re-run this rule" [ref=f8e4150] [cursor=pointer]:
+                      - img [ref=f8e5102]
+              - row "discount_not_exceeds_unit_price CDE BronzeDB.br_order_items We found nearly ten thousand order line items where a discount was applied that exceeded the original item price, which is logically impossible in our sales system. This error indicates that some customer orders were processed with incorrect pricing calculations or data entry mistakes before they reached us. To fix this immediately, we need to investigate these specific transactions to determine if refunds are required and then correct the underlying records so future reports reflect accurate revenue figures. BRONZE FAIL 9,004 100% MEDIUM Records" [ref=f8e4153]:
+                - cell "discount_not_exceeds_unit_price CDE BronzeDB.br_order_items We found nearly ten thousand order line items where a discount was applied that exceeded the original item price, which is logically impossible in our sales system. This error indicates that some customer orders were processed with incorrect pricing calculations or data entry mistakes before they reached us. To fix this immediately, we need to investigate these specific transactions to determine if refunds are required and then correct the underlying records so future reports reflect accurate revenue figures." [ref=f8e4154]:
+                  - text: discount_not_exceeds_unit_price
+                  - generic [ref=f8e4155]:
+                    - generic [ref=f8e4156]:
+                      - generic [ref=f8e4157]: CDE
+                      - generic [ref=f8e4158]: BronzeDB.br_order_items
+                    - generic [ref=f8e4159]: We found nearly ten thousand order line items where a discount was applied that exceeded the original item price, which is logically impossible in our sales system. This error indicates that some customer orders were processed with incorrect pricing calculations or data entry mistakes before they reached us. To fix this immediately, we need to investigate these specific transactions to determine if refunds are required and then correct the underlying records so future reports reflect accurate revenue figures.
+                - cell "BRONZE" [ref=f8e4160]:
+                  - generic [ref=f8e4161]: BRONZE
+                - cell "FAIL" [ref=f8e4162]:
+                  - generic [ref=f8e4163]:
+                    - img [ref=f8e5104]
+                    - text: FAIL
+                - cell "9,004" [ref=f8e4167]
+                - cell "100%" [ref=f8e4168]
+                - cell "MEDIUM" [ref=f8e4169]:
+                  - generic [ref=f8e4170]: MEDIUM
+                - cell "Records" [ref=f8e4172]:
+                  - generic [ref=f8e4173]:
+                    - button "Records" [ref=f8e4174] [cursor=pointer]:
+                      - img [ref=f8e5107]
+                      - text: Records
+                    - button "Re-run this rule" [ref=f8e4178] [cursor=pointer]:
+                      - img [ref=f8e5110]
+              - row "cde_category_name_not_null CDE BronzeDB.br_categories Eighteen records in our category master table are missing required names, which means over ninety-four percent of these entries cannot be used to filter or report on product categories right now. This gap prevents us from accurately tracking sales performance by category and risks showing incomplete data to customers who rely on clear categorization for their shopping experience. The immediate next step is to identify the source systems feeding this table so we can either correct the missing names directly or implement a validation check before these records enter our main database. BRONZE FAIL 18 94.74% HIGH Records" [ref=f8e4204]:
+                - cell "cde_category_name_not_null CDE BronzeDB.br_categories Eighteen records in our category master table are missing required names, which means over ninety-four percent of these entries cannot be used to filter or report on product categories right now. This gap prevents us from accurately tracking sales performance by category and risks showing incomplete data to customers who rely on clear categorization for their shopping experience. The immediate next step is to identify the source systems feeding this table so we can either correct the missing names directly or implement a validation check before these records enter our main database." [ref=f8e4205]:
+                  - text: cde_category_name_not_null
+                  - generic [ref=f8e4206]:
+                    - generic [ref=f8e4207]:
+                      - generic [ref=f8e4208]: CDE
+                      - generic [ref=f8e4209]: BronzeDB.br_categories
+                    - generic [ref=f8e4210]: Eighteen records in our category master table are missing required names, which means over ninety-four percent of these entries cannot be used to filter or report on product categories right now. This gap prevents us from accurately tracking sales performance by category and risks showing incomplete data to customers who rely on clear categorization for their shopping experience. The immediate next step is to identify the source systems feeding this table so we can either correct the missing names directly or implement a validation check before these records enter our main database.
+                - cell "BRONZE" [ref=f8e4211]:
+                  - generic [ref=f8e4212]: BRONZE
+                - cell "FAIL" [ref=f8e4213]:
+                  - generic [ref=f8e4214]:
+                    - img [ref=f8e5112]
+                    - text: FAIL
+                - cell "18" [ref=f8e4218]
+                - cell "94.74%" [ref=f8e4219]
+                - cell "HIGH" [ref=f8e4220]:
+                  - generic [ref=f8e4221]: HIGH
+                - cell "Records" [ref=f8e4223]:
+                  - generic [ref=f8e4224]:
+                    - button "Records" [ref=f8e4225] [cursor=pointer]:
+                      - img [ref=f8e5115]
+                      - text: Records
+                    - button "Re-run this rule" [ref=f8e4229] [cursor=pointer]:
+                      - img [ref=f8e5118]
+              - row "cde_batch_id_not_null BronzeDB.br_order_items The system detected that over nine thousand records in our order items table are missing a unique batch identifier, which is currently flagged as low severity because this field does not appear on any customer-facing reports or dashboards. While the absence of these IDs will prevent us from accurately tracking data lineage and debugging future issues if they arise, it has no immediate impact on your current sales views or decision-making processes. The next step for our team is to investigate why these identifiers were omitted during ingestion so we can either fix them retroactively or update the source system to ensure this field is always captured going forward. BRONZE FAIL 9,004 100% LOW Records" [ref=f8e4299]:
+                - cell "cde_batch_id_not_null BronzeDB.br_order_items The system detected that over nine thousand records in our order items table are missing a unique batch identifier, which is currently flagged as low severity because this field does not appear on any customer-facing reports or dashboards. While the absence of these IDs will prevent us from accurately tracking data lineage and debugging future issues if they arise, it has no immediate impact on your current sales views or decision-making processes. The next step for our team is to investigate why these identifiers were omitted during ingestion so we can either fix them retroactively or update the source system to ensure this field is always captured going forward." [ref=f8e4300]:
+                  - text: cde_batch_id_not_null
+                  - generic [ref=f8e4301]:
+                    - generic [ref=f8e4303]: BronzeDB.br_order_items
+                    - generic [ref=f8e4304]: The system detected that over nine thousand records in our order items table are missing a unique batch identifier, which is currently flagged as low severity because this field does not appear on any customer-facing reports or dashboards. While the absence of these IDs will prevent us from accurately tracking data lineage and debugging future issues if they arise, it has no immediate impact on your current sales views or decision-making processes. The next step for our team is to investigate why these identifiers were omitted during ingestion so we can either fix them retroactively or update the source system to ensure this field is always captured going forward.
+                - cell "BRONZE" [ref=f8e4305]:
+                  - generic [ref=f8e4306]: BRONZE
+                - cell "FAIL" [ref=f8e4307]:
+                  - generic [ref=f8e4308]:
+                    - img [ref=f8e5120]
+                    - text: FAIL
+                - cell "9,004" [ref=f8e4312]
+                - cell "100%" [ref=f8e4313]
+                - cell "LOW" [ref=f8e4314]:
+                  - generic [ref=f8e4315]: LOW
+                - cell "Records" [ref=f8e4317]:
+                  - generic [ref=f8e4318]:
+                    - button "Records" [ref=f8e4319] [cursor=pointer]:
+                      - img [ref=f8e5123]
+                      - text: Records
+                    - button "Re-run this rule" [ref=f8e4323] [cursor=pointer]:
+                      - img [ref=f8e5126]
+              - row "batch_id_not_null BronzeDB.br_categories The system flagged nineteen records in our category master table where a unique batch identifier was missing entirely, which is critical because this ID links every record to its source transaction so we can track changes over time and prevent duplicate entries during reporting. Although marked as low severity since these are isolated cases that do not currently block core operations, the data team should immediately review the raw logs for those specific records to identify why the identifier was dropped before re-running the extraction process to ensure future batches remain complete. BRONZE FAIL 19 100% LOW Records" [ref=f8e4326]:
+                - cell "batch_id_not_null BronzeDB.br_categories The system flagged nineteen records in our category master table where a unique batch identifier was missing entirely, which is critical because this ID links every record to its source transaction so we can track changes over time and prevent duplicate entries during reporting. Although marked as low severity since these are isolated cases that do not currently block core operations, the data team should immediately review the raw logs for those specific records to identify why the identifier was dropped before re-running the extraction process to ensure future batches remain complete." [ref=f8e4327]:
+                  - text: batch_id_not_null
+                  - generic [ref=f8e4328]:
+                    - generic [ref=f8e4330]: BronzeDB.br_categories
+                    - generic [ref=f8e4331]: The system flagged nineteen records in our category master table where a unique batch identifier was missing entirely, which is critical because this ID links every record to its source transaction so we can track changes over time and prevent duplicate entries during reporting. Although marked as low severity since these are isolated cases that do not currently block core operations, the data team should immediately review the raw logs for those specific records to identify why the identifier was dropped before re-running the extraction process to ensure future batches remain complete.
+                - cell "BRONZE" [ref=f8e4332]:
+                  - generic [ref=f8e4333]: BRONZE
+                - cell "FAIL" [ref=f8e4334]:
+                  - generic [ref=f8e4335]:
+                    - img [ref=f8e5128]
+                    - text: FAIL
+                - cell "19" [ref=f8e4339]
+                - cell "100%" [ref=f8e4340]
+                - cell "LOW" [ref=f8e4341]:
+                  - generic [ref=f8e4342]: LOW
+                - cell "Records" [ref=f8e4344]:
+                  - generic [ref=f8e4345]:
+                    - button "Records" [ref=f8e4346] [cursor=pointer]:
+                      - img [ref=f8e5131]
+                      - text: Records
+                    - button "Re-run this rule" [ref=f8e4350] [cursor=pointer]:
+                      - img [ref=f8e5134]
+              - row "Src_UpdatedDateNotNullCheck BronzeDB.br_customers The system detected that 27 customer records in our raw database layer are missing an update timestamp, which means we cannot track when these profiles were last modified or verify if they reflect current information. While this is marked as a low-severity issue and does not block immediate reporting, it creates uncertainty for any downstream analysis relying on accurate customer activity timelines. The data team should first investigate the source systems to identify why these records lack timestamps before re-running the validation check. BRONZE FAIL 27 100% LOW Records" [ref=f8e4376]:
+                - cell "Src_UpdatedDateNotNullCheck BronzeDB.br_customers The system detected that 27 customer records in our raw database layer are missing an update timestamp, which means we cannot track when these profiles were last modified or verify if they reflect current information. While this is marked as a low-severity issue and does not block immediate reporting, it creates uncertainty for any downstream analysis relying on accurate customer activity timelines. The data team should first investigate the source systems to identify why these records lack timestamps before re-running the validation check." [ref=f8e4377]:
+                  - text: Src_UpdatedDateNotNullCheck
+                  - generic [ref=f8e4378]:
+                    - generic [ref=f8e4380]: BronzeDB.br_customers
+                    - generic [ref=f8e4381]: The system detected that 27 customer records in our raw database layer are missing an update timestamp, which means we cannot track when these profiles were last modified or verify if they reflect current information. While this is marked as a low-severity issue and does not block immediate reporting, it creates uncertainty for any downstream analysis relying on accurate customer activity timelines. The data team should first investigate the source systems to identify why these records lack timestamps before re-running the validation check.
+                - cell "BRONZE" [ref=f8e4382]:
+                  - generic [ref=f8e4383]: BRONZE
+                - cell "FAIL" [ref=f8e4384]:
+                  - generic [ref=f8e4385]:
+                    - img [ref=f8e5136]
+                    - text: FAIL
+                - cell "27" [ref=f8e4389]
+                - cell "100%" [ref=f8e4390]
+                - cell "LOW" [ref=f8e4391]:
+                  - generic [ref=f8e4392]: LOW
+                - cell "Records" [ref=f8e4394]:
+                  - generic [ref=f8e4395]:
+                    - button "Records" [ref=f8e4396] [cursor=pointer]:
+                      - img [ref=f8e5139]
+                      - text: Records
+                    - button "Re-run this rule" [ref=f8e4400] [cursor=pointer]:
+                      - img [ref=f8e5142]
+              - row "parent_category_id_not_null BronzeDB.br_categories Thirteen records in our category master table are missing a required parent ID, which represents nearly seventy percent of all entries and is flagged as critical because every product relies on this hierarchy to be found correctly. This gap means that many items cannot be properly organized or searched by customers until the root cause is fixed. The data team should immediately investigate why these specific records lack their parent category and update them with valid IDs before any further processing occurs. BRONZE FAIL 13 68.42% CRITICAL Records" [ref=f8e4403]:
+                - cell "parent_category_id_not_null BronzeDB.br_categories Thirteen records in our category master table are missing a required parent ID, which represents nearly seventy percent of all entries and is flagged as critical because every product relies on this hierarchy to be found correctly. This gap means that many items cannot be properly organized or searched by customers until the root cause is fixed. The data team should immediately investigate why these specific records lack their parent category and update them with valid IDs before any further processing occurs." [ref=f8e4404]:
+                  - text: parent_category_id_not_null
+                  - generic [ref=f8e4405]:
+                    - generic [ref=f8e4407]: BronzeDB.br_categories
+                    - generic [ref=f8e4408]: Thirteen records in our category master table are missing a required parent ID, which represents nearly seventy percent of all entries and is flagged as critical because every product relies on this hierarchy to be found correctly. This gap means that many items cannot be properly organized or searched by customers until the root cause is fixed. The data team should immediately investigate why these specific records lack their parent category and update them with valid IDs before any further processing occurs.
+                - cell "BRONZE" [ref=f8e4409]:
+                  - generic [ref=f8e4410]: BRONZE
+                - cell "FAIL" [ref=f8e4411]:
+                  - generic [ref=f8e4412]:
+                    - img [ref=f8e5144]
+                    - text: FAIL
+                - cell "13" [ref=f8e4416]
+                - cell "68.42%" [ref=f8e4417]
+                - cell "CRITICAL" [ref=f8e4418]:
+                  - generic [ref=f8e4419]: CRITICAL
+                - cell "Records" [ref=f8e4421]:
+                  - generic [ref=f8e4422]:
+                    - button "Records" [ref=f8e4423] [cursor=pointer]:
+                      - img [ref=f8e5147]
+                      - text: Records
+                    - button "Re-run this rule" [ref=f8e4427] [cursor=pointer]:
+                      - img [ref=f8e5150]
+              - row "loaded_at_not_null BronzeDB.br_categories The system detected that nineteen records in our category master table were missing a timestamp indicating when they were loaded into the database. While this is currently marked as low severity because it does not block reporting, these gaps could cause confusion if analysts try to track how long categories have been active or verify data freshness without knowing exactly when each entry arrived. The next step for the team is to investigate why those specific records lack a timestamp and update them with accurate load times so that future reports can rely on consistent timing information. BRONZE FAIL 19 100% LOW Records" [ref=f8e4430]:
+                - cell "loaded_at_not_null BronzeDB.br_categories The system detected that nineteen records in our category master table were missing a timestamp indicating when they were loaded into the database. While this is currently marked as low severity because it does not block reporting, these gaps could cause confusion if analysts try to track how long categories have been active or verify data freshness without knowing exactly when each entry arrived. The next step for the team is to investigate why those specific records lack a timestamp and update them with accurate load times so that future reports can rely on consistent timing information." [ref=f8e4431]:
+                  - text: loaded_at_not_null
+                  - generic [ref=f8e4432]:
+                    - generic [ref=f8e4434]: BronzeDB.br_categories
+                    - generic [ref=f8e4435]: The system detected that nineteen records in our category master table were missing a timestamp indicating when they were loaded into the database. While this is currently marked as low severity because it does not block reporting, these gaps could cause confusion if analysts try to track how long categories have been active or verify data freshness without knowing exactly when each entry arrived. The next step for the team is to investigate why those specific records lack a timestamp and update them with accurate load times so that future reports can rely on consistent timing information.
+                - cell "BRONZE" [ref=f8e4436]:
+                  - generic [ref=f8e4437]: BRONZE
+                - cell "FAIL" [ref=f8e4438]:
+                  - generic [ref=f8e4439]:
+                    - img [ref=f8e5152]
+                    - text: FAIL
+                - cell "19" [ref=f8e4443]
+                - cell "100%" [ref=f8e4444]
+                - cell "LOW" [ref=f8e4445]:
+                  - generic [ref=f8e4446]: LOW
+                - cell "Records" [ref=f8e4448]:
+                  - generic [ref=f8e4449]:
+                    - button "Records" [ref=f8e4450] [cursor=pointer]:
+                      - img [ref=f8e5155]
+                      - text: Records
+                    - button "Re-run this rule" [ref=f8e4454] [cursor=pointer]:
+                      - img [ref=f8e5158]
+              - row "Brz_BatchIDNotNullCheck BronzeDB.br_customers The system flagged twenty-seven customer records in our raw source layer where a unique batch identifier was missing entirely. While this is marked as low severity because these entries are unlikely to impact core financial calculations, it creates uncertainty for downstream reporting and prevents us from accurately tracking which data came from which specific collection run. The immediate next step is for the engineering team to investigate why those records lacked an ID in their original source before they were ingested into our database. BRONZE FAIL 27 100% LOW Records" [ref=f8e4457]:
+                - cell "Brz_BatchIDNotNullCheck BronzeDB.br_customers The system flagged twenty-seven customer records in our raw source layer where a unique batch identifier was missing entirely. While this is marked as low severity because these entries are unlikely to impact core financial calculations, it creates uncertainty for downstream reporting and prevents us from accurately tracking which data came from which specific collection run. The immediate next step is for the engineering team to investigate why those records lacked an ID in their original source before they were ingested into our database." [ref=f8e4458]:
+                  - text: Brz_BatchIDNotNullCheck
+                  - generic [ref=f8e4459]:
+                    - generic [ref=f8e4461]: BronzeDB.br_customers
+                    - generic [ref=f8e4462]: The system flagged twenty-seven customer records in our raw source layer where a unique batch identifier was missing entirely. While this is marked as low severity because these entries are unlikely to impact core financial calculations, it creates uncertainty for downstream reporting and prevents us from accurately tracking which data came from which specific collection run. The immediate next step is for the engineering team to investigate why those records lacked an ID in their original source before they were ingested into our database.
+                - cell "BRONZE" [ref=f8e4463]:
+                  - generic [ref=f8e4464]: BRONZE
+                - cell "FAIL" [ref=f8e4465]:
+                  - generic [ref=f8e4466]:
+                    - img [ref=f8e5160]
+                    - text: FAIL
+                - cell "27" [ref=f8e4470]
+                - cell "100%" [ref=f8e4471]
+                - cell "LOW" [ref=f8e4472]:
+                  - generic [ref=f8e4473]: LOW
+                - cell "Records" [ref=f8e4475]:
+                  - generic [ref=f8e4476]:
+                    - button "Records" [ref=f8e4477] [cursor=pointer]:
+                      - img [ref=f8e5163]
+                      - text: Records
+                    - button "Re-run this rule" [ref=f8e4481] [cursor=pointer]:
+                      - img [ref=f8e5166]
+              - row "cde_source_category_id_not_null CDE BronzeDB.br_categories The system detected that nineteen records in our category master table are missing a required source ID tag, which is critical because this identifier links every product to its correct supplier or origin for accurate reporting. Without these tags, we cannot reliably track where products come from, leading to potential errors in cost allocation and supply chain analytics during the upcoming financial close. The data team should immediately investigate why these records lack IDs by checking our upstream extraction jobs and fixing the source system so that future batches include this mandatory field automatically. BRONZE FAIL 19 100% MEDIUM Records" [ref=f8e4528]:
+                - cell "cde_source_category_id_not_null CDE BronzeDB.br_categories The system detected that nineteen records in our category master table are missing a required source ID tag, which is critical because this identifier links every product to its correct supplier or origin for accurate reporting. Without these tags, we cannot reliably track where products come from, leading to potential errors in cost allocation and supply chain analytics during the upcoming financial close. The data team should immediately investigate why these records lack IDs by checking our upstream extraction jobs and fixing the source system so that future batches include this mandatory field automatically." [ref=f8e4529]:
+                  - text: cde_source_category_id_not_null
+                  - generic [ref=f8e4530]:
+                    - generic [ref=f8e4531]:
+                      - generic [ref=f8e4532]: CDE
+                      - generic [ref=f8e4533]: BronzeDB.br_categories
+                    - generic [ref=f8e4534]: The system detected that nineteen records in our category master table are missing a required source ID tag, which is critical because this identifier links every product to its correct supplier or origin for accurate reporting. Without these tags, we cannot reliably track where products come from, leading to potential errors in cost allocation and supply chain analytics during the upcoming financial close. The data team should immediately investigate why these records lack IDs by checking our upstream extraction jobs and fixing the source system so that future batches include this mandatory field automatically.
+                - cell "BRONZE" [ref=f8e4535]:
+                  - generic [ref=f8e4536]: BRONZE
+                - cell "FAIL" [ref=f8e4537]:
+                  - generic [ref=f8e4538]:
+                    - img [ref=f8e5168]
+                    - text: FAIL
+                - cell "19" [ref=f8e4542]
+                - cell "100%" [ref=f8e4543]
+                - cell "MEDIUM" [ref=f8e4544]:
+                  - generic [ref=f8e4545]: MEDIUM
+                - cell "Records" [ref=f8e4547]:
+                  - generic [ref=f8e4548]:
+                    - button "Records" [ref=f8e4549] [cursor=pointer]:
+                      - img [ref=f8e5171]
+                      - text: Records
+                    - button "Re-run this rule" [ref=f8e4553] [cursor=pointer]:
+                      - img [ref=f8e5174]
+              - row "cde_isactive_not_null CDE BronzeDB.br_categories The system flagged nineteen records in our category master list where a critical \"active\" status was missing entirely. While this low-severity issue currently limits its impact to internal reporting rather than customer-facing features, it risks causing confusion if we attempt to filter or analyze these categories later without knowing their current state. The data team should immediately review the source system for these specific entries and populate the missing active flags before any downstream analysis is run on this dataset. BRONZE FAIL 19 100% LOW Records" [ref=f8e4578]:
+                - cell "cde_isactive_not_null CDE BronzeDB.br_categories The system flagged nineteen records in our category master list where a critical \"active\" status was missing entirely. While this low-severity issue currently limits its impact to internal reporting rather than customer-facing features, it risks causing confusion if we attempt to filter or analyze these categories later without knowing their current state. The data team should immediately review the source system for these specific entries and populate the missing active flags before any downstream analysis is run on this dataset." [ref=f8e4579]:
+                  - text: cde_isactive_not_null
+                  - generic [ref=f8e4580]:
+                    - generic [ref=f8e4581]:
+                      - generic [ref=f8e4582]: CDE
+                      - generic [ref=f8e4583]: BronzeDB.br_categories
+                    - generic [ref=f8e4584]: The system flagged nineteen records in our category master list where a critical "active" status was missing entirely. While this low-severity issue currently limits its impact to internal reporting rather than customer-facing features, it risks causing confusion if we attempt to filter or analyze these categories later without knowing their current state. The data team should immediately review the source system for these specific entries and populate the missing active flags before any downstream analysis is run on this dataset.
+                - cell "BRONZE" [ref=f8e4585]:
+                  - generic [ref=f8e4586]: BRONZE
+                - cell "FAIL" [ref=f8e4587]:
+                  - generic [ref=f8e4588]:
+                    - img [ref=f8e5176]
+                    - text: FAIL
+                - cell "19" [ref=f8e4592]
+                - cell "100%" [ref=f8e4593]
+                - cell "LOW" [ref=f8e4594]:
+                  - generic [ref=f8e4595]: LOW
+                - cell "Records" [ref=f8e4597]:
+                  - generic [ref=f8e4598]:
+                    - button "Records" [ref=f8e4599] [cursor=pointer]:
+                      - img [ref=f8e5179]
+                      - text: Records
+                    - button "Re-run this rule" [ref=f8e4603] [cursor=pointer]:
+                      - img [ref=f8e5182]
+              - row "line_total_calc_not_exceeds_unit_price_times_qty CDE BronzeDB.br_order_items Our system flagged nearly ten thousand records in our order items table where a calculated line total exceeded the expected price multiplied by quantity, which usually indicates an error in how totals were computed or entered. While this is marked as low severity because it does not block transactions, these discrepancies could lead to billing inaccuracies and customer confusion if left uncorrected before they reach financial reports. The data team should immediately investigate a sample of the affected orders to determine whether the issue stems from input errors in our source systems or a logic flaw within our calculation process so we can fix it quickly. BRONZE FAIL 9,004 100% LOW Records" [ref=f8e4606]:
+                - cell "line_total_calc_not_exceeds_unit_price_times_qty CDE BronzeDB.br_order_items Our system flagged nearly ten thousand records in our order items table where a calculated line total exceeded the expected price multiplied by quantity, which usually indicates an error in how totals were computed or entered. While this is marked as low severity because it does not block transactions, these discrepancies could lead to billing inaccuracies and customer confusion if left uncorrected before they reach financial reports. The data team should immediately investigate a sample of the affected orders to determine whether the issue stems from input errors in our source systems or a logic flaw within our calculation process so we can fix it quickly." [ref=f8e4607]:
+                  - text: line_total_calc_not_exceeds_unit_price_times_qty
+                  - generic [ref=f8e4608]:
+                    - generic [ref=f8e4609]:
+                      - generic [ref=f8e4610]: CDE
+                      - generic [ref=f8e4611]: BronzeDB.br_order_items
+                    - generic [ref=f8e4612]: Our system flagged nearly ten thousand records in our order items table where a calculated line total exceeded the expected price multiplied by quantity, which usually indicates an error in how totals were computed or entered. While this is marked as low severity because it does not block transactions, these discrepancies could lead to billing inaccuracies and customer confusion if left uncorrected before they reach financial reports. The data team should immediately investigate a sample of the affected orders to determine whether the issue stems from input errors in our source systems or a logic flaw within our calculation process so we can fix it quickly.
+                - cell "BRONZE" [ref=f8e4613]:
+                  - generic [ref=f8e4614]: BRONZE
+                - cell "FAIL" [ref=f8e4615]:
+                  - generic [ref=f8e4616]:
+                    - img [ref=f8e5184]
+                    - text: FAIL
+                - cell "9,004" [ref=f8e4620]
+                - cell "100%" [ref=f8e4621]
+                - cell "LOW" [ref=f8e4622]:
+                  - generic [ref=f8e4623]: LOW
+                - cell "Records" [ref=f8e4625]:
+                  - generic [ref=f8e4626]:
+                    - button "Records" [ref=f8e4627] [cursor=pointer]:
+                      - img [ref=f8e5187]
+                      - text: Records
+                    - button "Re-run this rule" [ref=f8e4631] [cursor=pointer]:
+                      - img [ref=f8e5190]
+              - row "Brz_LoadedAtNotNullCheck BronzeDB.br_customers The system detected that twenty-seven customer records in our raw source database are missing a timestamp indicating when they were loaded into the Bronze layer, which is critical because we rely on these dates to track record freshness and detect processing delays. Although this issue has been flagged as low severity since it does not block core business operations or violate company data standards, the complete absence of timestamps suggests an upstream ingestion problem that needs immediate attention from our engineering team to ensure future records are properly timestamped before they enter any downstream analysis. BRONZE FAIL 27 100% LOW Records" [ref=f8e4700]:
+                - cell "Brz_LoadedAtNotNullCheck BronzeDB.br_customers The system detected that twenty-seven customer records in our raw source database are missing a timestamp indicating when they were loaded into the Bronze layer, which is critical because we rely on these dates to track record freshness and detect processing delays. Although this issue has been flagged as low severity since it does not block core business operations or violate company data standards, the complete absence of timestamps suggests an upstream ingestion problem that needs immediate attention from our engineering team to ensure future records are properly timestamped before they enter any downstream analysis." [ref=f8e4701]:
+                  - text: Brz_LoadedAtNotNullCheck
+                  - generic [ref=f8e4702]:
+                    - generic [ref=f8e4704]: BronzeDB.br_customers
+                    - generic [ref=f8e4705]: The system detected that twenty-seven customer records in our raw source database are missing a timestamp indicating when they were loaded into the Bronze layer, which is critical because we rely on these dates to track record freshness and detect processing delays. Although this issue has been flagged as low severity since it does not block core business operations or violate company data standards, the complete absence of timestamps suggests an upstream ingestion problem that needs immediate attention from our engineering team to ensure future records are properly timestamped before they enter any downstream analysis.
+                - cell "BRONZE" [ref=f8e4706]:
+                  - generic [ref=f8e4707]: BRONZE
+                - cell "FAIL" [ref=f8e4708]:
+                  - generic [ref=f8e4709]:
+                    - img [ref=f8e5192]
+                    - text: FAIL
+                - cell "27" [ref=f8e4713]
+                - cell "100%" [ref=f8e4714]
+                - cell "LOW" [ref=f8e4715]:
+                  - generic [ref=f8e4716]: LOW
+                - cell "Records" [ref=f8e4718]:
+                  - generic [ref=f8e4719]:
+                    - button "Records" [ref=f8e4720] [cursor=pointer]:
+                      - img [ref=f8e5195]
+                      - text: Records
+                    - button "Re-run this rule" [ref=f8e4724] [cursor=pointer]:
+                      - img [ref=f8e5198]
+              - row "line_discrepancy_flagged_on_mismatch CDE BronzeDB.br_order_items The system flagged nearly ten thousand order items in our raw database where line-level details did not match expected standards, indicating potential errors in how individual product quantities or prices were recorded at ingestion. This matters because these discrepancies could distort sales totals and inventory counts before they reach the reporting layer used by finance and operations teams to make decisions. The data team should immediately investigate a sample of these records against source documents to identify if this is caused by bad input files, system configuration issues, or genuine customer order anomalies. BRONZE FAIL 9,004 100% MEDIUM Records" [ref=f8e4727]:
+                - cell "line_discrepancy_flagged_on_mismatch CDE BronzeDB.br_order_items The system flagged nearly ten thousand order items in our raw database where line-level details did not match expected standards, indicating potential errors in how individual product quantities or prices were recorded at ingestion. This matters because these discrepancies could distort sales totals and inventory counts before they reach the reporting layer used by finance and operations teams to make decisions. The data team should immediately investigate a sample of these records against source documents to identify if this is caused by bad input files, system configuration issues, or genuine customer order anomalies." [ref=f8e4728]:
+                  - text: line_discrepancy_flagged_on_mismatch
+                  - generic [ref=f8e4729]:
+                    - generic [ref=f8e4730]:
+                      - generic [ref=f8e4731]: CDE
+                      - generic [ref=f8e4732]: BronzeDB.br_order_items
+                    - generic [ref=f8e4733]: The system flagged nearly ten thousand order items in our raw database where line-level details did not match expected standards, indicating potential errors in how individual product quantities or prices were recorded at ingestion. This matters because these discrepancies could distort sales totals and inventory counts before they reach the reporting layer used by finance and operations teams to make decisions. The data team should immediately investigate a sample of these records against source documents to identify if this is caused by bad input files, system configuration issues, or genuine customer order anomalies.
+                - cell "BRONZE" [ref=f8e4734]:
+                  - generic [ref=f8e4735]: BRONZE
+                - cell "FAIL" [ref=f8e4736]:
+                  - generic [ref=f8e4737]:
+                    - img [ref=f8e5200]
+                    - text: FAIL
+                - cell "9,004" [ref=f8e4741]
+                - cell "100%" [ref=f8e4742]
+                - cell "MEDIUM" [ref=f8e4743]:
+                  - generic [ref=f8e4744]: MEDIUM
+                - cell "Records" [ref=f8e4746]:
+                  - generic [ref=f8e4747]:
+                    - button "Records" [ref=f8e4748] [cursor=pointer]:
+                      - img [ref=f8e5203]
+                      - text: Records
+                    - button "Re-run this rule" [ref=f8e4752] [cursor=pointer]:
+                      - img [ref=f8e5206]
+              - row "cde_source_system_not_null CDE BronzeDB.br_categories The system flagged nineteen records in our category master table where a critical source field was missing entirely, which means we cannot reliably match or validate these categories against other systems right now. This gap risks disrupting downstream reporting and potentially causing errors when customers try to use products linked to those incomplete entries. The data team should immediately investigate the origin of this specific batch to identify why the required information failed to arrive from the source system before attempting any fixes. BRONZE FAIL 19 100% MEDIUM Records" [ref=f8e4755]:
+                - cell "cde_source_system_not_null CDE BronzeDB.br_categories The system flagged nineteen records in our category master table where a critical source field was missing entirely, which means we cannot reliably match or validate these categories against other systems right now. This gap risks disrupting downstream reporting and potentially causing errors when customers try to use products linked to those incomplete entries. The data team should immediately investigate the origin of this specific batch to identify why the required information failed to arrive from the source system before attempting any fixes." [ref=f8e4756]:
+                  - text: cde_source_system_not_null
+                  - generic [ref=f8e4757]:
+                    - generic [ref=f8e4758]:
+                      - generic [ref=f8e4759]: CDE
+                      - generic [ref=f8e4760]: BronzeDB.br_categories
+                    - generic [ref=f8e4761]: The system flagged nineteen records in our category master table where a critical source field was missing entirely, which means we cannot reliably match or validate these categories against other systems right now. This gap risks disrupting downstream reporting and potentially causing errors when customers try to use products linked to those incomplete entries. The data team should immediately investigate the origin of this specific batch to identify why the required information failed to arrive from the source system before attempting any fixes.
+                - cell "BRONZE" [ref=f8e4762]:
+                  - generic [ref=f8e4763]: BRONZE
+                - cell "FAIL" [ref=f8e4764]:
+                  - generic [ref=f8e4765]:
+                    - img [ref=f8e5208]
+                    - text: FAIL
+                - cell "19" [ref=f8e4769]
+                - cell "100%" [ref=f8e4770]
+                - cell "MEDIUM" [ref=f8e4771]:
+                  - generic [ref=f8e4772]: MEDIUM
+                - cell "Records" [ref=f8e4774]:
+                  - generic [ref=f8e4775]:
+                    - button "Records" [ref=f8e4776] [cursor=pointer]:
+                      - img [ref=f8e5211]
+                      - text: Records
+                    - button "Re-run this rule" [ref=f8e4780] [cursor=pointer]:
+                      - img [ref=f8e5214]
+          - generic [ref=f8e4783]:
+            - button "Download CSV" [ref=f8e4784] [cursor=pointer]:
+              - img [ref=f8e5216]
+              - text: Download CSV
+            - button "Share to Slack" [ref=f8e4788] [cursor=pointer]:
+              - img [ref=f8e5219]
+              - text: Share to Slack
+            - button "Review anomalies" [ref=f8e4796] [cursor=pointer]:
+              - text: Review anomalies
+              - img [ref=f8e5225]
+        - generic [ref=f8e5228]:
+          - generic [ref=f8e5229]:
+            - generic [ref=f8e5230]: Failed records — cde_load_timestamp_not_null
+            - button [ref=f8e5231] [cursor=pointer]:
+              - img [ref=f8e5232]
+          - generic [ref=f8e5235]:
+            - generic [ref=f8e5236]:
+              - generic [ref=f8e5237]: FAIL
+              - generic [ref=f8e5238]:
+                - text: Showing 20 of
+                - strong [ref=f8e5239]: 9,004
+                - text: failed records
+            - table [ref=f8e5241]:
+              - rowgroup [ref=f8e5242]:
+                - row "Discount Quantity LineTotal UnitPrice Brz_BatchID Brz_LoadedAt SourceSystem LineTotalCalc SourceOrderID Brz_LineItemID LineDiscrepancy SourceProductID Src_UpdatedDate SourceLineItemID" [ref=f8e5243]:
+                  - columnheader "Discount" [ref=f8e5244]
+                  - columnheader "Quantity" [ref=f8e5245]
+                  - columnheader "LineTotal" [ref=f8e5246]
+                  - columnheader "UnitPrice" [ref=f8e5247]
+                  - columnheader "Brz_BatchID" [ref=f8e5248]
+                  - columnheader "Brz_LoadedAt" [ref=f8e5249]
+                  - columnheader "SourceSystem" [ref=f8e5250]
+                  - columnheader "LineTotalCalc" [ref=f8e5251]
+                  - columnheader "SourceOrderID" [ref=f8e5252]
+                  - columnheader "Brz_LineItemID" [ref=f8e5253]
+                  - columnheader "LineDiscrepancy" [ref=f8e5254]
+                  - columnheader "SourceProductID" [ref=f8e5255]
+                  - columnheader "Src_UpdatedDate" [ref=f8e5256]
+                  - columnheader "SourceLineItemID" [ref=f8e5257]
+              - rowgroup [ref=f8e5258]:
+                - row "121 1 82 1436 1 2026-06-17T17:44:42.110000 LogiShip 1436 23602 1 true 1 2026-06-17T17:42:56.470000 7601" [ref=f8e5259]:
+                  - cell "121" [ref=f8e5260]
+                  - cell "1" [ref=f8e5261]
+                  - cell "82" [ref=f8e5262]
+                  - cell "1436" [ref=f8e5263]
+                  - cell "1" [ref=f8e5264]
+                  - cell "2026-06-17T17:44:42.110000" [ref=f8e5265]
+                  - cell "LogiShip" [ref=f8e5266]
+                  - cell "1436" [ref=f8e5267]
+                  - cell "23602" [ref=f8e5268]
+                  - cell "1" [ref=f8e5269]
+                  - cell "true" [ref=f8e5270]
+                  - cell "1" [ref=f8e5271]
+                  - cell "2026-06-17T17:42:56.470000" [ref=f8e5272]
+                  - cell "7601" [ref=f8e5273]
+                - row "102 2 5742 218 1 2026-06-17T17:44:42.110000 LogiShip 436 23603 2 true 2 2026-06-17T17:42:56.470000 7602" [ref=f8e5274]:
+                  - cell "102" [ref=f8e5275]
+                  - cell "2" [ref=f8e5276]
+                  - cell "5742" [ref=f8e5277]
+                  - cell "218" [ref=f8e5278]
+                  - cell "1" [ref=f8e5279]
+                  - cell "2026-06-17T17:44:42.110000" [ref=f8e5280]
+                  - cell "LogiShip" [ref=f8e5281]
+                  - cell "436" [ref=f8e5282]
+                  - cell "23603" [ref=f8e5283]
+                  - cell "2" [ref=f8e5284]
+                  - cell "true" [ref=f8e5285]
+                  - cell "2" [ref=f8e5286]
+                  - cell "2026-06-17T17:42:56.470000" [ref=f8e5287]
+                  - cell "7602" [ref=f8e5288]
+                - row "137 3 178 164 1 2026-06-17T17:44:42.110000 LogiShip 492 23604 3 true 3 2026-06-17T17:42:56.470000 7603" [ref=f8e5289]:
+                  - cell "137" [ref=f8e5290]
+                  - cell "3" [ref=f8e5291]
+                  - cell "178" [ref=f8e5292]
+                  - cell "164" [ref=f8e5293]
+                  - cell "1" [ref=f8e5294]
+                  - cell "2026-06-17T17:44:42.110000" [ref=f8e5295]
+                  - cell "LogiShip" [ref=f8e5296]
+                  - cell "492" [ref=f8e5297]
+                  - cell "23604" [ref=f8e5298]
+                  - cell "3" [ref=f8e5299]
+                  - cell "true" [ref=f8e5300]
+                  - cell "3" [ref=f8e5301]
+                  - cell "2026-06-17T17:42:56.470000" [ref=f8e5302]
+                  - cell "7603" [ref=f8e5303]
+                - row "21 4 1039 592 1 2026-06-17T17:44:42.110000 LogiShip 2368 23605 4 true 4 2026-06-17T17:42:56.470000 7604" [ref=f8e5304]:
+                  - cell "21" [ref=f8e5305]
+                  - cell "4" [ref=f8e5306]
+                  - cell "1039" [ref=f8e5307]
+                  - cell "592" [ref=f8e5308]
+                  - cell "1" [ref=f8e5309]
+                  - cell "2026-06-17T17:44:42.110000" [ref=f8e5310]
+                  - cell "LogiShip" [ref=f8e5311]
+                  - cell "2368" [ref=f8e5312]
+                  - cell "23605" [ref=f8e5313]
+                  - cell "4" [ref=f8e5314]
+                  - cell "true" [ref=f8e5315]
+                  - cell "4" [ref=f8e5316]
+                  - cell "2026-06-17T17:42:56.470000" [ref=f8e5317]
+                  - cell "7604" [ref=f8e5318]
+                - row "105 1 2661 249 1 2026-06-17T17:44:42.110000 LogiShip 249 23606 5 true 5 2026-06-17T17:42:56.470000 7605" [ref=f8e5319]:
+                  - cell "105" [ref=f8e5320]
+                  - cell "1" [ref=f8e5321]
+                  - cell "2661" [ref=f8e5322]
+                  - cell "249" [ref=f8e5323]
+                  - cell "1" [ref=f8e5324]
+                  - cell "2026-06-17T17:44:42.110000" [ref=f8e5325]
+                  - cell "LogiShip" [ref=f8e5326]
+                  - cell "249" [ref=f8e5327]
+                  - cell "23606" [ref=f8e5328]
+                  - cell "5" [ref=f8e5329]
+                  - cell "true" [ref=f8e5330]
+                  - cell "5" [ref=f8e5331]
+                  - cell "2026-06-17T17:42:56.470000" [ref=f8e5332]
+                  - cell "7605" [ref=f8e5333]
+                - row "16 2 4492 983 1 2026-06-17T17:44:42.110000 LogiShip 1966 23607 6 true 6 2026-06-17T17:42:56.470000 7606" [ref=f8e5334]:
+                  - cell "16" [ref=f8e5335]
+                  - cell "2" [ref=f8e5336]
+                  - cell "4492" [ref=f8e5337]
+                  - cell "983" [ref=f8e5338]
+                  - cell "1" [ref=f8e5339]
+                  - cell "2026-06-17T17:44:42.110000" [ref=f8e5340]
+                  - cell "LogiShip" [ref=f8e5341]
+                  - cell "1966" [ref=f8e5342]
+                  - cell "23607" [ref=f8e5343]
+                  - cell "6" [ref=f8e5344]
+                  - cell "true" [ref=f8e5345]
+                  - cell "6" [ref=f8e5346]
+                  - cell "2026-06-17T17:42:56.470000" [ref=f8e5347]
+                  - cell "7606" [ref=f8e5348]
+                - row "37 3 3359 219 1 2026-06-17T17:44:42.110000 LogiShip 657 23608 7 true 7 2026-06-17T17:42:56.470000 7607" [ref=f8e5349]:
+                  - cell "37" [ref=f8e5350]
+                  - cell "3" [ref=f8e5351]
+                  - cell "3359" [ref=f8e5352]
+                  - cell "219" [ref=f8e5353]
+                  - cell "1" [ref=f8e5354]
+                  - cell "2026-06-17T17:44:42.110000" [ref=f8e5355]
+                  - cell "LogiShip" [ref=f8e5356]
+                  - cell "657" [ref=f8e5357]
+                  - cell "23608" [ref=f8e5358]
+                  - cell "7" [ref=f8e5359]
+                  - cell "true" [ref=f8e5360]
+                  - cell "7" [ref=f8e5361]
+                  - cell "2026-06-17T17:42:56.470000" [ref=f8e5362]
+                  - cell "7607" [ref=f8e5363]
+                - row "0 4 1054 425 1 2026-06-17T17:44:42.110000 LogiShip 1700 23609 8 true 8 2026-06-17T17:42:56.470000 7608" [ref=f8e5364]:
+                  - cell "0" [ref=f8e5365]
+                  - cell "4" [ref=f8e5366]
+                  - cell "1054" [ref=f8e5367]
+                  - cell "425" [ref=f8e5368]
+                  - cell "1" [ref=f8e5369]
+                  - cell "2026-06-17T17:44:42.110000" [ref=f8e5370]
+                  - cell "LogiShip" [ref=f8e5371]
+                  - cell "1700" [ref=f8e5372]
+                  - cell "23609" [ref=f8e5373]
+                  - cell "8" [ref=f8e5374]
+                  - cell "true" [ref=f8e5375]
+                  - cell "8" [ref=f8e5376]
+                  - cell "2026-06-17T17:42:56.470000" [ref=f8e5377]
+                  - cell "7608" [ref=f8e5378]
+                - row "120 1 2652 729 1 2026-06-17T17:44:42.110000 LogiShip 729 23610 9 true 9 2026-06-17T17:42:56.470000 7609" [ref=f8e5379]:
+                  - cell "120" [ref=f8e5380]
+                  - cell "1" [ref=f8e5381]
+                  - cell "2652" [ref=f8e5382]
+                  - cell "729" [ref=f8e5383]
+                  - cell "1" [ref=f8e5384]
+                  - cell "2026-06-17T17:44:42.110000" [ref=f8e5385]
+                  - cell "LogiShip" [ref=f8e5386]
+                  - cell "729" [ref=f8e5387]
+                  - cell "23610" [ref=f8e5388]
+                  - cell "9" [ref=f8e5389]
+                  - cell "true" [ref=f8e5390]
+                  - cell "9" [ref=f8e5391]
+                  - cell "2026-06-17T17:42:56.470000" [ref=f8e5392]
+                  - cell "7609" [ref=f8e5393]
+                - row "121 2 5829 366 1 2026-06-17T17:44:42.110000 LogiShip 732 23611 10 true 10 2026-06-17T17:42:56.470000 7610" [ref=f8e5394]:
+                  - cell "121" [ref=f8e5395]
+                  - cell "2" [ref=f8e5396]
+                  - cell "5829" [ref=f8e5397]
+                  - cell "366" [ref=f8e5398]
+                  - cell "1" [ref=f8e5399]
+                  - cell "2026-06-17T17:44:42.110000" [ref=f8e5400]
+                  - cell "LogiShip" [ref=f8e5401]
+                  - cell "732" [ref=f8e5402]
+                  - cell "23611" [ref=f8e5403]
+                  - cell "10" [ref=f8e5404]
+                  - cell "true" [ref=f8e5405]
+                  - cell "10" [ref=f8e5406]
+                  - cell "2026-06-17T17:42:56.470000" [ref=f8e5407]
+                  - cell "7610" [ref=f8e5408]
+                - row "90 3 5418 1138 1 2026-06-17T17:44:42.110000 LogiShip 3414 23612 11 true 11 2026-06-17T17:42:56.470000 7611" [ref=f8e5409]:
+                  - cell "90" [ref=f8e5410]
+                  - cell "3" [ref=f8e5411]
+                  - cell "5418" [ref=f8e5412]
+                  - cell "1138" [ref=f8e5413]
+                  - cell "1" [ref=f8e5414]
+                  - cell "2026-06-17T17:44:42.110000" [ref=f8e5415]
+                  - cell "LogiShip" [ref=f8e5416]
+                  - cell "3414" [ref=f8e5417]
+                  - cell "23612" [ref=f8e5418]
+                  - cell "11" [ref=f8e5419]
+                  - cell "true" [ref=f8e5420]
+                  - cell "11" [ref=f8e5421]
+                  - cell "2026-06-17T17:42:56.470000" [ref=f8e5422]
+                  - cell "7611" [ref=f8e5423]
+                - row "3 4 5197 1446 1 2026-06-17T17:44:42.110000 LogiShip 5784 23613 12 true 12 2026-06-17T17:42:56.470000 7612" [ref=f8e5424]:
+                  - cell "3" [ref=f8e5425]
+                  - cell "4" [ref=f8e5426]
+                  - cell "5197" [ref=f8e5427]
+                  - cell "1446" [ref=f8e5428]
+                  - cell "1" [ref=f8e5429]
+                  - cell "2026-06-17T17:44:42.110000" [ref=f8e5430]
+                  - cell "LogiShip" [ref=f8e5431]
+                  - cell "5784" [ref=f8e5432]
+                  - cell "23613" [ref=f8e5433]
+                  - cell "12" [ref=f8e5434]
+                  - cell "true" [ref=f8e5435]
+                  - cell "12" [ref=f8e5436]
+                  - cell "2026-06-17T17:42:56.470000" [ref=f8e5437]
+                  - cell "7612" [ref=f8e5438]
+                - row "131 1 5009 1043 1 2026-06-17T17:44:42.110000 LogiShip 1043 23614 13 true 13 2026-06-17T17:42:56.470000 7613" [ref=f8e5439]:
+                  - cell "131" [ref=f8e5440]
+                  - cell "1" [ref=f8e5441]
+                  - cell "5009" [ref=f8e5442]
+                  - cell "1043" [ref=f8e5443]
+                  - cell "1" [ref=f8e5444]
+                  - cell "2026-06-17T17:44:42.110000" [ref=f8e5445]
+                  - cell "LogiShip" [ref=f8e5446]
+                  - cell "1043" [ref=f8e5447]
+                  - cell "23614" [ref=f8e5448]
+                  - cell "13" [ref=f8e5449]
+                  - cell "true" [ref=f8e5450]
+                  - cell "13" [ref=f8e5451]
+                  - cell "2026-06-17T17:42:56.470000" [ref=f8e5452]
+                  - cell "7613" [ref=f8e5453]
+                - row "14 2 561 144 1 2026-06-17T17:44:42.110000 LogiShip 288 23615 14 true 14 2026-06-17T17:42:56.470000 7614" [ref=f8e5454]:
+                  - cell "14" [ref=f8e5455]
+                  - cell "2" [ref=f8e5456]
+                  - cell "561" [ref=f8e5457]
+                  - cell "144" [ref=f8e5458]
+                  - cell "1" [ref=f8e5459]
+                  - cell "2026-06-17T17:44:42.110000" [ref=f8e5460]
+                  - cell "LogiShip" [ref=f8e5461]
+                  - cell "288" [ref=f8e5462]
+                  - cell "23615" [ref=f8e5463]
+                  - cell "14" [ref=f8e5464]
+                  - cell "true" [ref=f8e5465]
+                  - cell "14" [ref=f8e5466]
+                  - cell "2026-06-17T17:42:56.470000" [ref=f8e5467]
+                  - cell "7614" [ref=f8e5468]
+                - row "112 3 1095 759 1 2026-06-17T17:44:42.110000 LogiShip 2277 23616 15 true 15 2026-06-17T17:42:56.470000 7615" [ref=f8e5469]:
+                  - cell "112" [ref=f8e5470]
+                  - cell "3" [ref=f8e5471]
+                  - cell "1095" [ref=f8e5472]
+                  - cell "759" [ref=f8e5473]
+                  - cell "1" [ref=f8e5474]
+                  - cell "2026-06-17T17:44:42.110000" [ref=f8e5475]
+                  - cell "LogiShip" [ref=f8e5476]
+                  - cell "2277" [ref=f8e5477]
+                  - cell "23616" [ref=f8e5478]
+                  - cell "15" [ref=f8e5479]
+                  - cell "true" [ref=f8e5480]
+                  - cell "15" [ref=f8e5481]
+                  - cell "2026-06-17T17:42:56.470000" [ref=f8e5482]
+                  - cell "7615" [ref=f8e5483]
+                - row "54 4 4894 289 1 2026-06-17T17:44:42.110000 LogiShip 1156 23617 16 true 16 2026-06-17T17:42:56.470000 7616" [ref=f8e5484]:
+                  - cell "54" [ref=f8e5485]
+                  - cell "4" [ref=f8e5486]
+                  - cell "4894" [ref=f8e5487]
+                  - cell "289" [ref=f8e5488]
+                  - cell "1" [ref=f8e5489]
+                  - cell "2026-06-17T17:44:42.110000" [ref=f8e5490]
+                  - cell "LogiShip" [ref=f8e5491]
+                  - cell "1156" [ref=f8e5492]
+                  - cell "23617" [ref=f8e5493]
+                  - cell "16" [ref=f8e5494]
+                  - cell "true" [ref=f8e5495]
+                  - cell "16" [ref=f8e5496]
+                  - cell "2026-06-17T17:42:56.470000" [ref=f8e5497]
+                  - cell "7616" [ref=f8e5498]
+                - row "106 1 2041 1317 1 2026-06-17T17:44:42.110000 LogiShip 1317 23618 17 true 17 2026-06-17T17:42:56.470000 7617" [ref=f8e5499]:
+                  - cell "106" [ref=f8e5500]
+                  - cell "1" [ref=f8e5501]
+                  - cell "2041" [ref=f8e5502]
+                  - cell "1317" [ref=f8e5503]
+                  - cell "1" [ref=f8e5504]
+                  - cell "2026-06-17T17:44:42.110000" [ref=f8e5505]
+                  - cell "LogiShip" [ref=f8e5506]
+                  - cell "1317" [ref=f8e5507]
+                  - cell "23618" [ref=f8e5508]
+                  - cell "17" [ref=f8e5509]
+                  - cell "true" [ref=f8e5510]
+                  - cell "17" [ref=f8e5511]
+                  - cell "2026-06-17T17:42:56.470000" [ref=f8e5512]
+                  - cell "7617" [ref=f8e5513]
+                - row "139 2 3218 103 1 2026-06-17T17:44:42.110000 LogiShip 206 23619 18 true 18 2026-06-17T17:42:56.470000 7618" [ref=f8e5514]:
+                  - cell "139" [ref=f8e5515]
+                  - cell "2" [ref=f8e5516]
+                  - cell "3218" [ref=f8e5517]
+                  - cell "103" [ref=f8e5518]
+                  - cell "1" [ref=f8e5519]
+                  - cell "2026-06-17T17:44:42.110000" [ref=f8e5520]
+                  - cell "LogiShip" [ref=f8e5521]
+                  - cell "206" [ref=f8e5522]
+                  - cell "23619" [ref=f8e5523]
+                  - cell "18" [ref=f8e5524]
+                  - cell "true" [ref=f8e5525]
+                  - cell "18" [ref=f8e5526]
+                  - cell "2026-06-17T17:42:56.470000" [ref=f8e5527]
+                  - cell "7618" [ref=f8e5528]
+                - row "148 3 4674 162 1 2026-06-17T17:44:42.110000 LogiShip 486 23620 19 true 19 2026-06-17T17:42:56.470000 7619" [ref=f8e5529]:
+                  - cell "148" [ref=f8e5530]
+                  - cell "3" [ref=f8e5531]
+                  - cell "4674" [ref=f8e5532]
+                  - cell "162" [ref=f8e5533]
+                  - cell "1" [ref=f8e5534]
+                  - cell "2026-06-17T17:44:42.110000" [ref=f8e5535]
+                  - cell "LogiShip" [ref=f8e5536]
+                  - cell "486" [ref=f8e5537]
+                  - cell "23620" [ref=f8e5538]
+                  - cell "19" [ref=f8e5539]
+                  - cell "true" [ref=f8e5540]
+                  - cell "19" [ref=f8e5541]
+                  - cell "2026-06-17T17:42:56.470000" [ref=f8e5542]
+                  - cell "7619" [ref=f8e5543]
+                - row "120 4 5693 211 1 2026-06-17T17:44:42.110000 LogiShip 844 23621 20 true 20 2026-06-17T17:42:56.470000 7620" [ref=f8e5544]:
+                  - cell "120" [ref=f8e5545]
+                  - cell "4" [ref=f8e5546]
+                  - cell "5693" [ref=f8e5547]
+                  - cell "211" [ref=f8e5548]
+                  - cell "1" [ref=f8e5549]
+                  - cell "2026-06-17T17:44:42.110000" [ref=f8e5550]
+                  - cell "LogiShip" [ref=f8e5551]
+                  - cell "844" [ref=f8e5552]
+                  - cell "23621" [ref=f8e5553]
+                  - cell "20" [ref=f8e5554]
+                  - cell "true" [ref=f8e5555]
+                  - cell "20" [ref=f8e5556]
+                  - cell "2026-06-17T17:42:56.470000" [ref=f8e5557]
+                  - cell "7620" [ref=f8e5558]
+          - generic [ref=f8e5560]:
+            - button "Mark as expected" [ref=f8e5561] [cursor=pointer]:
+              - img [ref=f8e5562]
+              - text: Mark as expected
+            - button "Escalate to pipeline owner" [ref=f8e5565] [cursor=pointer]:
+              - img [ref=f8e5566]
+              - text: Escalate to pipeline owner

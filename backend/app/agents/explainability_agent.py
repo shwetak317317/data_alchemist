@@ -4,7 +4,8 @@ plain-English business narratives that non-technical stakeholders can act on.
 """
 import json
 import logging
-from app.core.llm import chat, parse_llm_json
+import time
+from app.core.llm import chat_with_usage, parse_llm_json
 from app.models.anomaly import AnomalyRecord, AnomalyExplanationResponse
 from app.models.execution import RuleResult
 from app.prompts.explainability import build_anomaly_explanation_prompt, build_rule_failure_prompt
@@ -12,11 +13,22 @@ from app.prompts.explainability import build_anomaly_explanation_prompt, build_r
 logger = logging.getLogger(__name__)
 
 
-def explain_anomaly(anomaly: AnomalyRecord) -> AnomalyExplanationResponse:
-    prompt = build_anomaly_explanation_prompt(anomaly)
+def explain_anomaly(anomaly: AnomalyRecord, db=None) -> AnomalyExplanationResponse:
+    # Every LLM call is persisted (rule_ai_calls, call_type=ANOMALY_EXPLAIN) so a
+    # wrong explanation can be traced to its exact prompt/response — the rule
+    # agent has had this since day one; this agent was the blind spot.
+    from app.agents.rule_agent import _log_ai_call
+    prompt = None
+    raw = None
+    usage = None
+    t0 = time.monotonic()
     try:
-        raw = chat(prompt)
+        prompt = build_anomaly_explanation_prompt(anomaly)
+        raw, usage = chat_with_usage(prompt)
         data = parse_llm_json(raw)
+        _log_ai_call(db, connection_id=anomaly.connection_id or "", call_type="ANOMALY_EXPLAIN",
+                     table_fqn=anomaly.table_fqn, prompt=prompt, raw_response=raw, status="success",
+                     usage=usage, latency_ms=int((time.monotonic() - t0) * 1000))
         return AnomalyExplanationResponse(
             anomaly_id=anomaly.anomaly_id,
             what_happened=data.get("what_happened", anomaly.description),
@@ -28,6 +40,10 @@ def explain_anomaly(anomaly: AnomalyRecord) -> AnomalyExplanationResponse:
         )
     except Exception as e:
         logger.error("Explainability agent failed: %s", e)
+        _log_ai_call(db, connection_id=anomaly.connection_id or "", call_type="ANOMALY_EXPLAIN",
+                     table_fqn=anomaly.table_fqn, prompt=prompt, raw_response=raw,
+                     status="error", error_message=str(e), usage=usage,
+                     latency_ms=int((time.monotonic() - t0) * 1000))
         # Build a rule-based fallback so the response is always substantive
         atype = anomaly.anomaly_type or "DATA"
         table = anomaly.table_fqn or "the table"
@@ -81,10 +97,15 @@ def explain_anomaly(anomaly: AnomalyRecord) -> AnomalyExplanationResponse:
             anomaly_id=anomaly.anomaly_id,
             what_happened=anomaly.description or f"{atype} anomaly detected on {table}: {dev} deviation from baseline.",
             where=f"{layer} / {table}",
-            when_first_seen=str(anomaly.detected_at),
+            when_first_seen=anomaly.detected_at.strftime("%b %d, %Y %H:%M UTC") if anomaly.detected_at else "unknown",
             why_it_matters=why,
             how_bad=f"Severity: {sev}. Immediate investigation recommended.",
             recommended_actions=actions,
+            # Honest labelling: this branch is a rule-based template, not the LLM.
+            # The frontend badges explanations "AI-generated" — without this flag a
+            # canned fallback silently wears that badge, which is exactly the
+            # "silent failure that looks like a real answer" anti-pattern.
+            fallback=True,
         )
 
 

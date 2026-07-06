@@ -105,12 +105,6 @@
     };
   }
 
-  const MOCK_CONNS = [
-    { id: "sf",  name: "RetailCo · Snowflake", env: "Production", glyph: "❄", color: "var(--navy-500)", host: "retailco-prod.us-east-1", status: "connected", schemas: 4, scopeList: ["raw","bronze","silver","gold"], tables: 29, lastSync: "2 min ago", auth: "Key pair · DQ_SERVICE_ROLE" },
-    { id: "dbx", name: "RetailCo · Databricks", env: "Staging", glyph: "▲", color: "var(--orange-500)", host: "dbc-a1b2-retailco.cloud.databricks.com", status: "connected", schemas: 2, scopeList: ["bronze","gold"], tables: 11, lastSync: "1 hr ago", auth: "OAuth 2.0 · M2M" },
-    { id: "bq",  name: "Marketing · BigQuery", env: "Production", glyph: "◈", color: "var(--blue-600)", host: "retailco-mktg.analytics", status: "error", schemas: 0, scopeList: [], tables: 0, lastSync: "Failed 3 hrs ago", auth: "Service account", err: "Key expired — re-authentication required" },
-  ];
-
   const Connections = () => {
     const { setStage, setActiveConn, activeConnectionId, refreshDatasets } = useApp();
     const [showWizard, setShowWizard] = React.useState(false);
@@ -425,7 +419,7 @@
                     <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 14, padding: "10px 14px", background: "var(--red-50)", borderRadius: 10 }}>
                       <i data-lucide="alert-triangle" style={{ width: 16, height: 16, color: "var(--red-500)", flexShrink: 0 }}></i>
                       <span style={{ flex: 1, fontSize: 12.5, color: "var(--red-600)" }}>{c.err}</span>
-                      <Button size="sm" variant="danger" icon="key-round" onClick={() => toast("Re-authentication flow opened", { kind: "info" })}>Re-authenticate</Button>
+                      <Button size="sm" variant="danger" icon="key-round" onClick={() => openCredEdit(c)}>Re-authenticate</Button>
                     </div>
                   ) : (
                     <div style={{ display: "flex", gap: 28, marginTop: 14, paddingTop: 14, borderTop: "1px solid var(--grey-100)", flexWrap: "wrap" }}>

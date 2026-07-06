@@ -1,0 +1,140 @@
+- generic [ref=f7e3]:
+  - complementary [ref=f7e4]:
+    - generic [ref=f7e5]:
+      - img [ref=f7e5548]
+      - generic [ref=f7e8]:
+        - generic [ref=f7e9]: DataTrust
+        - generic [ref=f7e10]: AGENTIC DQ PLATFORM
+    - generic [ref=f7e11] [cursor=pointer]:
+      - generic [ref=f7e12]: ⬡
+      - generic [ref=f7e13]:
+        - generic [ref=f7e14]: My Connection demo
+        - generic [ref=f7e15]: Active connection
+      - img [ref=f7e5551]
+    - generic [ref=f7e17]:
+      - generic [ref=f7e18]: Workflow
+      - button "Workspace Home" [ref=f7e19] [cursor=pointer]:
+        - img [ref=f7e5554]
+        - generic [ref=f7e21]: Workspace Home
+      - button "Profiling 1" [ref=f7e22] [cursor=pointer]:
+        - img [ref=f7e5559]
+        - generic [ref=f7e24]: Profiling
+        - generic [ref=f7e25]: "1"
+      - button "Dictionary & CDEs 2" [ref=f7e26] [cursor=pointer]:
+        - img [ref=f7e5566]
+        - generic [ref=f7e28]: Dictionary & CDEs
+        - generic [ref=f7e29]: "2"
+      - button "Rule Studio 3" [ref=f7e30] [cursor=pointer]:
+        - img [ref=f7e5569]
+        - generic [ref=f7e32]: Rule Studio
+        - generic [ref=f7e33]: "3"
+      - button "DQ Execution 4" [active] [ref=f7e34] [cursor=pointer]:
+        - img [ref=f7e5572]
+        - generic [ref=f7e36]: DQ Execution
+        - generic [ref=f7e37]: "4"
+    - generic [ref=f7e38]:
+      - generic [ref=f7e39]: Monitoring
+      - button "Anomaly Inbox 14" [ref=f7e248] [cursor=pointer]:
+        - img [ref=f7e5575]
+        - generic [ref=f7e42]: Anomaly Inbox
+        - generic [ref=f7e254]: "14"
+      - button "Impact Graph" [ref=f7e43] [cursor=pointer]:
+        - img [ref=f7e5580]
+        - generic [ref=f7e45]: Impact Graph
+      - button "Trust Dashboard" [ref=f7e46] [cursor=pointer]:
+        - img [ref=f7e5585]
+        - generic [ref=f7e48]: Trust Dashboard
+    - generic [ref=f7e49]:
+      - generic [ref=f7e50]: Intelligence
+      - button "Pre-run Advisory" [ref=f7e51] [cursor=pointer]:
+        - img [ref=f7e5588]
+        - generic [ref=f7e53]: Pre-run Advisory
+      - button "Trust Receipt" [ref=f7e54] [cursor=pointer]:
+        - img [ref=f7e5591]
+        - generic [ref=f7e56]: Trust Receipt
+    - generic [ref=f7e57]:
+      - generic [ref=f7e58]: Admin
+      - button "Connections" [ref=f7e59] [cursor=pointer]:
+        - img [ref=f7e5593]
+        - generic [ref=f7e61]: Connections
+    - generic [ref=f7e62]:
+      - generic [ref=f7e63]: Operate
+      - button "Scenario Simulator" [ref=f7e64] [cursor=pointer]:
+        - img [ref=f7e5595]
+        - generic [ref=f7e66]: Scenario Simulator
+      - button "Task Board" [ref=f7e68] [cursor=pointer]:
+        - img [ref=f7e5600]
+        - generic [ref=f7e70]: Task Board
+      - button "Daily Summary" [ref=f7e71] [cursor=pointer]:
+        - img [ref=f7e5603]
+        - generic [ref=f7e73]: Daily Summary
+    - generic [ref=f7e74]:
+      - generic [ref=f7e76]: SK
+      - generic [ref=f7e78]:
+        - generic [ref=f7e79]: shweta katkar
+        - generic [ref=f7e80]: shweta.katkar@pal.tech
+      - button "Sign out" [ref=f7e81] [cursor=pointer]:
+        - img [ref=f7e5606]
+  - generic [ref=f7e83]:
+    - banner [ref=f7e84]:
+      - generic [ref=f7e85]:
+        - generic [ref=f7e86]:
+          - generic [ref=f7e87]: My Connection demo
+          - generic [ref=f7e88]: /
+          - generic [ref=f7e89]: Workflow
+        - generic [ref=f7e90]: DQ Execution
+      - generic [ref=f7e91]: Pipeline · Issues detected
+      - generic [ref=f7e94]:
+        - generic [ref=f7e95]: TRUST SCORE
+        - generic [ref=f7e96]: 12/100
+      - button "Notifications" [ref=f7e97] [cursor=pointer]:
+        - img [ref=f7e5609]
+    - main [ref=f7e99]:
+      - generic [ref=f7e5612]:
+        - generic [ref=f7e5614]:
+          - generic [ref=f7e5615]:
+            - generic [ref=f7e5616]: Execution results
+            - generic [ref=f7e5617]: No runs yet — click Re-run checks to execute your approved rules.
+          - button "Re-run checks" [ref=f7e5618] [cursor=pointer]:
+            - img [ref=f7e5619]
+            - text: Re-run checks
+        - generic [ref=f7e5624]:
+          - generic [ref=f7e5626]:
+            - img [ref=f7e5627]
+            - generic [ref=f7e5631]: Rule results
+          - generic [ref=f7e5632]:
+            - generic [ref=f7e5633]: Status
+            - button "All" [ref=f7e5634] [cursor=pointer]
+            - button "Failed" [ref=f7e5635] [cursor=pointer]
+            - button "Passed" [ref=f7e5636] [cursor=pointer]
+            - button "Error" [ref=f7e5637] [cursor=pointer]
+            - button "Expected" [ref=f7e5638] [cursor=pointer]
+            - generic [ref=f7e5640]: Layer
+            - button "ALL" [ref=f7e5641] [cursor=pointer]
+            - button "RAW" [ref=f7e5642] [cursor=pointer]
+            - button "BRONZE" [ref=f7e5643] [cursor=pointer]
+            - button "SILVER" [ref=f7e5644] [cursor=pointer]
+            - button "GOLD" [ref=f7e5645] [cursor=pointer]
+          - table [ref=f7e5647]:
+            - rowgroup [ref=f7e5648]:
+              - row "Rule Layer Status Fail count Fail % Severity" [ref=f7e5649]:
+                - columnheader "Rule" [ref=f7e5650]
+                - columnheader "Layer" [ref=f7e5651]
+                - columnheader "Status" [ref=f7e5652]
+                - columnheader "Fail count" [ref=f7e5653]
+                - columnheader "Fail %" [ref=f7e5654]
+                - columnheader "Severity" [ref=f7e5655]
+                - columnheader [ref=f7e5656]
+            - rowgroup [ref=f7e5657]:
+              - row "No results yet — run checks to populate this table." [ref=f7e5658]:
+                - cell "No results yet — run checks to populate this table." [ref=f7e5659]
+          - generic [ref=f7e5660]:
+            - button "Download CSV" [ref=f7e5661] [cursor=pointer]:
+              - img [ref=f7e5662]
+              - text: Download CSV
+            - button "Share to Slack" [ref=f7e5665] [cursor=pointer]:
+              - img [ref=f7e5666]
+              - text: Share to Slack
+            - button "Review anomalies" [ref=f7e5673] [cursor=pointer]:
+              - text: Review anomalies
+              - img [ref=f7e5674]

@@ -1,0 +1,611 @@
+- generic [ref=f1e129]:
+  - complementary [ref=f1e130]:
+    - generic [ref=f1e131]:
+      - img [ref=f1e5250]
+      - generic [ref=f1e136]:
+        - generic [ref=f1e137]: DataTrust
+        - generic [ref=f1e138]: AGENTIC DQ PLATFORM
+    - generic [ref=f1e139] [cursor=pointer]:
+      - generic [ref=f1e140]: ⬡
+      - generic [ref=f1e141]:
+        - generic [ref=f1e142]: My Connection demo
+        - generic [ref=f1e143]: Active connection
+      - img [ref=f1e5253]
+    - generic [ref=f1e147]:
+      - generic [ref=f1e148]: Workflow
+      - button "Workspace Home" [ref=f1e149] [cursor=pointer]:
+        - img [ref=f1e5256]
+        - generic [ref=f1e155]: Workspace Home
+      - button "Profiling 1" [ref=f1e156] [cursor=pointer]:
+        - img [ref=f1e5261]
+        - generic [ref=f1e164]: Profiling
+        - generic [ref=f1e165]: "1"
+      - button "Dictionary & CDEs 2" [ref=f1e166] [cursor=pointer]:
+        - img [ref=f1e5268]
+        - generic [ref=f1e170]: Dictionary & CDEs
+        - generic [ref=f1e171]: "2"
+      - button "Rule Studio 3" [ref=f1e172] [cursor=pointer]:
+        - img [ref=f1e5271]
+        - generic [ref=f1e176]: Rule Studio
+        - generic [ref=f1e177]: "3"
+      - button "DQ Execution 4" [active] [ref=f1e178] [cursor=pointer]:
+        - img [ref=f1e5274]
+        - generic [ref=f1e182]: DQ Execution
+        - generic [ref=f1e183]: "4"
+    - generic [ref=f1e184]:
+      - generic [ref=f1e185]: Monitoring
+      - button "Anomaly Inbox 14" [ref=f1e5151] [cursor=pointer]:
+        - img [ref=f1e5277]
+        - generic [ref=f1e192]: Anomaly Inbox
+        - generic [ref=f1e193]: "14"
+      - button "Impact Graph" [ref=f1e194] [cursor=pointer]:
+        - img [ref=f1e5282]
+        - generic [ref=f1e200]: Impact Graph
+      - button "Trust Dashboard" [ref=f1e201] [cursor=pointer]:
+        - img [ref=f1e5287]
+        - generic [ref=f1e205]: Trust Dashboard
+    - generic [ref=f1e206]:
+      - generic [ref=f1e207]: Intelligence
+      - button "Pre-run Advisory" [ref=f1e208] [cursor=pointer]:
+        - img [ref=f1e5290]
+        - generic [ref=f1e212]: Pre-run Advisory
+      - button "Trust Receipt" [ref=f1e213] [cursor=pointer]:
+        - img [ref=f1e5293]
+        - generic [ref=f1e216]: Trust Receipt
+    - generic [ref=f1e217]:
+      - generic [ref=f1e218]: Admin
+      - button "Connections" [ref=f1e219] [cursor=pointer]:
+        - img [ref=f1e5295]
+        - generic [ref=f1e222]: Connections
+    - generic [ref=f1e223]:
+      - generic [ref=f1e224]: Operate
+      - button "Scenario Simulator" [ref=f1e225] [cursor=pointer]:
+        - img [ref=f1e5297]
+        - generic [ref=f1e231]: Scenario Simulator
+      - button "Task Board" [ref=f1e233] [cursor=pointer]:
+        - img [ref=f1e5302]
+        - generic [ref=f1e237]: Task Board
+      - button "Daily Summary" [ref=f1e238] [cursor=pointer]:
+        - img [ref=f1e5305]
+        - generic [ref=f1e242]: Daily Summary
+    - generic [ref=f1e243]:
+      - generic [ref=f1e245]: SK
+      - generic [ref=f1e247]:
+        - generic [ref=f1e248]: shweta katkar
+        - generic [ref=f1e249]: shweta.katkar@pal.tech
+      - button "Sign out" [ref=f1e250] [cursor=pointer]:
+        - img [ref=f1e5308]
+  - generic [ref=f1e254]:
+    - banner [ref=f1e255]:
+      - generic [ref=f1e256]:
+        - generic [ref=f1e257]:
+          - generic [ref=f1e258]: My Connection demo
+          - generic [ref=f1e259]: /
+          - generic [ref=f1e260]: Workflow
+        - generic [ref=f1e261]: DQ Execution
+      - generic [ref=f1e262]: Pipeline · Issues detected
+      - generic [ref=f1e265]:
+        - generic [ref=f1e266]: TRUST SCORE
+        - generic [ref=f1e267]: 0/100
+      - button "Notifications" [ref=f1e268] [cursor=pointer]:
+        - img [ref=f1e5311]
+    - main [ref=f1e272]:
+      - generic [ref=f1e5314]:
+        - generic [ref=f1e5316]:
+          - generic [ref=f1e5317]:
+            - generic [ref=f1e5318]: Execution results
+            - generic [ref=f1e5319]: "Run #e5643b0f · all layers"
+            - generic [ref=f1e5320]:
+              - text: Jul 2, 12:35 PM · 23 rules ·
+              - strong [ref=f1e5321]: 0 failed
+            - generic [ref=f1e5322]:
+              - generic [ref=f1e5323]: Overall quality
+              - generic [ref=f1e5324]: "0"
+          - button "Re-run checks" [ref=f1e5325] [cursor=pointer]:
+            - img [ref=f1e5326]
+            - text: Re-run checks
+        - generic [ref=f1e5332]:
+          - generic [ref=f1e5333]:
+            - generic [ref=f1e5334]: BRONZE
+            - generic [ref=f1e5335]: "0"
+          - generic [ref=f1e5337]:
+            - text: 0/23 passed ·
+            - generic [ref=f1e5338]: 0 failed
+          - button "Run layer" [ref=f1e5339] [cursor=pointer]:
+            - img [ref=f1e5340]
+            - text: Run layer
+        - generic [ref=f1e5343]:
+          - generic [ref=f1e5345]:
+            - img [ref=f1e5346]
+            - generic [ref=f1e5350]: Rule results
+          - generic [ref=f1e5351]:
+            - generic [ref=f1e5352]: Status
+            - button "All" [ref=f1e5353] [cursor=pointer]
+            - button "Failed" [ref=f1e5354] [cursor=pointer]
+            - button "Passed" [ref=f1e5355] [cursor=pointer]
+            - button "Error" [ref=f1e5356] [cursor=pointer]
+            - button "Expected" [ref=f1e5357] [cursor=pointer]
+            - generic [ref=f1e5359]: Layer
+            - button "ALL" [ref=f1e5360] [cursor=pointer]
+            - button "RAW" [ref=f1e5361] [cursor=pointer]
+            - button "BRONZE" [ref=f1e5362] [cursor=pointer]
+            - button "SILVER" [ref=f1e5363] [cursor=pointer]
+            - button "GOLD" [ref=f1e5364] [cursor=pointer]
+          - table [ref=f1e5366]:
+            - rowgroup [ref=f1e5367]:
+              - row "Rule Layer Status Fail count Fail % Severity" [ref=f1e5368]:
+                - columnheader "Rule" [ref=f1e5369]
+                - columnheader "Layer" [ref=f1e5370]
+                - columnheader "Status" [ref=f1e5371]
+                - columnheader "Fail count" [ref=f1e5372]
+                - columnheader "Fail %" [ref=f1e5373]
+                - columnheader "Severity" [ref=f1e5374]
+                - columnheader [ref=f1e5375]
+            - rowgroup [ref=f1e5376]:
+              - row "status_valid_values BronzeDB.BrzLoadLog Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page. BRONZE ERROR 0 — MEDIUM" [ref=f1e5377]:
+                - cell "status_valid_values BronzeDB.BrzLoadLog Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page." [ref=f1e5378]:
+                  - text: status_valid_values
+                  - generic [ref=f1e5379]:
+                    - generic [ref=f1e5381]: BronzeDB.BrzLoadLog
+                    - generic [ref=f1e5382]: Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page.
+                - cell "BRONZE" [ref=f1e5383]:
+                  - generic [ref=f1e5384]: BRONZE
+                - cell "ERROR" [ref=f1e5385]:
+                  - generic [ref=f1e5386]:
+                    - img [ref=f1e5387]
+                    - text: ERROR
+                - cell "0" [ref=f1e5389]
+                - cell "—" [ref=f1e5390]
+                - cell "MEDIUM" [ref=f1e5391]:
+                  - generic [ref=f1e5392]: MEDIUM
+                - cell [ref=f1e5394]:
+                  - button "Re-run this rule" [ref=f1e5396] [cursor=pointer]:
+                    - img [ref=f1e5397]
+              - row "run_duration_positive BronzeDB.BrzLoadLog Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page. BRONZE ERROR 0 — HIGH" [ref=f1e5399]:
+                - cell "run_duration_positive BronzeDB.BrzLoadLog Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page." [ref=f1e5400]:
+                  - text: run_duration_positive
+                  - generic [ref=f1e5401]:
+                    - generic [ref=f1e5403]: BronzeDB.BrzLoadLog
+                    - generic [ref=f1e5404]: Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page.
+                - cell "BRONZE" [ref=f1e5405]:
+                  - generic [ref=f1e5406]: BRONZE
+                - cell "ERROR" [ref=f1e5407]:
+                  - generic [ref=f1e5408]:
+                    - img [ref=f1e5409]
+                    - text: ERROR
+                - cell "0" [ref=f1e5411]
+                - cell "—" [ref=f1e5412]
+                - cell "HIGH" [ref=f1e5413]:
+                  - generic [ref=f1e5414]: HIGH
+                - cell [ref=f1e5416]:
+                  - button "Re-run this rule" [ref=f1e5418] [cursor=pointer]:
+                    - img [ref=f1e5419]
+              - row "notes_valid_length BronzeDB.BrzLoadLog Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page. BRONZE ERROR 0 — LOW" [ref=f1e5421]:
+                - cell "notes_valid_length BronzeDB.BrzLoadLog Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page." [ref=f1e5422]:
+                  - text: notes_valid_length
+                  - generic [ref=f1e5423]:
+                    - generic [ref=f1e5425]: BronzeDB.BrzLoadLog
+                    - generic [ref=f1e5426]: Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page.
+                - cell "BRONZE" [ref=f1e5427]:
+                  - generic [ref=f1e5428]: BRONZE
+                - cell "ERROR" [ref=f1e5429]:
+                  - generic [ref=f1e5430]:
+                    - img [ref=f1e5431]
+                    - text: ERROR
+                - cell "0" [ref=f1e5433]
+                - cell "—" [ref=f1e5434]
+                - cell "LOW" [ref=f1e5435]:
+                  - generic [ref=f1e5436]: LOW
+                - cell [ref=f1e5438]:
+                  - button "Re-run this rule" [ref=f1e5440] [cursor=pointer]:
+                    - img [ref=f1e5441]
+              - row "cde_category_id_not_null CDE BronzeDB.br_categories Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page. BRONZE ERROR 0 — HIGH" [ref=f1e5443]:
+                - cell "cde_category_id_not_null CDE BronzeDB.br_categories Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page." [ref=f1e5444]:
+                  - text: cde_category_id_not_null
+                  - generic [ref=f1e5445]:
+                    - generic [ref=f1e5446]:
+                      - generic [ref=f1e5447]: CDE
+                      - generic [ref=f1e5448]: BronzeDB.br_categories
+                    - generic [ref=f1e5449]: Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page.
+                - cell "BRONZE" [ref=f1e5450]:
+                  - generic [ref=f1e5451]: BRONZE
+                - cell "ERROR" [ref=f1e5452]:
+                  - generic [ref=f1e5453]:
+                    - img [ref=f1e5454]
+                    - text: ERROR
+                - cell "0" [ref=f1e5456]
+                - cell "—" [ref=f1e5457]
+                - cell "HIGH" [ref=f1e5458]:
+                  - generic [ref=f1e5459]: HIGH
+                - cell [ref=f1e5461]:
+                  - button "Re-run this rule" [ref=f1e5463] [cursor=pointer]:
+                    - img [ref=f1e5464]
+              - row "cde_run_started_at_not_null CDE BronzeDB.BrzLoadLog Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page. BRONZE ERROR 0 — CRITICAL" [ref=f1e5466]:
+                - cell "cde_run_started_at_not_null CDE BronzeDB.BrzLoadLog Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page." [ref=f1e5467]:
+                  - text: cde_run_started_at_not_null
+                  - generic [ref=f1e5468]:
+                    - generic [ref=f1e5469]:
+                      - generic [ref=f1e5470]: CDE
+                      - generic [ref=f1e5471]: BronzeDB.BrzLoadLog
+                    - generic [ref=f1e5472]: Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page.
+                - cell "BRONZE" [ref=f1e5473]:
+                  - generic [ref=f1e5474]: BRONZE
+                - cell "ERROR" [ref=f1e5475]:
+                  - generic [ref=f1e5476]:
+                    - img [ref=f1e5477]
+                    - text: ERROR
+                - cell "0" [ref=f1e5479]
+                - cell "—" [ref=f1e5480]
+                - cell "CRITICAL" [ref=f1e5481]:
+                  - generic [ref=f1e5482]: CRITICAL
+                - cell [ref=f1e5484]:
+                  - button "Re-run this rule" [ref=f1e5486] [cursor=pointer]:
+                    - img [ref=f1e5487]
+              - row "cde_category_name_not_null CDE BronzeDB.br_categories Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page. BRONZE ERROR 0 — HIGH" [ref=f1e5489]:
+                - cell "cde_category_name_not_null CDE BronzeDB.br_categories Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page." [ref=f1e5490]:
+                  - text: cde_category_name_not_null
+                  - generic [ref=f1e5491]:
+                    - generic [ref=f1e5492]:
+                      - generic [ref=f1e5493]: CDE
+                      - generic [ref=f1e5494]: BronzeDB.br_categories
+                    - generic [ref=f1e5495]: Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page.
+                - cell "BRONZE" [ref=f1e5496]:
+                  - generic [ref=f1e5497]: BRONZE
+                - cell "ERROR" [ref=f1e5498]:
+                  - generic [ref=f1e5499]:
+                    - img [ref=f1e5500]
+                    - text: ERROR
+                - cell "0" [ref=f1e5502]
+                - cell "—" [ref=f1e5503]
+                - cell "HIGH" [ref=f1e5504]:
+                  - generic [ref=f1e5505]: HIGH
+                - cell [ref=f1e5507]:
+                  - button "Re-run this rule" [ref=f1e5509] [cursor=pointer]:
+                    - img [ref=f1e5510]
+              - row "br_inventory_id_not_null CDE BronzeDB.br_inventory Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page. BRONZE ERROR 0 — CRITICAL" [ref=f1e5512]:
+                - cell "br_inventory_id_not_null CDE BronzeDB.br_inventory Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page." [ref=f1e5513]:
+                  - text: br_inventory_id_not_null
+                  - generic [ref=f1e5514]:
+                    - generic [ref=f1e5515]:
+                      - generic [ref=f1e5516]: CDE
+                      - generic [ref=f1e5517]: BronzeDB.br_inventory
+                    - generic [ref=f1e5518]: Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page.
+                - cell "BRONZE" [ref=f1e5519]:
+                  - generic [ref=f1e5520]: BRONZE
+                - cell "ERROR" [ref=f1e5521]:
+                  - generic [ref=f1e5522]:
+                    - img [ref=f1e5523]
+                    - text: ERROR
+                - cell "0" [ref=f1e5525]
+                - cell "—" [ref=f1e5526]
+                - cell "CRITICAL" [ref=f1e5527]:
+                  - generic [ref=f1e5528]: CRITICAL
+                - cell [ref=f1e5530]:
+                  - button "Re-run this rule" [ref=f1e5532] [cursor=pointer]:
+                    - img [ref=f1e5533]
+              - row "cde_notes_not_null CDE BronzeDB.BrzLoadLog Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page. BRONZE ERROR 0 — CRITICAL" [ref=f1e5535]:
+                - cell "cde_notes_not_null CDE BronzeDB.BrzLoadLog Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page." [ref=f1e5536]:
+                  - text: cde_notes_not_null
+                  - generic [ref=f1e5537]:
+                    - generic [ref=f1e5538]:
+                      - generic [ref=f1e5539]: CDE
+                      - generic [ref=f1e5540]: BronzeDB.BrzLoadLog
+                    - generic [ref=f1e5541]: Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page.
+                - cell "BRONZE" [ref=f1e5542]:
+                  - generic [ref=f1e5543]: BRONZE
+                - cell "ERROR" [ref=f1e5544]:
+                  - generic [ref=f1e5545]:
+                    - img [ref=f1e5546]
+                    - text: ERROR
+                - cell "0" [ref=f1e5548]
+                - cell "—" [ref=f1e5549]
+                - cell "CRITICAL" [ref=f1e5550]:
+                  - generic [ref=f1e5551]: CRITICAL
+                - cell [ref=f1e5553]:
+                  - button "Re-run this rule" [ref=f1e5555] [cursor=pointer]:
+                    - img [ref=f1e5556]
+              - row "category_id_positive BronzeDB.br_categories Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page. BRONZE ERROR 0 — MEDIUM" [ref=f1e5558]:
+                - cell "category_id_positive BronzeDB.br_categories Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page." [ref=f1e5559]:
+                  - text: category_id_positive
+                  - generic [ref=f1e5560]:
+                    - generic [ref=f1e5562]: BronzeDB.br_categories
+                    - generic [ref=f1e5563]: Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page.
+                - cell "BRONZE" [ref=f1e5564]:
+                  - generic [ref=f1e5565]: BRONZE
+                - cell "ERROR" [ref=f1e5566]:
+                  - generic [ref=f1e5567]:
+                    - img [ref=f1e5568]
+                    - text: ERROR
+                - cell "0" [ref=f1e5570]
+                - cell "—" [ref=f1e5571]
+                - cell "MEDIUM" [ref=f1e5572]:
+                  - generic [ref=f1e5573]: MEDIUM
+                - cell [ref=f1e5575]:
+                  - button "Re-run this rule" [ref=f1e5577] [cursor=pointer]:
+                    - img [ref=f1e5578]
+              - row "batch_id_not_null BronzeDB.br_categories Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page. BRONZE ERROR 0 — LOW" [ref=f1e5580]:
+                - cell "batch_id_not_null BronzeDB.br_categories Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page." [ref=f1e5581]:
+                  - text: batch_id_not_null
+                  - generic [ref=f1e5582]:
+                    - generic [ref=f1e5584]: BronzeDB.br_categories
+                    - generic [ref=f1e5585]: Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page.
+                - cell "BRONZE" [ref=f1e5586]:
+                  - generic [ref=f1e5587]: BRONZE
+                - cell "ERROR" [ref=f1e5588]:
+                  - generic [ref=f1e5589]:
+                    - img [ref=f1e5590]
+                    - text: ERROR
+                - cell "0" [ref=f1e5592]
+                - cell "—" [ref=f1e5593]
+                - cell "LOW" [ref=f1e5594]:
+                  - generic [ref=f1e5595]: LOW
+                - cell [ref=f1e5597]:
+                  - button "Re-run this rule" [ref=f1e5599] [cursor=pointer]:
+                    - img [ref=f1e5600]
+              - row "Src_UpdatedDateNotNullCheck BronzeDB.br_customers Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page. BRONZE ERROR 0 — LOW" [ref=f1e5602]:
+                - cell "Src_UpdatedDateNotNullCheck BronzeDB.br_customers Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page." [ref=f1e5603]:
+                  - text: Src_UpdatedDateNotNullCheck
+                  - generic [ref=f1e5604]:
+                    - generic [ref=f1e5606]: BronzeDB.br_customers
+                    - generic [ref=f1e5607]: Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page.
+                - cell "BRONZE" [ref=f1e5608]:
+                  - generic [ref=f1e5609]: BRONZE
+                - cell "ERROR" [ref=f1e5610]:
+                  - generic [ref=f1e5611]:
+                    - img [ref=f1e5612]
+                    - text: ERROR
+                - cell "0" [ref=f1e5614]
+                - cell "—" [ref=f1e5615]
+                - cell "LOW" [ref=f1e5616]:
+                  - generic [ref=f1e5617]: LOW
+                - cell [ref=f1e5619]:
+                  - button "Re-run this rule" [ref=f1e5621] [cursor=pointer]:
+                    - img [ref=f1e5622]
+              - row "parent_category_id_not_null BronzeDB.br_categories Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page. BRONZE ERROR 0 — CRITICAL" [ref=f1e5624]:
+                - cell "parent_category_id_not_null BronzeDB.br_categories Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page." [ref=f1e5625]:
+                  - text: parent_category_id_not_null
+                  - generic [ref=f1e5626]:
+                    - generic [ref=f1e5628]: BronzeDB.br_categories
+                    - generic [ref=f1e5629]: Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page.
+                - cell "BRONZE" [ref=f1e5630]:
+                  - generic [ref=f1e5631]: BRONZE
+                - cell "ERROR" [ref=f1e5632]:
+                  - generic [ref=f1e5633]:
+                    - img [ref=f1e5634]
+                    - text: ERROR
+                - cell "0" [ref=f1e5636]
+                - cell "—" [ref=f1e5637]
+                - cell "CRITICAL" [ref=f1e5638]:
+                  - generic [ref=f1e5639]: CRITICAL
+                - cell [ref=f1e5641]:
+                  - button "Re-run this rule" [ref=f1e5643] [cursor=pointer]:
+                    - img [ref=f1e5644]
+              - row "loaded_at_not_null BronzeDB.br_categories Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page. BRONZE ERROR 0 — LOW" [ref=f1e5646]:
+                - cell "loaded_at_not_null BronzeDB.br_categories Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page." [ref=f1e5647]:
+                  - text: loaded_at_not_null
+                  - generic [ref=f1e5648]:
+                    - generic [ref=f1e5650]: BronzeDB.br_categories
+                    - generic [ref=f1e5651]: Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page.
+                - cell "BRONZE" [ref=f1e5652]:
+                  - generic [ref=f1e5653]: BRONZE
+                - cell "ERROR" [ref=f1e5654]:
+                  - generic [ref=f1e5655]:
+                    - img [ref=f1e5656]
+                    - text: ERROR
+                - cell "0" [ref=f1e5658]
+                - cell "—" [ref=f1e5659]
+                - cell "LOW" [ref=f1e5660]:
+                  - generic [ref=f1e5661]: LOW
+                - cell [ref=f1e5663]:
+                  - button "Re-run this rule" [ref=f1e5665] [cursor=pointer]:
+                    - img [ref=f1e5666]
+              - row "Brz_BatchIDNotNullCheck BronzeDB.br_customers Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page. BRONZE ERROR 0 — LOW" [ref=f1e5668]:
+                - cell "Brz_BatchIDNotNullCheck BronzeDB.br_customers Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page." [ref=f1e5669]:
+                  - text: Brz_BatchIDNotNullCheck
+                  - generic [ref=f1e5670]:
+                    - generic [ref=f1e5672]: BronzeDB.br_customers
+                    - generic [ref=f1e5673]: Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page.
+                - cell "BRONZE" [ref=f1e5674]:
+                  - generic [ref=f1e5675]: BRONZE
+                - cell "ERROR" [ref=f1e5676]:
+                  - generic [ref=f1e5677]:
+                    - img [ref=f1e5678]
+                    - text: ERROR
+                - cell "0" [ref=f1e5680]
+                - cell "—" [ref=f1e5681]
+                - cell "LOW" [ref=f1e5682]:
+                  - generic [ref=f1e5683]: LOW
+                - cell [ref=f1e5685]:
+                  - button "Re-run this rule" [ref=f1e5687] [cursor=pointer]:
+                    - img [ref=f1e5688]
+              - row "source_system_not_null CDE BronzeDB.br_inventory Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page. BRONZE ERROR 0 — CRITICAL" [ref=f1e5690]:
+                - cell "source_system_not_null CDE BronzeDB.br_inventory Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page." [ref=f1e5691]:
+                  - text: source_system_not_null
+                  - generic [ref=f1e5692]:
+                    - generic [ref=f1e5693]:
+                      - generic [ref=f1e5694]: CDE
+                      - generic [ref=f1e5695]: BronzeDB.br_inventory
+                    - generic [ref=f1e5696]: Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page.
+                - cell "BRONZE" [ref=f1e5697]:
+                  - generic [ref=f1e5698]: BRONZE
+                - cell "ERROR" [ref=f1e5699]:
+                  - generic [ref=f1e5700]:
+                    - img [ref=f1e5701]
+                    - text: ERROR
+                - cell "0" [ref=f1e5703]
+                - cell "—" [ref=f1e5704]
+                - cell "CRITICAL" [ref=f1e5705]:
+                  - generic [ref=f1e5706]: CRITICAL
+                - cell [ref=f1e5708]:
+                  - button "Re-run this rule" [ref=f1e5710] [cursor=pointer]:
+                    - img [ref=f1e5711]
+              - row "status_valid_length BronzeDB.BrzLoadLog Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page. BRONZE ERROR 0 — MEDIUM" [ref=f1e5713]:
+                - cell "status_valid_length BronzeDB.BrzLoadLog Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page." [ref=f1e5714]:
+                  - text: status_valid_length
+                  - generic [ref=f1e5715]:
+                    - generic [ref=f1e5717]: BronzeDB.BrzLoadLog
+                    - generic [ref=f1e5718]: Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page.
+                - cell "BRONZE" [ref=f1e5719]:
+                  - generic [ref=f1e5720]: BRONZE
+                - cell "ERROR" [ref=f1e5721]:
+                  - generic [ref=f1e5722]:
+                    - img [ref=f1e5723]
+                    - text: ERROR
+                - cell "0" [ref=f1e5725]
+                - cell "—" [ref=f1e5726]
+                - cell "MEDIUM" [ref=f1e5727]:
+                  - generic [ref=f1e5728]: MEDIUM
+                - cell [ref=f1e5730]:
+                  - button "Re-run this rule" [ref=f1e5732] [cursor=pointer]:
+                    - img [ref=f1e5733]
+              - row "cde_source_category_id_not_null CDE BronzeDB.br_categories Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page. BRONZE ERROR 0 — MEDIUM" [ref=f1e5735]:
+                - cell "cde_source_category_id_not_null CDE BronzeDB.br_categories Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page." [ref=f1e5736]:
+                  - text: cde_source_category_id_not_null
+                  - generic [ref=f1e5737]:
+                    - generic [ref=f1e5738]:
+                      - generic [ref=f1e5739]: CDE
+                      - generic [ref=f1e5740]: BronzeDB.br_categories
+                    - generic [ref=f1e5741]: Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page.
+                - cell "BRONZE" [ref=f1e5742]:
+                  - generic [ref=f1e5743]: BRONZE
+                - cell "ERROR" [ref=f1e5744]:
+                  - generic [ref=f1e5745]:
+                    - img [ref=f1e5746]
+                    - text: ERROR
+                - cell "0" [ref=f1e5748]
+                - cell "—" [ref=f1e5749]
+                - cell "MEDIUM" [ref=f1e5750]:
+                  - generic [ref=f1e5751]: MEDIUM
+                - cell [ref=f1e5753]:
+                  - button "Re-run this rule" [ref=f1e5755] [cursor=pointer]:
+                    - img [ref=f1e5756]
+              - row "no_null_warehouse_name BronzeDB.br_warehouses Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page. BRONZE ERROR 0 — HIGH" [ref=f1e5758]:
+                - cell "no_null_warehouse_name BronzeDB.br_warehouses Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page." [ref=f1e5759]:
+                  - text: no_null_warehouse_name
+                  - generic [ref=f1e5760]:
+                    - generic [ref=f1e5762]: BronzeDB.br_warehouses
+                    - generic [ref=f1e5763]: Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page.
+                - cell "BRONZE" [ref=f1e5764]:
+                  - generic [ref=f1e5765]: BRONZE
+                - cell "ERROR" [ref=f1e5766]:
+                  - generic [ref=f1e5767]:
+                    - img [ref=f1e5768]
+                    - text: ERROR
+                - cell "0" [ref=f1e5770]
+                - cell "—" [ref=f1e5771]
+                - cell "HIGH" [ref=f1e5772]:
+                  - generic [ref=f1e5773]: HIGH
+                - cell [ref=f1e5775]:
+                  - button "Re-run this rule" [ref=f1e5777] [cursor=pointer]:
+                    - img [ref=f1e5778]
+              - row "cde_isactive_not_null CDE BronzeDB.br_categories Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page. BRONZE ERROR 0 — LOW" [ref=f1e5780]:
+                - cell "cde_isactive_not_null CDE BronzeDB.br_categories Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page." [ref=f1e5781]:
+                  - text: cde_isactive_not_null
+                  - generic [ref=f1e5782]:
+                    - generic [ref=f1e5783]:
+                      - generic [ref=f1e5784]: CDE
+                      - generic [ref=f1e5785]: BronzeDB.br_categories
+                    - generic [ref=f1e5786]: Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page.
+                - cell "BRONZE" [ref=f1e5787]:
+                  - generic [ref=f1e5788]: BRONZE
+                - cell "ERROR" [ref=f1e5789]:
+                  - generic [ref=f1e5790]:
+                    - img [ref=f1e5791]
+                    - text: ERROR
+                - cell "0" [ref=f1e5793]
+                - cell "—" [ref=f1e5794]
+                - cell "LOW" [ref=f1e5795]:
+                  - generic [ref=f1e5796]: LOW
+                - cell [ref=f1e5798]:
+                  - button "Re-run this rule" [ref=f1e5800] [cursor=pointer]:
+                    - img [ref=f1e5801]
+              - row "source_category_id_positive BronzeDB.br_categories Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page. BRONZE ERROR 0 — MEDIUM" [ref=f1e5803]:
+                - cell "source_category_id_positive BronzeDB.br_categories Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page." [ref=f1e5804]:
+                  - text: source_category_id_positive
+                  - generic [ref=f1e5805]:
+                    - generic [ref=f1e5807]: BronzeDB.br_categories
+                    - generic [ref=f1e5808]: Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page.
+                - cell "BRONZE" [ref=f1e5809]:
+                  - generic [ref=f1e5810]: BRONZE
+                - cell "ERROR" [ref=f1e5811]:
+                  - generic [ref=f1e5812]:
+                    - img [ref=f1e5813]
+                    - text: ERROR
+                - cell "0" [ref=f1e5815]
+                - cell "—" [ref=f1e5816]
+                - cell "MEDIUM" [ref=f1e5817]:
+                  - generic [ref=f1e5818]: MEDIUM
+                - cell [ref=f1e5820]:
+                  - button "Re-run this rule" [ref=f1e5822] [cursor=pointer]:
+                    - img [ref=f1e5823]
+              - row "cde_status_not_null CDE BronzeDB.BrzLoadLog Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page. BRONZE ERROR 0 — CRITICAL" [ref=f1e5825]:
+                - cell "cde_status_not_null CDE BronzeDB.BrzLoadLog Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page." [ref=f1e5826]:
+                  - text: cde_status_not_null
+                  - generic [ref=f1e5827]:
+                    - generic [ref=f1e5828]:
+                      - generic [ref=f1e5829]: CDE
+                      - generic [ref=f1e5830]: BronzeDB.BrzLoadLog
+                    - generic [ref=f1e5831]: Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page.
+                - cell "BRONZE" [ref=f1e5832]:
+                  - generic [ref=f1e5833]: BRONZE
+                - cell "ERROR" [ref=f1e5834]:
+                  - generic [ref=f1e5835]:
+                    - img [ref=f1e5836]
+                    - text: ERROR
+                - cell "0" [ref=f1e5838]
+                - cell "—" [ref=f1e5839]
+                - cell "CRITICAL" [ref=f1e5840]:
+                  - generic [ref=f1e5841]: CRITICAL
+                - cell [ref=f1e5843]:
+                  - button "Re-run this rule" [ref=f1e5845] [cursor=pointer]:
+                    - img [ref=f1e5846]
+              - row "Brz_LoadedAtNotNullCheck BronzeDB.br_customers Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page. BRONZE ERROR 0 — LOW" [ref=f1e5848]:
+                - cell "Brz_LoadedAtNotNullCheck BronzeDB.br_customers Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page." [ref=f1e5849]:
+                  - text: Brz_LoadedAtNotNullCheck
+                  - generic [ref=f1e5850]:
+                    - generic [ref=f1e5852]: BronzeDB.br_customers
+                    - generic [ref=f1e5853]: Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page.
+                - cell "BRONZE" [ref=f1e5854]:
+                  - generic [ref=f1e5855]: BRONZE
+                - cell "ERROR" [ref=f1e5856]:
+                  - generic [ref=f1e5857]:
+                    - img [ref=f1e5858]
+                    - text: ERROR
+                - cell "0" [ref=f1e5860]
+                - cell "—" [ref=f1e5861]
+                - cell "LOW" [ref=f1e5862]:
+                  - generic [ref=f1e5863]: LOW
+                - cell [ref=f1e5865]:
+                  - button "Re-run this rule" [ref=f1e5867] [cursor=pointer]:
+                    - img [ref=f1e5868]
+              - row "cde_source_system_not_null CDE BronzeDB.br_categories Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page. BRONZE ERROR 0 — MEDIUM" [ref=f1e5870]:
+                - cell "cde_source_system_not_null CDE BronzeDB.br_categories Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page." [ref=f1e5871]:
+                  - text: cde_source_system_not_null
+                  - generic [ref=f1e5872]:
+                    - generic [ref=f1e5873]:
+                      - generic [ref=f1e5874]: CDE
+                      - generic [ref=f1e5875]: BronzeDB.br_categories
+                    - generic [ref=f1e5876]: Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page.
+                - cell "BRONZE" [ref=f1e5877]:
+                  - generic [ref=f1e5878]: BRONZE
+                - cell "ERROR" [ref=f1e5879]:
+                  - generic [ref=f1e5880]:
+                    - img [ref=f1e5881]
+                    - text: ERROR
+                - cell "0" [ref=f1e5883]
+                - cell "—" [ref=f1e5884]
+                - cell "MEDIUM" [ref=f1e5885]:
+                  - generic [ref=f1e5886]: MEDIUM
+                - cell [ref=f1e5888]:
+                  - button "Re-run this rule" [ref=f1e5890] [cursor=pointer]:
+                    - img [ref=f1e5891]
+          - generic [ref=f1e5893]:
+            - button "Download CSV" [ref=f1e5894] [cursor=pointer]:
+              - img [ref=f1e5895]
+              - text: Download CSV
+            - button "Share to Slack" [ref=f1e5898] [cursor=pointer]:
+              - img [ref=f1e5899]
+              - text: Share to Slack
+            - button "Review anomalies" [ref=f1e5906] [cursor=pointer]:
+              - text: Review anomalies
+              - img [ref=f1e5907]

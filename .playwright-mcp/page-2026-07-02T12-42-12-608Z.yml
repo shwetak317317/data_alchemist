@@ -1,0 +1,268 @@
+- generic [ref=f4e3]:
+  - complementary [ref=f4e4]:
+    - generic [ref=f4e5]:
+      - img [ref=f4e1606]
+      - generic [ref=f4e8]:
+        - generic [ref=f4e9]: DataTrust
+        - generic [ref=f4e10]: AGENTIC DQ PLATFORM
+    - generic [ref=f4e11] [cursor=pointer]:
+      - generic [ref=f4e12]: ⬡
+      - generic [ref=f4e13]:
+        - generic [ref=f4e14]: My Connection ofc
+        - generic [ref=f4e15]: Active connection
+      - img [ref=f4e1609]
+    - generic [ref=f4e17]:
+      - generic [ref=f4e18]: Workflow
+      - button "Workspace Home" [active] [ref=f4e19] [cursor=pointer]:
+        - img [ref=f4e1612]
+        - generic [ref=f4e21]: Workspace Home
+      - button "Profiling 1" [ref=f4e22] [cursor=pointer]:
+        - img [ref=f4e1617]
+        - generic [ref=f4e24]: Profiling
+        - generic [ref=f4e25]: "1"
+      - button "Dictionary & CDEs 2" [ref=f4e26] [cursor=pointer]:
+        - img [ref=f4e1624]
+        - generic [ref=f4e28]: Dictionary & CDEs
+        - generic [ref=f4e29]: "2"
+      - button "Rule Studio 3" [ref=f4e30] [cursor=pointer]:
+        - img [ref=f4e1627]
+        - generic [ref=f4e32]: Rule Studio
+        - generic [ref=f4e33]: "3"
+      - button "DQ Execution 4" [ref=f4e34] [cursor=pointer]:
+        - img [ref=f4e1630]
+        - generic [ref=f4e36]: DQ Execution
+        - generic [ref=f4e37]: "4"
+    - generic [ref=f4e38]:
+      - generic [ref=f4e39]: Monitoring
+      - button "Anomaly Inbox 1" [ref=f4e248] [cursor=pointer]:
+        - img [ref=f4e1633]
+        - generic [ref=f4e42]: Anomaly Inbox
+        - generic [ref=f4e254]: "1"
+      - button "Impact Graph" [ref=f4e43] [cursor=pointer]:
+        - img [ref=f4e1638]
+        - generic [ref=f4e45]: Impact Graph
+      - button "Trust Dashboard" [ref=f4e46] [cursor=pointer]:
+        - img [ref=f4e1643]
+        - generic [ref=f4e48]: Trust Dashboard
+    - generic [ref=f4e49]:
+      - generic [ref=f4e50]: Intelligence
+      - button "Pre-run Advisory" [ref=f4e51] [cursor=pointer]:
+        - img [ref=f4e1646]
+        - generic [ref=f4e53]: Pre-run Advisory
+      - button "Trust Receipt" [ref=f4e54] [cursor=pointer]:
+        - img [ref=f4e1649]
+        - generic [ref=f4e56]: Trust Receipt
+    - generic [ref=f4e57]:
+      - generic [ref=f4e58]: Admin
+      - button "Connections" [ref=f4e59] [cursor=pointer]:
+        - img [ref=f4e1651]
+        - generic [ref=f4e61]: Connections
+    - generic [ref=f4e62]:
+      - generic [ref=f4e63]: Operate
+      - button "Scenario Simulator" [ref=f4e64] [cursor=pointer]:
+        - img [ref=f4e1653]
+        - generic [ref=f4e66]: Scenario Simulator
+      - button "Task Board" [ref=f4e68] [cursor=pointer]:
+        - img [ref=f4e1658]
+        - generic [ref=f4e70]: Task Board
+      - button "Daily Summary" [ref=f4e71] [cursor=pointer]:
+        - img [ref=f4e1661]
+        - generic [ref=f4e73]: Daily Summary
+    - generic [ref=f4e74]:
+      - generic [ref=f4e76]: SK
+      - generic [ref=f4e78]:
+        - generic [ref=f4e79]: shweta katkar
+        - generic [ref=f4e80]: shweta.katkar@pal.tech
+      - button "Sign out" [ref=f4e81] [cursor=pointer]:
+        - img [ref=f4e1664]
+  - generic [ref=f4e83]:
+    - banner [ref=f4e84]:
+      - generic [ref=f4e85]:
+        - generic [ref=f4e86]:
+          - generic [ref=f4e87]: My Connection ofc
+          - generic [ref=f4e88]: /
+          - generic [ref=f4e89]: Workflow
+        - generic [ref=f4e90]: Workspace Home
+      - generic [ref=f4e91]: Pipeline · Issues detected
+      - generic [ref=f4e94]:
+        - generic [ref=f4e95]: TRUST SCORE
+        - generic [ref=f4e96]: 99/100
+      - button "Notifications" [ref=f4e97] [cursor=pointer]:
+        - img [ref=f4e1667]
+    - main [ref=f4e99]:
+      - generic [ref=f4e1670]:
+        - generic [ref=f4e1671]:
+          - generic [ref=f4e1672]:
+            - heading "Good evening, shweta." [level=1] [ref=f4e1673]
+            - generic [ref=f4e1674]:
+              - text: Thursday, July 2, 2026 · Last pipeline run
+              - strong [ref=f4e1675]: 12:39 PM
+          - generic [ref=f4e1676]:
+            - button "Open today's run" [ref=f4e1677] [cursor=pointer]:
+              - img [ref=f4e1678]
+              - text: Open today's run
+            - button "Live simulator" [ref=f4e1685] [cursor=pointer]:
+              - img [ref=f4e1686]
+              - text: Live simulator
+        - generic [ref=f4e1691]:
+          - generic [ref=f4e1692]:
+            - generic [ref=f4e1693]: Overall Trust
+            - generic [ref=f4e1694]:
+              - generic [ref=f4e1695]:
+                - img [ref=f4e1696]
+                - generic [ref=f4e1700]: "99"
+              - generic [ref=f4e1701]:
+                - generic [ref=f4e1702]:
+                  - img [ref=f4e1703]
+                  - text: +6 pts
+                - generic [ref=f4e1706]: vs yesterday (0)
+          - generic [ref=f4e1707]:
+            - generic [ref=f4e1708]: Open Issues
+            - generic [ref=f4e1709]:
+              - generic [ref=f4e1710]:
+                - generic [ref=f4e1712]: Critical
+                - generic [ref=f4e1713]: "1"
+              - generic [ref=f4e1714]:
+                - generic [ref=f4e1716]: High
+                - generic [ref=f4e1717]: "0"
+              - generic [ref=f4e1718]:
+                - generic [ref=f4e1720]: Medium
+                - generic [ref=f4e1721]: "0"
+          - generic [ref=f4e1722]:
+            - generic [ref=f4e1723]: Anomalies
+            - generic [ref=f4e1724]:
+              - generic [ref=f4e1725]:
+                - generic [ref=f4e1726]: "1"
+                - generic [ref=f4e1727]: Freshness gap
+              - button "Go to Anomaly Inbox →" [ref=f4e1728] [cursor=pointer]
+        - generic [ref=f4e1729]:
+          - generic [ref=f4e1730]:
+            - img [ref=f4e1731]
+            - generic [ref=f4e1736]: Layer scores
+            - generic [ref=f4e1737]: Medallion architecture
+          - generic [ref=f4e1738]:
+            - button "RAW — — Not profiled" [ref=f4e1739] [cursor=pointer]:
+              - generic [ref=f4e1740]:
+                - generic [ref=f4e1741]: RAW
+                - generic [ref=f4e1742]: —
+              - generic [ref=f4e1743]: —
+              - generic [ref=f4e1744]: Not profiled
+            - button "BRONZE 99/100 1 failing · 0 anomalies" [ref=f4e1745] [cursor=pointer]:
+              - generic [ref=f4e1746]:
+                - generic [ref=f4e1747]: BRONZE
+                - img [ref=f4e1748]
+              - generic [ref=f4e1750]: 99/100
+              - generic [ref=f4e1751]: 1 failing · 0 anomalies
+            - button "SILVER — — Not profiled" [ref=f4e1752] [cursor=pointer]:
+              - generic [ref=f4e1753]:
+                - generic [ref=f4e1754]: SILVER
+                - generic [ref=f4e1755]: —
+              - generic [ref=f4e1756]: —
+              - generic [ref=f4e1757]: Not profiled
+            - button "GOLD — — Not profiled" [ref=f4e1758] [cursor=pointer]:
+              - generic [ref=f4e1759]:
+                - generic [ref=f4e1760]: GOLD
+                - generic [ref=f4e1761]: —
+              - generic [ref=f4e1762]: —
+              - generic [ref=f4e1763]: Not profiled
+        - generic [ref=f4e1764]:
+          - generic [ref=f4e1765]:
+            - generic [ref=f4e1766]:
+              - img [ref=f4e1767]
+              - generic [ref=f4e1769]:
+                - generic [ref=f4e1770]: Recent activity
+                - generic [ref=f4e1771]: Live · My Connection ofc
+            - generic [ref=f4e1772]:
+              - generic [ref=f4e1773] [cursor=pointer]:
+                - generic [ref=f4e1774]: 12:24
+                - generic [ref=f4e1776]:
+                  - strong [ref=f4e1777]: shweta.katkar@pal.tech
+                  - text: · APPROVE · RULE · 37dd44e5-7b82-46cd-b8d2-4b077ba4b096
+                - img [ref=f4e1778]
+              - generic [ref=f4e1780] [cursor=pointer]:
+                - generic [ref=f4e1781]: 12:24
+                - generic [ref=f4e1783]:
+                  - strong [ref=f4e1784]: shweta.katkar@pal.tech
+                  - text: · APPROVE · RULE · a54e49a2-cbec-454b-8b36-c719a54df598
+                - img [ref=f4e1785]
+              - generic [ref=f4e1787] [cursor=pointer]:
+                - generic [ref=f4e1788]: 11:59
+                - generic [ref=f4e1790]:
+                  - strong [ref=f4e1791]: test@pal.tech
+                  - text: · REJECT · RULE · 62da44cd-ace1-4e8a-adf5-261e3a0b0c96
+                - img [ref=f4e1792]
+              - generic [ref=f4e1794] [cursor=pointer]:
+                - generic [ref=f4e1795]: 16:08
+                - generic [ref=f4e1797]:
+                  - strong [ref=f4e1798]: shweta.katkar@pal.tech
+                  - text: · simulation.inject · scenario · source
+                - img [ref=f4e1799]
+              - generic [ref=f4e1801] [cursor=pointer]:
+                - generic [ref=f4e1802]: 16:08
+                - generic [ref=f4e1804]:
+                  - strong [ref=f4e1805]: shweta.katkar@pal.tech
+                  - text: · simulation.remediate · simulation_run · 48f1bb84-1794-40a6-be18-54a3afd16899
+                - img [ref=f4e1806]
+              - generic [ref=f4e1808] [cursor=pointer]:
+                - generic [ref=f4e1809]: 16:08
+                - generic [ref=f4e1811]:
+                  - strong [ref=f4e1812]: shweta.katkar@pal.tech
+                  - text: · simulation.inject · scenario · segment
+                - img [ref=f4e1813]
+              - generic [ref=f4e1815] [cursor=pointer]:
+                - generic [ref=f4e1816]: 16:07
+                - generic [ref=f4e1818]:
+                  - strong [ref=f4e1819]: shweta.katkar@pal.tech
+                  - text: · simulation.remediate · simulation_run · b47293a4-720f-4d8e-85d6-fff3492afdfa
+                - img [ref=f4e1820]
+              - generic [ref=f4e1822] [cursor=pointer]:
+                - generic [ref=f4e1823]: 16:07
+                - generic [ref=f4e1825]:
+                  - strong [ref=f4e1826]: shweta.katkar@pal.tech
+                  - text: · simulation.inject · scenario · segment
+                - img [ref=f4e1827]
+          - generic [ref=f4e1829]:
+            - generic [ref=f4e1830]:
+              - img [ref=f4e1831]
+              - generic [ref=f4e1836]: Agentic workflow
+            - generic [ref=f4e1837]:
+              - generic [ref=f4e1838] [cursor=pointer]:
+                - img [ref=f4e1841]
+                - generic [ref=f4e1844]:
+                  - generic [ref=f4e1845]: Profiling
+                  - generic [ref=f4e1846]: Complete
+              - generic [ref=f4e1847] [cursor=pointer]:
+                - img [ref=f4e1850]
+                - generic [ref=f4e1853]:
+                  - generic [ref=f4e1854]: Dictionary & CDEs
+                  - generic [ref=f4e1855]: Complete
+              - generic [ref=f4e1856] [cursor=pointer]:
+                - img [ref=f4e1859]
+                - generic [ref=f4e1862]:
+                  - generic [ref=f4e1863]: Rule Studio
+                  - generic [ref=f4e1864]: Complete
+              - generic [ref=f4e1865] [cursor=pointer]:
+                - generic [ref=f4e1867]: "4"
+                - generic [ref=f4e1869]:
+                  - generic [ref=f4e1870]: DQ Execution
+                  - generic [ref=f4e1871]: In progress
+              - generic [ref=f4e1872] [cursor=pointer]:
+                - generic [ref=f4e1874]: "5"
+                - generic [ref=f4e1876]:
+                  - generic [ref=f4e1877]: Anomaly + Explain
+                  - generic [ref=f4e1878]: In progress
+              - generic [ref=f4e1879] [cursor=pointer]:
+                - generic [ref=f4e1881]: "6"
+                - generic [ref=f4e1882]:
+                  - generic [ref=f4e1883]: Trust Dashboard
+                  - generic [ref=f4e1884]: In progress
+            - generic [ref=f4e1885]:
+              - generic [ref=f4e1886]:
+                - generic [ref=f4e1887]: Tables profiled
+                - generic [ref=f4e1888]: "15"
+              - generic [ref=f4e1889]:
+                - generic [ref=f4e1890]: CDE health
+                - generic [ref=f4e1891]: 100%
+              - generic [ref=f4e1892]:
+                - generic [ref=f4e1893]: Open issues
+                - generic [ref=f4e1894]: "1"

@@ -15,6 +15,58 @@ logger = logging.getLogger(__name__)
 
 SEVERITY_WEIGHT = {"CRITICAL": 3, "HIGH": 2, "MEDIUM": 1, "LOW": 0.5}
 
+# The primary table is always aliased `t` in every query the executor builds. Two
+# invariants depend on this exact alias:
+#   1. Correlated subqueries: the rule prompts instruct the model to qualify the
+#      primary table's columns as t.Col inside any EXISTS/subquery. Without the
+#      alias, an unqualified outer reference binds to the SUBQUERY's table whenever
+#      the column name exists there too (standard SQL scoping) — which is the normal
+#      FK case and every self-reference case — turning the correlation predicate
+#      into a tautology (c.X = c.X) so the rule passes every row and orphaned FKs
+#      are never detected. Proven live before this fix.
+#   2. The dry-run validation gate in api/rules.py compiles candidate expressions
+#      with this same builder, so generation-time validation exactly matches
+#      execution-time behavior.
+PRIMARY_TABLE_ALIAS = "t"
+
+
+def build_rule_check_sql(tref: str, rule_expression: str, *, dry_run: bool = False) -> str:
+    """Build the fail-count query for a rule expression.
+
+    The expression is evaluated in a derived table's SELECT list (CASE WHEN), not
+    directly in WHERE, because the rule prompts mandate window-function shapes for
+    uniqueness/consistency/VOLUME rules (COUNT(*) OVER (PARTITION BY ...)) and no
+    dialect allows a window function in a WHERE clause — the old
+    `WHERE NOT (expr)` form made every such rule error at execution.
+
+    NULL semantics are deliberate and differ from the old form: CASE WHEN treats a
+    NULL-valued expression as a FAILURE (ELSE 0), whereas `WHERE NOT (expr)`
+    silently skipped NULL rows — a rule whose expression can't decide a row should
+    surface it, not vanish it.
+
+    dry_run=True adds WHERE 1=0 INSIDE the derived table: the database still
+    parses, binds, and validates the whole expression (columns, tables, syntax,
+    window placement) but scans no rows — used by the generation-time gate.
+    """
+    inner_filter = " WHERE 1=0" if dry_run else ""
+    return (
+        f"SELECT COUNT(*) FROM ("
+        f"SELECT CASE WHEN ({rule_expression}) THEN 1 ELSE 0 END AS __dq_pass "
+        f"FROM {tref} AS {PRIMARY_TABLE_ALIAS}{inner_filter}"
+        f") __dq WHERE __dq_pass = 0"
+    )
+
+
+def build_failed_sample_sql(tref: str, rule_expression: str, limit_style: str) -> str:
+    """Sample-failed-rows variant of build_rule_check_sql. limit_style: 'top' | 'limit'."""
+    inner = (
+        f"SELECT {PRIMARY_TABLE_ALIAS}.*, CASE WHEN ({rule_expression}) THEN 1 ELSE 0 END AS __dq_pass "
+        f"FROM {tref} AS {PRIMARY_TABLE_ALIAS}"
+    )
+    if limit_style == "top":
+        return f"SELECT TOP 20 * FROM ({inner}) __dq WHERE __dq_pass = 0"
+    return f"SELECT * FROM ({inner}) __dq WHERE __dq_pass = 0 LIMIT 20"
+
 
 def weighted_quality_score(results: list[RuleResult]) -> float:
     """Severity-weighted average quality score — the single definition of
@@ -49,23 +101,24 @@ def execute_rule(
         parts = table_fqn.rsplit(".", 1)
         tref = connector.table_ref(parts[0], parts[1]) if len(parts) == 2 else f'"{table_fqn}"'
 
-        fail_sql  = f"SELECT COUNT(*) FROM {tref} WHERE NOT ({rule_expression})"
+        fail_sql  = build_rule_check_sql(tref, rule_expression)
         total_sql = f"SELECT COUNT(*) FROM {tref}"
 
         total = int(connector.query_scalar(total_sql) or 0)
         failed = int(connector.query_scalar(fail_sql) or 0)
         fail_pct = round(failed / max(total, 1) * 100, 2)
 
-        # Sample failed records — try ANSI LIMIT first, fall back to TOP (SQL Server)
+        # Sample failed records — try TOP (SQL Server) first, fall back to ANSI LIMIT.
+        # __dq_pass is the wrapper's internal marker column, not table data — drop it.
         sample_rows = []
         for sample_sql in (
-            f"SELECT TOP 20 * FROM {tref} WHERE NOT ({rule_expression})",
-            f"SELECT * FROM {tref} WHERE NOT ({rule_expression}) LIMIT 20",
+            build_failed_sample_sql(tref, rule_expression, "top"),
+            build_failed_sample_sql(tref, rule_expression, "limit"),
         ):
             try:
                 sample_result = connector.query(sample_sql)
                 sample_rows = [
-                    dict(zip(sample_result.columns, row))
+                    {k: v for k, v in zip(sample_result.columns, row) if k != "__dq_pass"}
                     for row in sample_result.rows[:20]
                 ]
                 break
@@ -113,21 +166,31 @@ def execute_rule(
             quality_score=0,
             severity=severity,
             is_cde_rule=is_cde_rule,
-            remediation_suggestion=_safe_error_message(e),
+            remediation_suggestion=_safe_error_message(e, table_fqn=table_fqn, connector=connector),
         )
 
 
-def _safe_error_message(e: Exception) -> str:
+def _safe_error_message(e: Exception, table_fqn: str | None = None, connector=None) -> str:
     """User-facing summary of a rule execution failure — never the raw driver/DB
     exception text. The full exception is already logged server-side (see caller);
     this value is returned in the API response and must not leak SQL error detail,
-    which would hand an attacker an oracle for refining an injected rule_expression."""
+    which would hand an attacker an oracle for refining an injected rule_expression.
+
+    Permission denials are the one class that gets MORE detail, not less: the
+    table name and exact GRANT to request are what unblock the steward, and they
+    reveal nothing an attacker doesn't already know (the rule's own table)."""
+    from app.connectors.base import is_permission_error, permission_denied_message
     text = str(e).lower()
     if any(s in text for s in ("login timeout", "could not connect", "timeout expired",
                                 "cannot reach", "timed out", "connection refused")):
         return "Connection to the data source timed out or is unreachable. Check the connection's health on the Connections page."
-    if "login failed" in text or "authentication" in text or "access denied" in text or "permission" in text:
-        return "The connection's credentials do not have permission to run this rule. Check the connection's configuration."
+    if "login failed" in text or "authentication" in text:
+        return "The connection's login or password was rejected by the data source. Check the connection's credentials."
+    if is_permission_error(e):
+        login = None
+        if connector is not None:
+            login = getattr(connector, "_config", {}).get("username")
+        return permission_denied_message("select", table_fqn, login)
     return "This rule could not be executed due to a data source error. Check the connection's health, or contact support if the problem persists."
 
 

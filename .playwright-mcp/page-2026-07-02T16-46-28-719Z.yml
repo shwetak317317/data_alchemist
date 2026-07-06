@@ -1,0 +1,186 @@
+- generic [ref=e121]:
+  - complementary [ref=e122]:
+    - generic [ref=e123]:
+      - img [ref=e490]
+      - generic [ref=e128]:
+        - generic [ref=e129]: DataTrust
+        - generic [ref=e130]: AGENTIC DQ PLATFORM
+    - generic [ref=e131] [cursor=pointer]:
+      - generic [ref=e132]: ⬡
+      - generic [ref=e133]:
+        - generic [ref=e134]: My Connection ofc
+        - generic [ref=e135]: Active connection
+      - img [ref=e493]
+    - generic [ref=e139]:
+      - generic [ref=e140]: Workflow
+      - button "Workspace Home" [ref=e141] [cursor=pointer]:
+        - img [ref=e496]
+        - generic [ref=e147]: Workspace Home
+      - button "Profiling 1" [ref=e148] [cursor=pointer]:
+        - img [ref=e501]
+        - generic [ref=e156]: Profiling
+        - generic [ref=e157]: "1"
+      - button "Dictionary & CDEs 2" [ref=e158] [cursor=pointer]:
+        - img [ref=e508]
+        - generic [ref=e162]: Dictionary & CDEs
+        - generic [ref=e163]: "2"
+      - button "Rule Studio 3" [ref=e164] [cursor=pointer]:
+        - img [ref=e511]
+        - generic [ref=e168]: Rule Studio
+        - generic [ref=e169]: "3"
+      - button "DQ Execution 4" [ref=e170] [cursor=pointer]:
+        - img [ref=e514]
+        - generic [ref=e174]: DQ Execution
+        - generic [ref=e175]: "4"
+    - generic [ref=e176]:
+      - generic [ref=e177]: Monitoring
+      - button "Anomaly Inbox 1" [ref=e178] [cursor=pointer]:
+        - img [ref=e517]
+        - generic [ref=e184]: Anomaly Inbox
+        - generic [ref=e185]: "1"
+      - button "Impact Graph" [ref=e186] [cursor=pointer]:
+        - img [ref=e522]
+        - generic [ref=e192]: Impact Graph
+      - button "Trust Dashboard" [ref=e193] [cursor=pointer]:
+        - img [ref=e527]
+        - generic [ref=e197]: Trust Dashboard
+    - generic [ref=e198]:
+      - generic [ref=e199]: Intelligence
+      - button "Pre-run Advisory" [ref=e200] [cursor=pointer]:
+        - img [ref=e530]
+        - generic [ref=e204]: Pre-run Advisory
+      - button "Trust Receipt" [ref=e205] [cursor=pointer]:
+        - img [ref=e533]
+        - generic [ref=e208]: Trust Receipt
+    - generic [ref=e209]:
+      - generic [ref=e210]: Admin
+      - button "Connections" [active] [ref=e211] [cursor=pointer]:
+        - img [ref=e535]
+        - generic [ref=e214]: Connections
+    - generic [ref=e215]:
+      - generic [ref=e216]: Operate
+      - button "Scenario Simulator" [ref=e217] [cursor=pointer]:
+        - img [ref=e537]
+        - generic [ref=e223]: Scenario Simulator
+      - button "Task Board" [ref=e225] [cursor=pointer]:
+        - img [ref=e542]
+        - generic [ref=e229]: Task Board
+      - button "Daily Summary" [ref=e230] [cursor=pointer]:
+        - img [ref=e545]
+        - generic [ref=e234]: Daily Summary
+    - generic [ref=e235]:
+      - generic [ref=e237]: SK
+      - generic [ref=e239]:
+        - generic [ref=e240]: shweta katkar
+        - generic [ref=e241]: shweta.katkar@pal.tech
+      - button "Sign out" [ref=e242] [cursor=pointer]:
+        - img [ref=e548]
+  - generic [ref=e246]:
+    - banner [ref=e247]:
+      - generic [ref=e248]:
+        - generic [ref=e249]:
+          - generic [ref=e250]: My Connection ofc
+          - generic [ref=e251]: /
+          - generic [ref=e252]: Workflow
+        - generic [ref=e253]: Connections
+      - generic [ref=e254]: Pipeline · Issues detected
+      - generic [ref=e257]:
+        - generic [ref=e258]: TRUST SCORE
+        - generic [ref=e259]: 90/100
+      - button "Notifications" [ref=e260] [cursor=pointer]:
+        - img [ref=e551]
+    - main [ref=e264]:
+      - generic [ref=e554]:
+        - generic [ref=e556]:
+          - img [ref=e557]
+          - generic [ref=e559]:
+            - generic [ref=e560]: Connections
+            - generic [ref=e561]: Data platforms DataTrust monitors. Checks run in-warehouse — your data is never copied out.
+          - button "Add connection" [ref=e562] [cursor=pointer]:
+            - img [ref=e563]
+            - text: Add connection
+        - generic [ref=e564]:
+          - generic [ref=e566]:
+            - generic [ref=e567]:
+              - generic [ref=e568]: ⬡
+              - generic [ref=e569]:
+                - generic [ref=e570]:
+                  - generic [ref=e571]:
+                    - generic [ref=e572]: My Connection demo
+                    - button "Rename connection" [ref=e573] [cursor=pointer]:
+                      - img [ref=e574]
+                  - generic [ref=e577]: production
+                  - generic [ref=e578]: Connected
+                - generic [ref=e580]: 192.168.1.3
+              - generic [ref=e581]:
+                - button "Use this" [ref=e582] [cursor=pointer]:
+                  - img [ref=e583]
+                  - text: Use this
+                - button "Edit schemas" [ref=e586] [cursor=pointer]:
+                  - img [ref=e587]
+                  - text: Edit schemas
+                - button "Edit credentials" [ref=e591] [cursor=pointer]:
+                  - img [ref=e592]
+                  - text: Edit credentials
+                - button "Sync" [ref=e595] [cursor=pointer]:
+                  - img [ref=e596]
+                  - text: Sync
+                - button "Delete connection" [ref=e601] [cursor=pointer]:
+                  - img [ref=e602]
+            - generic [ref=e605]:
+              - generic [ref=e606]:
+                - generic [ref=e607]: Schemas
+                - generic [ref=e608]: "3"
+              - generic [ref=e609]:
+                - generic [ref=e610]: Tables
+                - generic [ref=e611]: "54"
+              - generic [ref=e612]:
+                - generic [ref=e613]: Auth
+                - generic [ref=e614]: sql auth
+              - generic [ref=e615]:
+                - generic [ref=e616]: Last sync
+                - generic [ref=e617]: 03:52 PM
+          - generic [ref=e619]:
+            - generic [ref=e620]:
+              - generic [ref=e621]: ⬡
+              - generic [ref=e622]:
+                - generic [ref=e623]:
+                  - generic [ref=e624]:
+                    - generic [ref=e625]: My Connection ofc
+                    - button "Rename connection" [ref=e626] [cursor=pointer]:
+                      - img [ref=e627]
+                  - generic [ref=e630]: production
+                  - generic [ref=e631]: Connected
+                  - generic [ref=e633]: Active
+                - generic [ref=e635]: 10.10.97.36
+              - generic [ref=e636]:
+                - button "Edit schemas" [ref=e637] [cursor=pointer]:
+                  - img [ref=e638]
+                  - text: Edit schemas
+                - button "Edit credentials" [ref=e642] [cursor=pointer]:
+                  - img [ref=e643]
+                  - text: Edit credentials
+                - button "Sync" [ref=e646] [cursor=pointer]:
+                  - img [ref=e647]
+                  - text: Sync
+                - button "Delete connection" [ref=e652] [cursor=pointer]:
+                  - img [ref=e653]
+            - generic [ref=e656]:
+              - generic [ref=e657]:
+                - generic [ref=e658]: Schemas
+                - generic [ref=e659]: "3"
+              - generic [ref=e660]:
+                - generic [ref=e661]: Tables
+                - generic [ref=e662]: "15"
+              - generic [ref=e663]:
+                - generic [ref=e664]: Auth
+                - generic [ref=e665]: sql auth
+              - generic [ref=e666]:
+                - generic [ref=e667]: Last sync
+                - generic [ref=e668]: 08:25 AM
+        - generic [ref=e669]:
+          - img [ref=e670]
+          - generic [ref=e673]: All connections use least-privilege read roles. Credentials are encrypted (AES-256) in your tenant secret manager and rotated every 90 days.
+          - button "View access log" [ref=e674] [cursor=pointer]:
+            - img [ref=e675]
+            - text: View access log

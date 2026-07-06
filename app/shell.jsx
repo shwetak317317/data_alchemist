@@ -5,6 +5,32 @@ window.DTContext = React.createContext(null);
 const useApp = () => React.useContext(window.DTContext);
 window.useApp = useApp;
 
+// lucide.createIcons() REPLACES every <i data-lucide> with an <svg>, removing DOM
+// nodes React still tracks. When React later unmounts or reorders such a node,
+// Node.removeChild/insertBefore throws NotFoundError and the whole screen dies to
+// the error boundary below (seen live: Connections crashed with "This screen hit an
+// unexpected error" right after saving edited credentials — the closing edit panel
+// unmounts a subtree whose icons lucide had already swapped out). Make both
+// operations tolerant of an already-replaced child: removing a node that is no
+// longer ours is a no-op, and inserting before a vanished reference appends
+// instead. Same class of guard as the well-known Google-Translate/React fix —
+// appropriate here because a no-build Babel SPA can't wrap lucide in React-owned
+// components.
+(function tolerateThirdPartyDomMutation() {
+  if (typeof Node === "undefined" || Node.prototype.__dtDomPatched) return;
+  Node.prototype.__dtDomPatched = true;
+  const origRemoveChild = Node.prototype.removeChild;
+  Node.prototype.removeChild = function (child) {
+    if (child && child.parentNode !== this) return child;
+    return origRemoveChild.call(this, child);
+  };
+  const origInsertBefore = Node.prototype.insertBefore;
+  Node.prototype.insertBefore = function (newNode, refNode) {
+    if (refNode && refNode.parentNode !== this) return origInsertBefore.call(this, newNode, null);
+    return origInsertBefore.call(this, newNode, refNode);
+  };
+})();
+
 // re-render lucide icons after paint
 function useIcons(dep) {
   React.useEffect(() => { if (window.lucide) window.lucide.createIcons(); });
@@ -22,8 +48,14 @@ class ScreenErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ padding: 24, background: "var(--red-50)", border: "1px solid var(--red-200)", borderRadius: 10, fontSize: 13, color: "var(--red-700)" }}>
-          This screen hit an unexpected error and could not render. Try switching screens and coming back.
+        <div style={{ padding: 24, background: "var(--red-50)", border: "1px solid var(--red-200)", borderRadius: 10, fontSize: 13, color: "var(--red-700)",
+          display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+          <span>This screen hit an unexpected error and could not render.</span>
+          <button onClick={() => this.setState({ hasError: false })}
+            style={{ fontSize: 12.5, fontWeight: 600, color: "var(--red-700)", background: "#fff",
+              border: "1px solid var(--red-200)", borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>
+            Reload this screen
+          </button>
         </div>
       );
     }
@@ -177,7 +209,7 @@ const Sidebar = () => {
 
 // ---------- TopBar ----------
 const TopBar = () => {
-  const { route, trustScore, pipeline, activeConnectionName } = useApp();
+  const { route, trustScore, pipeline, activeConnectionName, backgroundJobs, go } = useApp();
   const meta = NAV.flatMap(g => g.items).find(i => i.id === route) || {};
   const pipMap = {
     ISSUES:      ["var(--red-500)", "var(--red-50)", "Issues detected"],
@@ -199,6 +231,17 @@ const TopBar = () => {
         </div>
         <div style={{ fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 700, letterSpacing: "-0.01em" }}>{meta.label || "Workspace"}</div>
       </div>
+
+      {backgroundJobs && backgroundJobs.length > 0 && (
+        <div onClick={() => go("rules")} title="Click to jump back to Rule Studio"
+          style={{ display: "flex", alignItems: "center", gap: 7, padding: "6px 11px", borderRadius: 999,
+            background: "var(--brand-soft)", fontSize: 12, fontWeight: 600, color: "var(--brand)", cursor: "pointer" }}>
+          <span className="dt-spin" style={{ width: 10, height: 10, border: "1.5px solid var(--brand-ring)",
+            borderTopColor: "var(--brand)", borderRadius: "50%", display: "inline-block" }}></span>
+          {backgroundJobs[0].label}{backgroundJobs[0].total ? ` ${backgroundJobs[0].done}/${backgroundJobs[0].total}` : ""}
+          {backgroundJobs.length > 1 ? ` (+${backgroundJobs.length - 1} more)` : ""}
+        </div>
+      )}
 
       <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "6px 11px", borderRadius: 999,
         background: pbg, fontSize: 12, fontWeight: 600, color: pc }}>
@@ -251,7 +294,19 @@ function App() {
   const [stage, setStage] = React.useState(() => {
     try { return JSON.parse(sessionStorage.getItem('dt_user') || '{}').name ? "app" : "login"; } catch { return "login"; }
   });
-  const [route, setRoute] = React.useState("home");
+  // Restore the last screen on reload — this is a client-side-only routed SPA (no
+  // per-screen URL), so a plain useState("home") meant hitting refresh mid-workflow
+  // always dumped you back to Workspace Home, discarding your place. sessionStorage
+  // (not localStorage) so it survives a same-tab reload but still starts fresh next
+  // time the tab/browser is actually closed. Validated against NAV so a stale id from
+  // an older app version can't render a permanent "Screen not found".
+  const [route, setRoute] = React.useState(() => {
+    try {
+      const saved = sessionStorage.getItem("dt_route");
+      const validIds = NAV.flatMap(g => g.items.map(it => it.id));
+      return saved && validIds.includes(saved) ? saved : "home";
+    } catch { return "home"; }
+  });
   const [trustScore, setTrustScore] = React.useState(69);
   const [pipeline, setPipeline] = React.useState("ISSUES");
   const [ruleDecisions, setRuleDecisions] = React.useState({});
@@ -269,8 +324,21 @@ function App() {
   const [datasets, setDatasets] = React.useState([]);
   const [datasetsLoading, setDatasetsLoading] = React.useState(false);
   const [openAnomalyCount, setOpenAnomalyCount] = React.useState(null);
+  // Background jobs (e.g. "Generate all tables" in Rule Studio) that should keep
+  // running and stay visible even if the user navigates to a different screen —
+  // the async work itself already survives navigation (it's a plain in-flight
+  // promise chain, not tied to the component's DOM), but without this the
+  // progress indicator disappeared, making it look like the job died.
+  const [backgroundJobs, setBackgroundJobs] = React.useState([]); // [{id, label, done, total}]
+  const startJob = (id, label) => setBackgroundJobs(jobs => [...jobs.filter(j => j.id !== id), { id, label, done: 0, total: 0 }]);
+  const updateJob = (id, patch) => setBackgroundJobs(jobs => jobs.map(j => j.id === id ? { ...j, ...patch } : j));
+  const endJob = (id) => setBackgroundJobs(jobs => jobs.filter(j => j.id !== id));
 
-  const go = (r) => { setRoute(r); const s = document.getElementById("dt-scroll"); if (s) s.scrollTop = 0; };
+  const go = (r) => {
+    setRoute(r);
+    try { sessionStorage.setItem("dt_route", r); } catch (_) {}
+    const s = document.getElementById("dt-scroll"); if (s) s.scrollTop = 0;
+  };
 
   const setActiveConn = (id, name, platform) => {
     setActiveConnectionId(id || null);
@@ -352,6 +420,7 @@ function App() {
     lastRunId, setLastRunId,
     datasets, setDatasets, datasetsLoading, refreshDatasets,
     openAnomalyCount, refreshAnomalyCount,
+    backgroundJobs, startJob, updateJob, endJob,
   };
 
   useIcons();

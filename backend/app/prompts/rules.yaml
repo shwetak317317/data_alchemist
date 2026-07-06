@@ -13,23 +13,61 @@ recommend_rules:
     SQL dialect: {{ sql_dialect }}
 
     SQL dialect notes:
-    - sqlserver: Use YEAR(col), MONTH(col), LEN(col), ISNULL(col, x), CHARINDEX, PATINDEX — NOT EXTRACT, DATE_TRUNC, LENGTH, COALESCE with 3+ args
+    - sqlserver: Use YEAR(col), MONTH(col), LEN(col), ISNULL(col, x) ONLY as a value-substitution/coalesce
+      function (like COALESCE), CHARINDEX, PATINDEX — NOT EXTRACT, DATE_TRUNC, LENGTH, COALESCE with 3+ args
     - postgresql: Use EXTRACT(YEAR FROM col), DATE_TRUNC, LENGTH, COALESCE
     - snowflake: Use YEAR(col), LENGTH(col), IFF, ZEROIFNULL
     - databricks: Use YEAR(col), LENGTH(col), IFNULL
     - duckdb: Use EXTRACT(YEAR FROM col), LENGTH(col), COALESCE
     Write rule_expression in the dialect above. Do NOT mix dialects.
 
-    Column statistics:
+    NULL_CHECK rule_expression MUST be `column IS NOT NULL` — nothing else.
+      WRONG: `ISNULL(column, sentinel) = sentinel` (or IFNULL/COALESCE/ZEROIFNULL the same way) —
+      this is TRUE exactly when column IS NULL, the opposite of "passing". Do not use it, ever.
+    Every AND/OR operand must be a real boolean comparison — never AND/OR two bare
+    ISNULL/IFNULL/COALESCE calls directly (e.g. `ISNULL(a,0) AND ISNULL(b,0)` is invalid SQL).
+
+    Column references: the executor evaluates rule_expression with this table aliased as `t`
+    (conceptually `SELECT ... CASE WHEN (rule_expression) THEN 1 ELSE 0 END ... FROM <table> AS t`).
+    At the top level use bare column names — never `[dbo].[Col]`, `[{{ table_fqn }}].[Col]`, or any
+    schema-qualified form. Inside any subquery (e.g. a self-referencing EXISTS), you MUST qualify
+    THIS table's columns as `t.Col` and give the subquery's table its own different alias — an
+    unqualified name inside a subquery binds to the SUBQUERY's table when the column exists there
+    too, silently breaking the correlation. Never use `t` as a subquery alias.
+    Window functions (COUNT(*) OVER (...)) ARE allowed in rule_expression.
+
+    Column statistics (min_val/max_val/top_values/has_duplicates are REAL observed values):
     {{ col_summary_json }}
 
     Top risks detected:
     {{ risk_lines }}
 
-    Generate 5–15 DQ rules prioritised by severity.
-    Write SQL expressions that run directly on the table — rule_expression must return TRUE for
-    passing rows and FALSE for failing rows.
-    CDE columns must each get at least one rule.
+    Generate 5–10 DQ rules prioritised by severity, TRUE=pass/FALSE=fail. Keep each
+    rule_description under 15 words.
+    CDE columns need more than a null check — add a RANGE (from min_val/max_val) or FORMAT rule too
+    when the type/stats support one.
+
+    Ground rules in the REAL stats, copying these shapes literally rather than inventing variants:
+    - RANGE: bounds from min_val/max_val — never invent numbers if they're absent.
+    - ENUM (top_values is a small closed set): `col IN ('v1', 'v2', 'v3')` — list EVERY top_value,
+      nothing invented. If nulls should pass this rule: `col IS NULL OR col IN (...)`. Never an
+      OR-chain of equality checks, never bolt on `<> ''` instead of the IN list.
+    - Uniqueness (has_duplicates=true, cardinality_ratio≈1.0, or a composite natural key): EXACTLY
+      `COUNT(*) OVER (PARTITION BY col) = 1` (or `PARTITION BY col_a, col_b` for composite) — never
+      a subquery or MAX-of-grouped-counts variant.
+    - format_pattern='MIXED' → almost always deserves a FORMAT rule.
+
+    Look across columns for cross-column rules too (quantity×price=total; end-date >= start-date;
+    a status implying another column's nullability; an SCD is_current flag that should be true for
+    exactly one row per natural key; a denormalized snapshot column that should stay consistent for
+    a given key, e.g. every row with the same CustomerID should show the same CustomerName —
+    `COUNT(DISTINCT CustomerName) OVER (PARTITION BY CustomerID) = 1`, same window-function shape
+    as uniqueness, never a self-join) — set column_name to null for these table-level rules.
+    Don't propose two rules catching the same failure mode in different wording.
+
+    VOLUME rule_type = a single-scan row-count check only (e.g.
+    `COUNT(*) OVER (PARTITION BY BatchID) >= 10`) — never a check against a previous run's count,
+    since this rule has no access to historical data. Skip VOLUME if you don't have one of these.
 
     Return JSON matching this schema exactly:
     {"rules": [
@@ -45,6 +83,90 @@ recommend_rules:
     ]}
 
 
+cross_table_rules:
+  system: *system
+
+  user: |
+    Primary table: {{ table_fqn }}  Layer: {{ layer }}
+    SQL dialect: {{ sql_dialect }}
+
+    SQL dialect notes:
+    - sqlserver: Use YEAR(col), MONTH(col), LEN(col), ISNULL(col, x) ONLY as a value-substitution/coalesce
+      function (like COALESCE) — NOT EXTRACT, DATE_TRUNC, LENGTH
+    - postgresql: Use EXTRACT(YEAR FROM col), DATE_TRUNC, LENGTH, COALESCE
+    - snowflake: Use YEAR(col), LENGTH(col), IFF, ZEROIFNULL
+    - databricks: Use YEAR(col), LENGTH(col), IFNULL
+    - duckdb: Use EXTRACT(YEAR FROM col), LENGTH(col), COALESCE
+
+    Primary table's columns (name: type):
+    {{ primary_columns }}
+
+    Other tables available in this connection (name: type per table):
+    {{ sibling_tables }}
+
+    Find plausible RELATIONSHIPS between the primary table and the other tables listed above —
+    a foreign-key column on the primary table whose value should always exist as a key in another
+    table (e.g. primary.CustomerID should exist in Customers.CustomerID), or a cross-table
+    consistency check (e.g. a total on the primary table should not exceed a limit on a related
+    table). Only propose a relationship where the column names/types make the match plausible —
+    do not invent a relationship between unrelated columns just to have something to report.
+    Propose one rule per genuinely plausible relationship you find — don't pad the list with
+    weak or speculative matches, and don't skip a real relationship to stay under some count.
+    Keep each rule_description under 20 words.
+
+    Where a sibling column is marked "unique" above, that's a strong signal it's the primary
+    key/natural key side of the relationship (the side your EXISTS subquery should match against);
+    "has duplicates" means it's more likely a foreign key or attribute column, not a lookup target.
+
+    Composite key match (e.g. RegionCode+StoreID together identify a Stores row): check ALL
+    matching columns in the same EXISTS (`c.RegionCode = t.RegionCode AND c.StoreID = t.StoreID`),
+    not just one. Also consider AGGREGATE consistency (a total/count on the primary side should
+    match a SUM/COUNT from a related header/detail table) and the REVERSE direction (every primary
+    row should have a matching related row, e.g. `EXISTS (SELECT 1 FROM [Sales].[OrderLines] l WHERE
+    l.OrderID = t.OrderID)`), not just "does my FK exist elsewhere". Only match compatible column
+    types (INT vs VARCHAR keys can misbehave depending on dialect).
+
+    If the only plausible match is back to the PRIMARY table itself (a self-referencing hierarchy,
+    e.g. ParentCategoryID → another row's CategoryID in this SAME table), that's valid but NOT
+    cross-table — return it with "related_table_fqn" set to null and say so in the description. In
+    any subquery's FROM/JOIN, spell every table name EXACTLY as given above (primary or sibling) —
+    never rename, re-case, or invent a variant (e.g. don't write `Brz_Categories` when you were
+    given `br_categories`) — a wrong table name fails at execution, not just review.
+
+    Write each rule to run standalone against the PRIMARY table only. The executor aliases the
+    primary table as `t` (conceptually `... FROM <primary table> AS t`) — reference its columns by
+    bare name at the top level, and as `t.Col` INSIDE any subquery. To check against another table,
+    use an EXISTS subquery that names the other table explicitly, exactly as it appears above
+    (schema-qualified, in the dialect's quoting style), with its own alias (never `t`), e.g.:
+    `[CustomerID] IS NULL OR EXISTS (SELECT 1 FROM [Sales].[Customers] c WHERE c.[CustomerID] = t.[CustomerID])`
+    The `t.` qualifier on the primary side of the correlation is MANDATORY — writing
+    `c.[CustomerID] = [CustomerID]` makes the unqualified reference bind to `c` itself (both tables
+    have the column), so the comparison is always true and the rule can never catch an orphaned row.
+    (Allowing NULL to pass here is deliberate — a missing FK value is a separate NULL_CHECK rule's
+    job, not this one's; don't make this rule fail rows a NULL_CHECK rule already covers.
+    WRONG: `[CustomerID] IS NOT NULL AND EXISTS (...)` — that fails every row where the FK is NULL,
+    the exact opposite of the required null-pass behavior. Always `IS NULL OR EXISTS`.)
+
+    If no plausible cross-table relationship exists given the columns provided, return an empty
+    "rules" array — do not fabricate one. Do not repeat the null-check-inversion or
+    invalid-boolean-combination mistakes described for single-table rules: use `column IS NOT NULL`
+    for null tests, never `ISNULL(x,s)=s`; never AND/OR two bare value-substitution calls together.
+
+    Return JSON matching this schema exactly:
+    {"rules": [
+      {
+        "rule_name": "snake_case_name",
+        "rule_description": "plain English description mentioning both tables (or, for a self-reference, saying so explicitly)",
+        "column_name": "the primary table's FK column, or null",
+        "related_table_fqn": "the other table this rule checks against, or null if this is a same-table self-reference",
+        "rule_expression": "SQL returning TRUE=pass FALSE=fail, runnable standalone against the primary table",
+        "rule_type": "FK",
+        "severity": "CRITICAL|HIGH|MEDIUM|LOW",
+        "is_cde_rule": false
+      }
+    ]}
+
+
 nl_to_rule:
   system: *system
 
@@ -53,12 +175,29 @@ nl_to_rule:
     SQL dialect: {{ sql_dialect }}
 
     SQL dialect notes:
-    - sqlserver: Use YEAR(col), MONTH(col), LEN(col), ISNULL(col, x), CHARINDEX — NOT EXTRACT, DATE_TRUNC, LENGTH
+    - sqlserver: Use YEAR(col), MONTH(col), LEN(col), ISNULL(col, x) ONLY as a value-substitution/coalesce
+      function (like COALESCE), CHARINDEX — NOT EXTRACT, DATE_TRUNC, LENGTH
     - postgresql: Use EXTRACT(YEAR FROM col), DATE_TRUNC, LENGTH, COALESCE
     - snowflake: Use YEAR(col), LENGTH(col), IFF, ZEROIFNULL
     - databricks: Use YEAR(col), LENGTH(col), IFNULL
     - duckdb: Use EXTRACT(YEAR FROM col), LENGTH(col), COALESCE
     Write rule_expression in the dialect above.
+
+    NULL_CHECK rule_expression MUST be `column IS NOT NULL` — nothing else. NEVER write
+    `ISNULL(column, sentinel) = sentinel` (or the IFNULL/COALESCE/ZEROIFNULL equivalent) — that
+    pattern is TRUE exactly when the column IS null, the opposite of "passing", and silently
+    inverts every row's pass/fail result. Double-check this before returning your answer.
+
+    Column references — critical, get this exactly right:
+    the executor evaluates rule_expression against this table aliased as `t` (conceptually
+    `... FROM <this table> AS t`). At the top level reference every column by its BARE name only —
+    e.g. `CategoryKey`, never `[dbo].[CategoryKey]`, `[{{ table_fqn }}].[CategoryKey]`, or any
+    schema/table/catalog-qualified form — `{{ table_fqn }}` is this app's internal display label,
+    not a real qualified SQL identifier, so quoting it verbatim (or prefixing a guessed schema like
+    `dbo`) produces an invalid reference. INSIDE any subquery (EXISTS or otherwise), qualify THIS
+    table's columns as `t.Col` and give the subquery's table its own different alias — an
+    unqualified name inside a subquery binds to the subquery's table when the column exists there
+    too, silently breaking the correlation. Window functions (COUNT(*) OVER (...)) are allowed.
 
     {% if known_columns %}
     Known columns on this table, verified from the data dictionary (name: type):
@@ -78,10 +217,14 @@ nl_to_rule:
 
     If the requirement clearly does not correspond to any column in the list above,
     or is ambiguous, or is self-contradictory (e.g. asks for a value to be both always
-    null and never empty), do NOT guess or fabricate an expression. Instead set
-    "unresolved": true, explain why in "unresolved_reason", and still fill the other
-    fields with your best-effort guess so a human can edit it — but the human must be
-    warned it needs review.
+    null and never empty), or describes a concept/entity/process that has no plausible
+    mapping onto any column or combination of columns in the list above (e.g. a business
+    term, device, or process the table's schema has no way to represent), do NOT guess
+    or fabricate an expression. Instead set "unresolved": true, explain why in
+    "unresolved_reason", and still fill the other fields with your best-effort guess so
+    a human can edit it — but the human must be warned it needs review. When unresolved
+    is true, never set severity to CRITICAL and never set is_cde_rule to true — an
+    unverifiable, best-effort guess must never look as authoritative as a grounded rule.
 
     Return JSON matching this schema exactly:
     {

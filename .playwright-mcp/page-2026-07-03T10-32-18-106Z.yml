@@ -1,0 +1,266 @@
+- generic [ref=e129]:
+  - complementary [ref=e130]:
+    - generic [ref=e131]:
+      - img [ref=e4134]
+      - generic [ref=e136]:
+        - generic [ref=e137]: DataTrust
+        - generic [ref=e138]: AGENTIC DQ PLATFORM
+    - generic [ref=e139] [cursor=pointer]:
+      - generic [ref=e140]: ⬡
+      - generic [ref=e141]:
+        - generic [ref=e142]: My Connection demo
+        - generic [ref=e143]: Active connection
+      - img [ref=e4137]
+    - generic [ref=e147]:
+      - generic [ref=e148]: Workflow
+      - button "Workspace Home" [ref=e149] [cursor=pointer]:
+        - img [ref=e4140]
+        - generic [ref=e155]: Workspace Home
+      - button "Profiling 1" [ref=e156] [cursor=pointer]:
+        - img [ref=e4145]
+        - generic [ref=e164]: Profiling
+        - generic [ref=e165]: "1"
+      - button "Dictionary & CDEs 2" [ref=e166] [cursor=pointer]:
+        - img [ref=e4152]
+        - generic [ref=e170]: Dictionary & CDEs
+        - generic [ref=e171]: "2"
+      - button "Rule Studio 3" [ref=e172] [cursor=pointer]:
+        - img [ref=e4155]
+        - generic [ref=e176]: Rule Studio
+        - generic [ref=e177]: "3"
+      - button "DQ Execution 4" [ref=e178] [cursor=pointer]:
+        - img [ref=e4158]
+        - generic [ref=e182]: DQ Execution
+        - generic [ref=e183]: "4"
+    - generic [ref=e184]:
+      - generic [ref=e185]: Monitoring
+      - button "Anomaly Inbox 26" [ref=e2331] [cursor=pointer]:
+        - img [ref=e4161]
+        - generic [ref=e192]: Anomaly Inbox
+        - generic [ref=e2337]: "26"
+      - button "Impact Graph" [ref=e194] [cursor=pointer]:
+        - img [ref=e4166]
+        - generic [ref=e200]: Impact Graph
+      - button "Trust Dashboard" [ref=e201] [cursor=pointer]:
+        - img [ref=e4171]
+        - generic [ref=e205]: Trust Dashboard
+    - generic [ref=e206]:
+      - generic [ref=e207]: Intelligence
+      - button "Pre-run Advisory" [ref=e208] [cursor=pointer]:
+        - img [ref=e4174]
+        - generic [ref=e212]: Pre-run Advisory
+      - button "Trust Receipt" [ref=e213] [cursor=pointer]:
+        - img [ref=e4177]
+        - generic [ref=e216]: Trust Receipt
+    - generic [ref=e217]:
+      - generic [ref=e218]: Admin
+      - button "Connections" [ref=e219] [cursor=pointer]:
+        - img [ref=e4179]
+        - generic [ref=e222]: Connections
+    - generic [ref=e223]:
+      - generic [ref=e224]: Operate
+      - button "Scenario Simulator" [ref=e225] [cursor=pointer]:
+        - img [ref=e4181]
+        - generic [ref=e231]: Scenario Simulator
+      - button "Task Board" [ref=e233] [cursor=pointer]:
+        - img [ref=e4186]
+        - generic [ref=e237]: Task Board
+      - button "Daily Summary" [ref=e238] [cursor=pointer]:
+        - img [ref=e4189]
+        - generic [ref=e242]: Daily Summary
+    - generic [ref=e243]:
+      - generic [ref=e245]: TA
+      - generic [ref=e247]:
+        - generic [ref=e248]: Test Admin
+        - generic [ref=e249]: test@pal.tech
+      - button "Sign out" [ref=e250] [cursor=pointer]:
+        - img [ref=e4192]
+  - generic [ref=e254]:
+    - banner [ref=e255]:
+      - generic [ref=e256]:
+        - generic [ref=e257]:
+          - generic [ref=e258]: My Connection demo
+          - generic [ref=e259]: /
+          - generic [ref=e260]: Workflow
+        - generic [ref=e261]: Connections
+      - generic [ref=e262]: Pipeline · Issues detected
+      - generic [ref=e265]:
+        - generic [ref=e266]: TRUST SCORE
+        - generic [ref=e267]: 0/100
+      - button "Notifications" [ref=e268] [cursor=pointer]:
+        - img [ref=e4195]
+    - main [ref=e272]:
+      - generic [ref=e2434]:
+        - generic [ref=e2436]:
+          - img [ref=e4198]
+          - generic [ref=e2439]:
+            - generic [ref=e2440]: Connections
+            - generic [ref=e2441]: Data platforms DataTrust monitors. Checks run in-warehouse — your data is never copied out.
+          - button "Add connection" [ref=e2442] [cursor=pointer]:
+            - img [ref=e4200]
+            - text: Add connection
+        - generic [ref=e2444]:
+          - generic [ref=e2446]:
+            - generic [ref=e2447]:
+              - generic [ref=e2448]: 🦆
+              - generic [ref=e2449]:
+                - generic [ref=e2450]:
+                  - generic [ref=e2451]:
+                    - generic [ref=e2452]: DQ Demo DuckDB
+                    - button "Rename connection" [ref=e2453] [cursor=pointer]:
+                      - img [ref=e4201]
+                  - generic [ref=e2457]: production
+                  - generic [ref=e4204]: Connected
+                - generic [ref=e2460]: duckdb
+              - generic [ref=e2461]:
+                - button "Use this" [ref=e2462] [cursor=pointer]:
+                  - img [ref=e4206]
+                  - text: Use this
+                - button "Edit schemas" [ref=e2466] [cursor=pointer]:
+                  - img [ref=e4209]
+                  - text: Edit schemas
+                - button "Edit credentials" [ref=e2471] [cursor=pointer]:
+                  - img [ref=e4213]
+                  - text: Edit credentials
+                - button "Sync" [ref=e2475] [cursor=pointer]:
+                  - img [ref=e4216]
+                  - text: Sync
+                - button "Delete connection" [ref=e2481] [cursor=pointer]:
+                  - img [ref=e4221]
+            - generic [ref=e2485]:
+              - generic [ref=e2486]:
+                - generic [ref=e2487]: Schemas
+                - generic [ref=e2488]: "0"
+              - generic [ref=e2489]:
+                - generic [ref=e2490]: Tables
+                - generic [ref=e2491]: "2"
+              - generic [ref=e2492]:
+                - generic [ref=e2493]: Auth
+                - generic [ref=e2494]: sql auth
+              - generic [ref=e2495]:
+                - generic [ref=e2496]: Last sync
+                - generic [ref=e2497]: 10:16 AM
+          - generic [ref=e2499]:
+            - generic [ref=e2500]:
+              - generic [ref=e2501]: ⬡
+              - generic [ref=e2502]:
+                - generic [ref=e2503]:
+                  - generic [ref=e2504]:
+                    - generic [ref=e2505]: My Connection demo
+                    - button "Rename connection" [ref=e2506] [cursor=pointer]:
+                      - img [ref=e4224]
+                  - generic [ref=e2510]: production
+                  - generic [ref=e4227]: Connected
+                  - generic [ref=e2513]: Active
+                - generic [ref=e2515]: 192.168.1.2
+              - generic [ref=e2516]:
+                - button "Edit schemas" [ref=e2517] [cursor=pointer]:
+                  - img [ref=e4229]
+                  - text: Edit schemas
+                - button "Edit credentials" [ref=e2522] [cursor=pointer]:
+                  - img [ref=e4233]
+                  - text: Edit credentials
+                - button "Sync" [ref=e2526] [cursor=pointer]:
+                  - img [ref=e4236]
+                  - text: Sync
+                - button "Delete connection" [ref=e2532] [cursor=pointer]:
+                  - img [ref=e4241]
+            - generic [ref=e2536]:
+              - generic [ref=e2537]:
+                - generic [ref=e2538]: Schemas
+                - generic [ref=e2539]: "3"
+              - generic [ref=e2540]:
+                - generic [ref=e2541]: Tables
+                - generic [ref=e2542]: "54"
+              - generic [ref=e2543]:
+                - generic [ref=e2544]: Auth
+                - generic [ref=e2545]: sql auth
+              - generic [ref=e2546]:
+                - generic [ref=e2547]: Last sync
+                - generic [ref=e2548]: 10:21 AM
+          - generic [ref=e2550]:
+            - generic [ref=e2551]:
+              - generic [ref=e2552]: ⬡
+              - generic [ref=e2553]:
+                - generic [ref=e2554]:
+                  - generic [ref=e2555]:
+                    - generic [ref=e2556]: My Connection ofc
+                    - button "Rename connection" [ref=e2557] [cursor=pointer]:
+                      - img [ref=e4244]
+                  - generic [ref=e2561]: production
+                  - generic [ref=e4247]: Connected
+                - generic [ref=e2564]: 10.10.97.36
+              - generic [ref=e2565]:
+                - button "Use this" [ref=e2566] [cursor=pointer]:
+                  - img [ref=e4249]
+                  - text: Use this
+                - button "Edit schemas" [ref=e2570] [cursor=pointer]:
+                  - img [ref=e4252]
+                  - text: Edit schemas
+                - button "Close" [ref=e4076] [cursor=pointer]:
+                  - img [ref=e4256]
+                  - text: Close
+                - button "Sync" [ref=e2579] [cursor=pointer]:
+                  - img [ref=e4259]
+                  - text: Sync
+                - button "Delete connection" [ref=e2585] [cursor=pointer]:
+                  - img [ref=e4264]
+            - generic [ref=e2589]:
+              - generic [ref=e2590]:
+                - generic [ref=e2591]: Schemas
+                - generic [ref=e2592]: "3"
+              - generic [ref=e2593]:
+                - generic [ref=e2594]: Tables
+                - generic [ref=e2595]: "15"
+              - generic [ref=e2596]:
+                - generic [ref=e2597]: Auth
+                - generic [ref=e2598]: sql auth
+              - generic [ref=e2599]:
+                - generic [ref=e2600]: Last sync
+                - generic [ref=e2601]: 08:48 AM
+            - generic [ref=e4088]:
+              - generic [ref=e4089]:
+                - img [ref=e4267]
+                - generic [ref=e4093]: Edit credentials
+                - generic [ref=e4094]: Passwords are not shown — leave blank to keep current
+              - generic [ref=e4095]:
+                - button "SQL Server Auth" [ref=e4096] [cursor=pointer]
+                - button "Windows Auth" [ref=e4097] [cursor=pointer]
+                - button "Azure AD" [ref=e4098] [cursor=pointer]
+              - generic [ref=e4099]:
+                - generic [ref=e4100]:
+                  - generic [ref=e4101]: Server / IP
+                  - textbox "MYSERVER or 192.168.1.10" [ref=e4102]: 10.10.97.36
+                - generic [ref=e4103]:
+                  - generic [ref=e4104]: Port
+                  - textbox "1433" [ref=e4105]
+                - generic [ref=e4106]:
+                  - generic [ref=e4107]: Database(optional)
+                  - textbox "(default)" [ref=e4108]
+                - generic [ref=e4109]:
+                  - generic [ref=e4110]: Instance(optional)
+                  - textbox "SQLEXPRESS" [ref=e4111]
+                - generic [ref=e4112]:
+                  - generic [ref=e4113]: Username
+                  - textbox "sa" [ref=e4114]: Data_Alchemists
+                - generic [ref=e4115]:
+                  - generic [ref=e4116]: Password
+                  - textbox "leave blank to keep current" [ref=e4117]
+              - generic [ref=e4271]:
+                - img [ref=e4272]
+                - text: "Cannot reach 10.10.97.36:1433. Verify: (1) SQL Server service is running, (2) TCP/IP is enabled in SQL Server Configuration Manager, (3) port 1433 is allowed through the firewall. Detail: timed out"
+                - generic [ref=e4274]: (3004 ms)
+              - generic [ref=e4118]:
+                - button "Test connection" [ref=e4119] [cursor=pointer]:
+                  - img [ref=e4275]
+                  - text: Test connection
+                - button "Save credentials" [ref=e4122] [cursor=pointer]:
+                  - img [ref=e4277]
+                  - text: Save credentials
+                - button "Cancel" [ref=e4127] [cursor=pointer]
+        - generic [ref=e2602]:
+          - img [ref=e4281]
+          - generic [ref=e2606]: All connections use least-privilege read roles. Credentials are encrypted (AES-256) in your tenant secret manager and rotated every 90 days.
+          - button "View access log" [ref=e2607] [cursor=pointer]:
+            - img [ref=e4284]
+            - text: View access log

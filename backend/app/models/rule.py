@@ -21,6 +21,12 @@ class DQRule(BaseModel):
     snooze_until: Optional[datetime] = None
     created_by: Optional[str] = None
     nl_source: Optional[str] = None
+    # Which flow created the rule: single_table | cross_table | nl | manual.
+    # Regenerate-cleanup scoping and the UI's cross-table badge key off these two
+    # structured fields — never off rule_description text, whose "[Cross-table: X]"
+    # prefix survives only for human readability (and legacy-row backfill).
+    generation_source: Optional[str] = None
+    related_table_fqn: Optional[str] = None   # other table a cross-table rule checks; NULL for self-refs
 
 
 class RuleDecisionRequest(BaseModel):

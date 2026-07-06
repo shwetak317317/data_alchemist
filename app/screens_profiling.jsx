@@ -1,15 +1,23 @@
 // DataTrust — Screen: Profiling (selector → live agent run → report)
 (function () {
-  const D = window.DT;
 
   // ── Selector ──────────────────────────────────────────────────────────────
   const Selector = ({ onProfile, onForceProfile, connectionId }) => {
-    const { datasets, setDatasets, datasetsLoading, refreshDatasets } = useApp();
+    const { datasets, setDatasets, datasetsLoading, refreshDatasets,
+      backgroundJobs, startJob, updateJob, endJob } = useApp();
     const [open, setOpen]             = React.useState({});
     const [connError, setConnError]   = React.useState(null);
     const [searchQ, setSearchQ]       = React.useState("");
     const [batchState, setBatchState] = React.useState(null);
     // batchState: { groupKey, done, total, errors, currentFqn } | null
+    // A batch keeps running in the background after this screen unmounts (callback
+    // recursion + the shell's global job registry). On remount mid-run, local state
+    // has reset — adopt the live job so the UI shows the run and blocks a duplicate.
+    const liveBatchJob = (backgroundJobs || []).find(j => j.id.startsWith(`profile-batch-${connectionId}-`));
+    const effBatch = batchState || (liveBatchJob ? {
+      groupKey: liveBatchJob.groupKey, done: liveBatchJob.done || 0, total: liveBatchJob.total || 0,
+      errors: liveBatchJob.errors || 0, currentFqn: liveBatchJob.currentFqn || null,
+    } : null);
     useIcons();
 
     // Auto-open first group when datasets load
@@ -27,11 +35,18 @@
 
     // Sequential batch profiling — pure callback recursion, no async/await
     const runGroupBatch = (grp, groupKey) => {
+      if (effBatch) return;   // a batch is already live (possibly started before a page switch)
       const tables = grp.tables.map(t => grp.schema ? `${grp.schema}.${t.name}` : t.name);
       if (!tables.length || !window.DTApi || !connectionId) return;
 
       setBatchState({ groupKey, done: 0, total: tables.length, errors: 0, currentFqn: null });
       setOpen(o => ({ ...o, [groupKey]: true }));
+      // Register globally so the batch survives navigation: the recursion keeps
+      // executing after unmount, and the TopBar indicator + this screen's remount
+      // adoption (effBatch above) keep it visible everywhere.
+      const jobId = `profile-batch-${connectionId}-${groupKey}`;
+      startJob(jobId, `Profiling ${grp.schema || grp.layer || "tables"}`);
+      updateJob(jobId, { total: tables.length, groupKey });
 
       let errorCount = 0;
 
@@ -39,6 +54,7 @@
         // All tables done
         if (idx >= tables.length) {
           setBatchState(null);
+          endJob(jobId);
           toast(
             errorCount > 0
               ? `Batch complete — ${tables.length - errorCount}/${tables.length} tables succeeded`
@@ -50,6 +66,7 @@
 
         const fqn = tables[idx];
         setBatchState(prev => prev ? { ...prev, currentFqn: fqn } : null);
+        updateJob(jobId, { currentFqn: fqn });
 
         const parts      = fqn.split(".");
         const schemaName = parts.length > 1 ? parts[0] : null;
@@ -79,6 +96,7 @@
             ? { ...prev, done: idx + 1, errors: errorCount, currentFqn: null }
             : null
           );
+          updateJob(jobId, { done: idx + 1, errors: errorCount, currentFqn: null });
           runNext(idx + 1);
         };
 
@@ -176,11 +194,22 @@
         {filtered.map((grp, gi) => {
           const groupKey     = grp.schema || `${grp.layer}-${gi}`;
           const displayLabel = (grp.layer === "UNKNOWN" && grp.schema) ? grp.schema : grp.layer;
-          const isGroupRunning = batchState?.groupKey === groupKey;
+          const isGroupRunning = effBatch?.groupKey === groupKey;
           const allProfiled    = grp.tables.length > 0 && grp.tables.every(t => t.score > 0);
 
           return (
             <div key={groupKey} style={{ marginBottom: 8 }}>
+              {/* Schema-level permission warning — carries the exact GRANT the
+                  backend produced, so an unreadable database never masquerades
+                  as an empty one. */}
+              {grp.warning && (
+                <div style={{ display: "flex", gap: 7, alignItems: "flex-start", margin: "4px 4px 6px",
+                  padding: "8px 10px", background: "var(--red-50)", border: "1px solid var(--red-200)",
+                  borderRadius: 8, fontSize: 12, color: "var(--red-700)", lineHeight: 1.5 }}>
+                  <i data-lucide="lock" style={{ width: 13, height: 13, flexShrink: 0, marginTop: 2 }}></i>
+                  <span>{grp.warning}</span>
+                </div>
+              )}
               {/* Group header */}
               <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 4px" }}>
                 <button
@@ -206,19 +235,19 @@
                     gap: 6, whiteSpace: "nowrap", flexShrink: 0 }}>
                     <span className="dt-spin" style={{ width: 12, height: 12, border: "1.5px solid var(--brand-ring)",
                       borderTopColor: "var(--brand)", borderRadius: "50%", display: "inline-block" }}></span>
-                    {batchState.done}/{batchState.total} profiled
-                    {batchState.errors > 0 && (
-                      <span style={{ color: "var(--red-400)" }}>&nbsp;· {batchState.errors} failed</span>
+                    {effBatch.done}/{effBatch.total} profiled
+                    {effBatch.errors > 0 && (
+                      <span style={{ color: "var(--red-400)" }}>&nbsp;· {effBatch.errors} failed</span>
                     )}
                   </span>
                 ) : (
                   <button
                     onClick={() => runGroupBatch(grp, groupKey)}
-                    disabled={!!batchState}
+                    disabled={!!effBatch}
                     title={allProfiled ? "Re-run profiling for all tables in this group" : "Profile all tables in this group"}
-                    style={{ fontSize: 11.5, color: batchState ? "var(--fg-3)" : "var(--brand)",
-                      background: "none", border: `1px solid ${batchState ? "var(--grey-200)" : "var(--brand-ring)"}`,
-                      borderRadius: 6, padding: "3px 9px", cursor: batchState ? "not-allowed" : "pointer",
+                    style={{ fontSize: 11.5, color: effBatch ? "var(--fg-3)" : "var(--brand)",
+                      background: "none", border: `1px solid ${effBatch ? "var(--grey-200)" : "var(--brand-ring)"}`,
+                      borderRadius: 6, padding: "3px 9px", cursor: effBatch ? "not-allowed" : "pointer",
                       whiteSpace: "nowrap", flexShrink: 0, display: "flex", alignItems: "center", gap: 5 }}>
                     {allProfiled
                       ? <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
@@ -234,8 +263,8 @@
                 <div style={{ display: "flex", flexDirection: "column", paddingLeft: 6 }}>
                   {grp.tables.map((t) => {
                     const fqn            = grp.schema ? `${grp.schema}.${t.name}` : t.name;
-                    const isCurrentlyRunning = batchState?.currentFqn === fqn;
-                    const canInteract    = !batchState;
+                    const isCurrentlyRunning = effBatch?.currentFqn === fqn;
+                    const canInteract    = !effBatch;
 
                     return (
                       <div key={t.name} className="dt-row-hover"

@@ -58,6 +58,7 @@ class DiscoveryReport:
     fk_enabled: bool = True
     fk_schemas_scanned: list[str] = field(default_factory=list)
     fk_edges_found: int = 0
+    fk_error: str | None = None
 
     query_log_enabled: bool = True
     query_log_supported: bool = False
@@ -312,11 +313,20 @@ def _discover_fk_edges(
     db: Session, connection_id: str, connector: BaseConnector, schemas: list[str],
     known_tables: dict[str, str], node_cache: dict[str, str], report: DiscoveryReport,
 ) -> None:
+    from app.connectors.base import is_permission_error, permission_denied_message
     for schema in schemas:
         try:
             fks = connector.list_foreign_keys(schema)
         except Exception as exc:
+            # Never swallow silently — "0 FK edges" because the login can't read
+            # the constraint catalog needs a very different follow-up (a GRANT)
+            # than "0 FK edges because none are declared".
             logger.warning("FK discovery failed for schema=%s: %s", schema, exc)
+            if is_permission_error(exc):
+                login = getattr(connector, "_config", {}).get("username")
+                report.fk_error = permission_denied_message("metadata", schema, login)
+            else:
+                report.fk_error = f"FK scan failed for {schema}: {exc}"
             continue
         report.fk_schemas_scanned.append(schema)
         for fk in fks:
@@ -339,11 +349,17 @@ def _discover_fk_edges(
 
 # ── Query-log discovery (SQL parsing, never LLM) ────────────────────────────
 
-def _table_fqn_from_node(t) -> str | None:
+def _table_fqn_from_node(t, default_db: str | None = None) -> str | None:
     """Map a sqlglot Table node to OUR table_fqn convention: database.table for
-    dbo/default-schema tables, database.schema.table otherwise. A bare table name
-    with no database/catalog context is unresolvable and returns None — we never
-    guess which database an unqualified reference belongs to."""
+    dbo/default-schema tables, database.schema.table otherwise.
+
+    default_db is the database the statement EXECUTED in (known for Query Store
+    entries, which are per-database) — it resolves the references cross-database
+    statements always leave unqualified: an ETL run in SilverDB writes
+    `INSERT INTO dbo.dim_product SELECT ... FROM BronzeDB.dbo.br_products`, so
+    the target has no catalog part at all. Without default_db (plan cache /
+    single-DB mode) an unqualified reference stays unresolvable and returns
+    None — we never GUESS which database it belongs to."""
     from sqlglot import exp
     if not isinstance(t, exp.Table) or not t.name:
         return None
@@ -357,12 +373,36 @@ def _table_fqn_from_node(t) -> str | None:
         parts.append(catalog_name)
         if db_name and db_name.lower() != "dbo":
             parts.append(db_name)
+    elif default_db:
+        # schema-qualified or bare reference inside a known database context
+        parts.append(default_db)
+        if db_name and db_name.lower() != "dbo":
+            parts.append(db_name)
     elif db_name:
         parts.append(db_name)
     else:
         return None
     parts.append(t.name)
     return ".".join(parts)
+
+
+# Query Store / plan cache return parameterized statements with a leading
+# parameter-declaration block — `(@BrzBatchID int,@SlvBatchID int)INSERT INTO ...`
+# (the sp_executesql inner form). sqlglot cannot parse that prefix, which made
+# 51 of 53 REAL ETL statements on a live connection register as parse failures.
+# Strip it only when what follows is a statement keyword, so a legitimate
+# leading parenthesized subquery/union is never touched. One nesting level in
+# the type list handles e.g. (@name nvarchar(50), @qty decimal(10,2)).
+import re as _re
+_PARAM_PREFIX_RE = _re.compile(
+    r"^\s*\(\s*@(?:[^()]|\([^()]*\))*\)\s*"
+    r"(?=(?:INSERT|MERGE|SELECT|CREATE|UPDATE|DELETE|WITH|DECLARE|SET|EXEC)\b)",
+    _re.IGNORECASE,
+)
+
+
+def _strip_param_prefix(sql_text: str) -> str:
+    return _PARAM_PREFIX_RE.sub("", sql_text, count=1)
 
 
 class _SqlParseFailure(Exception):
@@ -373,7 +413,7 @@ class _SqlParseFailure(Exception):
     isn't lineage-relevant would only waste tokens and risk a spurious guess."""
 
 
-def _extract_from_statement(tree) -> tuple[str, list[str]] | None:
+def _extract_from_statement(tree, default_db: str | None = None) -> tuple[str, list[str]] | None:
     """Extract (target_fqn, [source_fqns]) from a single already-parsed
     statement tree. Returns None if it isn't a recognized lineage-producing
     statement (INSERT INTO ... SELECT, MERGE, CREATE TABLE AS SELECT,
@@ -388,6 +428,13 @@ def _extract_from_statement(tree) -> tuple[str, list[str]] | None:
     target_node = None
     if isinstance(tree, (exp.Insert, exp.Merge)):
         target_node = tree.args.get("this")
+        # INSERT INTO x (col1, col2, ...) — the explicit column list makes
+        # sqlglot wrap the target in an exp.Schema node, exactly like CREATE.
+        # Without this unwrap, EVERY production-style INSERT...SELECT (they all
+        # list columns) silently returned None — seen live: 30+ real ETL
+        # loaders skipped while only the 4 MERGE-based ones produced edges.
+        if isinstance(target_node, exp.Schema):
+            target_node = target_node.args.get("this")
     elif isinstance(tree, exp.Create):
         if not tree.args.get("expression"):
             return None  # plain CREATE TABLE DDL, no SELECT body — no lineage signal
@@ -403,7 +450,7 @@ def _extract_from_statement(tree) -> tuple[str, list[str]] | None:
     if not isinstance(target_node, exp.Table):
         return None
 
-    target_fqn = _table_fqn_from_node(target_node)
+    target_fqn = _table_fqn_from_node(target_node, default_db)
     if not target_fqn:
         return None
 
@@ -411,7 +458,7 @@ def _extract_from_statement(tree) -> tuple[str, list[str]] | None:
     for t in tree.find_all(exp.Table):
         if t is target_node:
             continue
-        fqn = _table_fqn_from_node(t)
+        fqn = _table_fqn_from_node(t, default_db)
         if fqn and fqn != target_fqn:
             source_fqns.append(fqn)
     if not source_fqns:
@@ -419,7 +466,7 @@ def _extract_from_statement(tree) -> tuple[str, list[str]] | None:
     return target_fqn, list(dict.fromkeys(source_fqns))
 
 
-def _extract_target_sources(sql_text: str, dialect: str | None) -> tuple[str, list[str]] | None:
+def _extract_target_sources(sql_text: str, dialect: str | None, default_db: str | None = None) -> tuple[str, list[str]] | None:
     """Parse one query-log entry (which may be a multi-statement T-SQL batch —
     e.g. a session SET followed by the actual INSERT) into (target_fqn,
     [source_fqns]). Tries every statement in the batch, not just the first
@@ -436,7 +483,7 @@ def _extract_target_sources(sql_text: str, dialect: str | None) -> tuple[str, li
     from sqlglot import exp
 
     try:
-        statements = sqlglot.parse(sql_text, dialect=dialect)
+        statements = sqlglot.parse(_strip_param_prefix(sql_text), dialect=dialect)
     except Exception as exc:
         raise _SqlParseFailure(str(exc)) from exc
 
@@ -448,7 +495,7 @@ def _extract_target_sources(sql_text: str, dialect: str | None) -> tuple[str, li
         if isinstance(tree, exp.Command):
             had_unparseable = True
             continue
-        result = _extract_from_statement(tree)
+        result = _extract_from_statement(tree, default_db)
         if result is not None:
             return result
 
@@ -475,7 +522,17 @@ def _discover_query_log_edges(
         entries = connector.list_recent_queries(since_hours=since_hours)
     except Exception as exc:
         logger.warning("list_recent_queries failed: %s", exc)
-        report.query_log_unsupported_reason = f"Query log fetch failed: {exc}"
+        msg = str(exc)
+        # A raw ODBC/driver error string tells a steward nothing actionable.
+        # Connectors that already produce a curated message (e.g. sqlserver's
+        # PermissionError naming the exact GRANTs) pass through untouched;
+        # anything else that smells like a permission problem gets a generic
+        # actionable pointer instead of driver internals.
+        low = msg.lower()
+        if "grant" not in low and "permission" in low and "denied" in low:
+            msg = ("the connection's login lacks permission to read the platform's query history. "
+                   "Ask a DBA to grant the query-history/monitoring privilege for this login.")
+        report.query_log_unsupported_reason = f"Query log fetch failed: {msg}"
         return
 
     dialect = _DIALECT_BY_PLATFORM.get(platform)
@@ -487,7 +544,7 @@ def _discover_query_log_edges(
     for entry in entries:
         report.query_log_statements_scanned += 1
         try:
-            parsed = _extract_target_sources(entry.query_text, dialect)
+            parsed = _extract_target_sources(entry.query_text, dialect, getattr(entry, "database", None))
         except _SqlParseFailure:
             report.query_log_parse_failures += 1
             normalized = entry.query_text.strip()

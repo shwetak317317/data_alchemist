@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 
 from app.core.metadata_db import get_db
-from app.core.auth_deps import get_current_user, CurrentUser
+from app.core.auth_deps import get_current_user, assert_connection_access, CurrentUser
 from app.services.lineage_discovery import run_discovery, would_create_cycle, recompute_is_source
 
 logger = logging.getLogger(__name__)
@@ -113,6 +113,7 @@ class DiscoverResponse(BaseModel):
     fk_enabled: bool
     fk_schemas_scanned: list[str]
     fk_edges_found: int
+    fk_error: Optional[str] = None
 
     query_log_enabled: bool
     query_log_supported: bool
@@ -177,6 +178,42 @@ class LineageHealth(BaseModel):
 
 
 # ── Shared helpers ────────────────────────────────────────────────────────────
+
+def _assert_connection_org(connection_id: str, db: Session, current_user: CurrentUser) -> None:
+    """403 if the connection belongs to another org; 404 if it doesn't exist.
+    Every lineage route enforces this — previously any authenticated user could
+    read, seed, or DELETE another organisation's lineage by guessing ids."""
+    row = db.execute(text(
+        "SELECT org_id FROM connections WHERE id=:id AND deleted_at IS NULL"
+    ), {"id": connection_id}).fetchone()
+    if not row:
+        raise HTTPException(404, "Connection not found")
+    assert_connection_access(row[0], current_user)
+
+
+def _assert_node_org(node_id: str, db: Session, current_user: CurrentUser) -> str:
+    """Org-check a node via its connection; returns the connection_id."""
+    row = db.execute(text(
+        "SELECT n.connection_id, c.org_id FROM lineage_nodes n "
+        "LEFT JOIN connections c ON c.id = n.connection_id WHERE n.node_id=:id"
+    ), {"id": node_id}).fetchone()
+    if not row:
+        raise HTTPException(404, "Node not found")
+    assert_connection_access(row[1], current_user)
+    return row[0]
+
+
+def _assert_edge_org(edge_id: str, db: Session, current_user: CurrentUser) -> str:
+    """Org-check an edge via its connection; returns the connection_id."""
+    row = db.execute(text(
+        "SELECT e.connection_id, c.org_id FROM lineage_edges e "
+        "LEFT JOIN connections c ON c.id = e.connection_id WHERE e.edge_id=:id"
+    ), {"id": edge_id}).fetchone()
+    if not row:
+        raise HTTPException(404, "Edge not found")
+    assert_connection_access(row[1], current_user)
+    return row[0]
+
 
 def _rows_to_graph(source_table: str, node_rows, edge_rows) -> LineageGraph:
     if not node_rows:
@@ -264,6 +301,7 @@ def propagate_lineage_health_sync(db: Session, connection_id: str, run_id: str) 
 def get_full_graph(connection_id: str, db: Session = Depends(get_db),
                    current_user: CurrentUser = Depends(get_current_user)):
     """Return the full lineage graph for a connection (all nodes + edges)."""
+    _assert_connection_org(connection_id, db, current_user)
     node_rows = db.execute(text(f"""
         SELECT {_NODE_COLUMNS}
         FROM lineage_nodes n
@@ -285,6 +323,7 @@ def get_full_graph(connection_id: str, db: Session = Depends(get_db),
 def seed_lineage(connection_id: str, db: Session = Depends(get_db),
                  current_user: CurrentUser = Depends(get_current_user)):
     """Auto-seed lineage nodes from profiling reports for a connection. Idempotent."""
+    _assert_connection_org(connection_id, db, current_user)
     reports = db.execute(text("""
         SELECT DISTINCT ON (table_fqn) table_fqn, layer, quality_score
         FROM profiling_reports
@@ -340,6 +379,7 @@ def seed_lineage(connection_id: str, db: Session = Depends(get_db),
 def propagate_health(connection_id: str, db: Session = Depends(get_db),
                      current_user: CurrentUser = Depends(get_current_user)):
     """Update lineage node health_status from latest DQ execution results."""
+    _assert_connection_org(connection_id, db, current_user)
     latest = db.execute(text("""
         SELECT run_id FROM dq_run_results
         WHERE connection_id = :conn
@@ -358,6 +398,7 @@ def propagate_health(connection_id: str, db: Session = Depends(get_db),
 def create_node(req: CreateNodeRequest, db: Session = Depends(get_db),
                 current_user: CurrentUser = Depends(get_current_user)):
     """Create a new lineage node."""
+    _assert_connection_org(req.connection_id, db, current_user)
     row = db.execute(text("""
         INSERT INTO lineage_nodes
             (connection_id, external_id, label, sub_label, layer, node_type,
@@ -386,6 +427,7 @@ def create_node(req: CreateNodeRequest, db: Session = Depends(get_db),
 def update_node(node_id: str, req: UpdateNodeRequest, db: Session = Depends(get_db),
                 current_user: CurrentUser = Depends(get_current_user)):
     """Update a lineage node's metadata or health status."""
+    _assert_node_org(node_id, db, current_user)
     fields = [
         ("label", "label"), ("sub_label", "sub_label"),
         ("health_status", "health_status"), ("note", "note"),
@@ -425,10 +467,17 @@ def update_node(node_id: str, req: UpdateNodeRequest, db: Session = Depends(get_
 def delete_node(node_id: str, db: Session = Depends(get_db),
                 current_user: CurrentUser = Depends(get_current_user)):
     """Delete a lineage node and all its edges (cascade)."""
+    connection_id = _assert_node_org(node_id, db, current_user)
     res = db.execute(text("DELETE FROM lineage_nodes WHERE node_id = :id"), {"id": node_id})
-    db.commit()
     if res.rowcount == 0:
+        db.rollback()
         raise HTTPException(404, "Node not found")
+    # The cascade may have removed the only incoming edge of downstream nodes —
+    # without this their is_source flags go stale (every other edge-mutating
+    # route already recomputes; this one was the gap).
+    if connection_id:
+        recompute_is_source(db, connection_id)
+    db.commit()
     return {"deleted": node_id}
 
 
@@ -439,6 +488,7 @@ def create_edge(req: CreateEdgeRequest, db: Session = Depends(get_db),
     Manually-curated edges are ground truth (same as FK/dbt discovery) and are
     always status='confirmed' — but still checked for cycles, since a human
     can fat-finger a reversed edge just as easily as a parser can."""
+    _assert_connection_org(req.connection_id, db, current_user)
     src = db.execute(text(
         "SELECT node_id FROM lineage_nodes WHERE connection_id = :conn AND external_id = :ext"
     ), {"conn": req.connection_id, "ext": req.source_ext_id}).fetchone()
@@ -479,12 +529,7 @@ def create_edge(req: CreateEdgeRequest, db: Session = Depends(get_db),
 def delete_edge(edge_id: str, db: Session = Depends(get_db),
                 current_user: CurrentUser = Depends(get_current_user)):
     """Delete a lineage edge."""
-    row = db.execute(text(
-        "SELECT connection_id FROM lineage_edges WHERE edge_id = :id"
-    ), {"id": edge_id}).fetchone()
-    if not row:
-        raise HTTPException(404, "Edge not found")
-    connection_id = row[0]
+    connection_id = _assert_edge_org(edge_id, db, current_user)
     db.execute(text("DELETE FROM lineage_edges WHERE edge_id = :id"), {"id": edge_id})
     recompute_is_source(db, connection_id)
     db.commit()
@@ -508,6 +553,7 @@ def discover_lineage(
     """
     from app.api.connections import get_active_connector
 
+    _assert_connection_org(connection_id, db, current_user)
     row = db.execute(text(
         "SELECT platform, schemas_scope FROM connections WHERE id = :id AND deleted_at IS NULL"
     ), {"id": connection_id}).fetchone()
@@ -549,6 +595,7 @@ def discover_lineage(
         fk_enabled=report.fk_enabled,
         fk_schemas_scanned=report.fk_schemas_scanned,
         fk_edges_found=report.fk_edges_found,
+        fk_error=report.fk_error,
         query_log_enabled=report.query_log_enabled,
         query_log_supported=report.query_log_supported,
         query_log_unsupported_reason=report.query_log_unsupported_reason,
@@ -575,6 +622,7 @@ def discover_lineage(
 def list_suggested_edges(connection_id: str, db: Session = Depends(get_db),
                          current_user: CurrentUser = Depends(get_current_user)):
     """Pending query-log-discovered edges awaiting human approval."""
+    _assert_connection_org(connection_id, db, current_user)
     rows = db.execute(text("""
         SELECT e.edge_id, src.label, tgt.label, e.edge_type,
                e.discovered_via, e.confidence, e.evidence, e.discovered_at
@@ -602,6 +650,7 @@ def approve_edge(edge_id: str, db: Session = Depends(get_db),
     at discovery time): the graph's confirmed topology may have changed since
     this edge was suggested, e.g. another suggestion for the reverse direction
     could have been approved first."""
+    _assert_edge_org(edge_id, db, current_user)
     pending = db.execute(text("""
         SELECT connection_id, source_node_id, target_node_id, edge_type
         FROM lineage_edges WHERE edge_id = :id AND status = 'suggested'
@@ -640,6 +689,7 @@ def reject_edge(edge_id: str, db: Session = Depends(get_db),
     """Reject a suggested edge. Kept in the table (status='rejected') as an audit
     trail rather than deleted, so re-running discovery doesn't just re-suggest the
     same edge a steward already dismissed — see run_discovery's existing-edge check."""
+    _assert_edge_org(edge_id, db, current_user)
     res = db.execute(text("""
         UPDATE lineage_edges
         SET status = 'rejected', reviewed_by = :user, reviewed_at = NOW()
@@ -663,6 +713,7 @@ def get_impact_narrative(
     /{table_fqn}). The only LLM-touching piece of the lineage module; see
     lineage_narrative.py for the grounding discipline and deterministic
     fallback (this endpoint never errors out to the user on an LLM failure)."""
+    _assert_connection_org(connection_id, db, current_user)
     from app.services.lineage_narrative import generate_impact_narrative
 
     result = generate_impact_narrative(db, connection_id, table_fqn)
@@ -675,6 +726,7 @@ def get_root_causes(connection_id: str, db: Session = Depends(get_db),
     """Rank genuine root-cause failures (no failing ancestor via confirmed
     edges) by downstream blast radius. Multiple independent failures can
     coexist — this returns all of them, ranked, rather than picking one."""
+    _assert_connection_org(connection_id, db, current_user)
     from app.services.lineage_discovery import compute_root_causes
 
     return [RootCause(**rc) for rc in compute_root_causes(db, connection_id)]
@@ -688,6 +740,7 @@ def get_lineage_health(connection_id: str, db: Session = Depends(get_db),
     not just internal logs. completeness_pct in particular: a module that
     finds zero edges everywhere is a much bigger problem than any single
     discovery run's counts reveal on their own."""
+    _assert_connection_org(connection_id, db, current_user)
     total_known = db.execute(text(
         "SELECT COUNT(*) FROM connection_tables WHERE connection_id = :conn"
     ), {"conn": connection_id}).scalar() or 0
@@ -727,6 +780,8 @@ def get_lineage(table_fqn: str, connection_id: Optional[str] = None,
                 db: Session = Depends(get_db),
                 current_user: CurrentUser = Depends(get_current_user)):
     """Return the downstream lineage graph rooted at the given table (BFS from root node)."""
+    if connection_id:
+        _assert_connection_org(connection_id, db, current_user)
     params: dict = {"fqn": table_fqn}
     conn_filter = "AND connection_id = :conn" if connection_id else ""
     if connection_id:
@@ -739,20 +794,11 @@ def get_lineage(table_fqn: str, connection_id: Optional[str] = None,
     """), params).fetchone()
 
     if not root:
-        # No root found — return full graph for the connection as fallback
-        node_rows = db.execute(text(f"""
-            SELECT {_NODE_COLUMNS}
-            FROM lineage_nodes n
-            {_NODE_PROFILING_JOIN}
-            WHERE 1=1 {conn_filter}
-            ORDER BY n.position_order, n.tier_label
-        """), params).fetchall()
-        edge_rows = db.execute(text(f"""
-            SELECT e.edge_id, e.source_node_id, e.target_node_id, e.edge_type
-            FROM lineage_edges e WHERE e.status = 'confirmed'
-            {conn_filter.replace('connection_id', 'e.connection_id')}
-        """), params).fetchall()
-        return _rows_to_graph(table_fqn, node_rows, edge_rows)
+        # The table has no lineage node — say so honestly with an empty graph.
+        # The old fallback returned the ENTIRE connection graph, which read as
+        # "this table impacts everything": a false blast radius is the one
+        # thing an impact endpoint must never produce.
+        return LineageGraph(source_table=table_fqn, nodes=[], edges=[])
 
     # BFS downstream from root — only follow confirmed edges; a 'suggested' edge
     # awaiting review must not silently expand what impact analysis reports.

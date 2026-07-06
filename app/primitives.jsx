@@ -24,6 +24,7 @@ const Button = ({ variant = "primary", size = "md", icon, iconRight, children, o
   return (
     <button onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
       style={{ ...base, ...variants[variant], ...dis, ...style }}
+      disabled={disabled}
       onClick={disabled ? undefined : onClick}>
       {icon && <i data-lucide={icon} style={{ width: size === "sm" ? 14 : 16, height: size === "sm" ? 14 : 16 }}></i>}
       {children}
@@ -354,6 +355,12 @@ const ToastHost = () => {
 // Simple modal
 const Modal = ({ open, onClose, title, children, width = 560, footer }) => {
   React.useEffect(() => { if (window.lucide) window.lucide.createIcons(); });
+  React.useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open, onClose]);
   if (!open) return null;
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.4)", zIndex: 9000,

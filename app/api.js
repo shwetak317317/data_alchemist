@@ -112,6 +112,7 @@ export const addColumnManually = (body)           => _fetch('/metadata/dictionar
 // ── Rules ─────────────────────────────────────────────────────────────────────
 export const listRules         = (connId, status) => _fetch(`/rules?connection_id=${connId}${status ? `&status=${status}` : ''}`);
 export const recommendRules    = (body)           => _fetch('/rules/recommend', { method: 'POST', body: JSON.stringify(body) });
+export const recommendCrossTableRules = (body)    => _fetch('/rules/recommend-cross-table', { method: 'POST', body: JSON.stringify(body) });
 export const nlToRule          = (body)           => _fetch('/rules/nl', { method: 'POST', body: JSON.stringify(body) });
 export const decideRule        = (ruleId, body)   => _fetch(`/rules/${ruleId}`, { method: 'PATCH', body: JSON.stringify(body) });
 export const createRule        = (body)           => _fetch('/rules', { method: 'POST', body: JSON.stringify(body) });
@@ -129,6 +130,9 @@ export const getFingerprints   = (connId)         => _fetch(`/anomalies/fingerpr
 export const scanAnomalies     = (body)           => _fetch('/anomalies/scan', { method: 'POST', body: JSON.stringify(body) });
 export const acknowledgeAnomaly = (id, body)      => _fetch(`/anomalies/${id}/acknowledge`, { method: 'POST', body: JSON.stringify(body) });
 export const explainAnomaly    = (id)             => _fetch(`/anomalies/${id}/explain`, { method: 'POST' });
+export const getThresholds     = (connId)         => _fetch(`/anomalies/thresholds?connection_id=${connId}`);
+export const saveThresholds    = (body)           => _fetch('/anomalies/thresholds', { method: 'POST', body: JSON.stringify(body) });
+export const shareAnomaly      = (id, body)       => _fetch(`/anomalies/${id}/share`, { method: 'POST', body: JSON.stringify(body || {}) });
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 export const getDashboardSummary = (connId)       => _fetch(`/dashboard/summary${connId ? `?connection_id=${connId}` : ''}`);
@@ -157,6 +161,13 @@ export const updateLineageNode     = (nodeId, body)     => _fetch(`/lineage/node
 export const deleteLineageNode     = (nodeId)           => _fetch(`/lineage/nodes/${nodeId}`, { method: 'DELETE' });
 export const createLineageEdge     = (body)             => _fetch('/lineage/edges', { method: 'POST', body: JSON.stringify(body) });
 export const deleteLineageEdge     = (edgeId)           => _fetch(`/lineage/edges/${edgeId}`, { method: 'DELETE' });
+export const discoverLineage       = (connId, body)     => _fetch(`/lineage/discover/${connId}`, { method: 'POST', body: JSON.stringify(body || {}) });
+export const listSuggestedEdges    = (connId)           => _fetch(`/lineage/suggested/${connId}`);
+export const approveLineageEdge    = (edgeId)           => _fetch(`/lineage/edges/${edgeId}/approve`, { method: 'POST' });
+export const rejectLineageEdge     = (edgeId)           => _fetch(`/lineage/edges/${edgeId}/reject`, { method: 'POST' });
+export const getImpactNarrative    = (connId, tableFqn) => _fetch(`/lineage/narrative/${connId}?table_fqn=${encodeURIComponent(tableFqn)}`, { method: 'POST' });
+export const getLineageRootCauses  = (connId)           => _fetch(`/lineage/root-causes/${connId}`);
+export const getLineageHealth      = (connId)           => _fetch(`/lineage/health/${connId}`);
 
 // ── Simulation ────────────────────────────────────────────────────────────────
 export const listScenarios         = ()              => _fetch('/simulation/scenarios');

@@ -11,8 +11,16 @@ CREATE TABLE IF NOT EXISTS rule_ai_calls (
     raw_response  TEXT,
     status        VARCHAR(16) NOT NULL DEFAULT 'success',  -- success|error
     error_message TEXT,
+    input_tokens  INTEGER,
+    output_tokens INTEGER,
+    latency_ms    INTEGER,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Additive columns for pre-existing tables from before token/latency logging was added.
+ALTER TABLE rule_ai_calls ADD COLUMN IF NOT EXISTS input_tokens  INTEGER;
+ALTER TABLE rule_ai_calls ADD COLUMN IF NOT EXISTS output_tokens INTEGER;
+ALTER TABLE rule_ai_calls ADD COLUMN IF NOT EXISTS latency_ms    INTEGER;
 
 CREATE INDEX IF NOT EXISTS idx_rule_ai_calls_conn    ON rule_ai_calls(connection_id);
 CREATE INDEX IF NOT EXISTS idx_rule_ai_calls_created ON rule_ai_calls(created_at DESC);

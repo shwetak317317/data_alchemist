@@ -174,6 +174,10 @@ class SqlServerConnector(BaseConnector):
                 )
             except Exception as e:
                 logger.error("list_tables cross-db DB=%s: %s", schema, e, exc_info=True)
+                from app.connectors.base import is_permission_error, permission_denied_message
+                if is_permission_error(e):
+                    raise PermissionError(permission_denied_message(
+                        "metadata", schema, self._config.get("username"))) from e
                 return []
             tables = []
             for (db_schema, tname) in result.rows:
@@ -312,6 +316,12 @@ class SqlServerConnector(BaseConnector):
             result = self.query(sql, None if self._is_cross_db() else {"schema": schema})
         except Exception as e:
             logger.warning("list_foreign_keys schema=%s: %s", schema, e)
+            from app.connectors.base import is_permission_error, permission_denied_message
+            if is_permission_error(e):
+                # Surface, don't swallow: "0 FK edges" because the catalog is
+                # unreadable needs a GRANT, not a shrug (product-wide contract).
+                raise PermissionError(permission_denied_message(
+                    "metadata", schema, self._config.get("username"))) from e
             return []
 
         # holder = table that HAS the FK column (sys.fk_columns "parent"); referenced =
@@ -336,20 +346,62 @@ class SqlServerConnector(BaseConnector):
     def supports_query_log(self) -> bool:
         return True
 
+    @staticmethod
+    def _is_permission_error(exc: Exception) -> bool:
+        # SQL Server phrases permission failures several ways depending on the
+        # object: "VIEW SERVER PERFORMANCE STATE permission was denied" (DMVs),
+        # "permission denied in database" (Query Store), and error 297 "The user
+        # does not have permission to perform this action" (dm_exec_sql_text).
+        low = str(exc).lower()
+        return "permission" in low and ("denied" in low or "does not have permission" in low)
+
     def list_recent_queries(self, since_hours: int = 168, limit: int = 500) -> list[QueryLogEntry]:
-        """Recent executed query text from the plan cache (sys.dm_exec_query_stats).
+        """Recent executed query text — plan cache first, Query Store fallback.
 
-        Requires VIEW SERVER STATE (or VIEW DATABASE STATE on Azure SQL) permission,
-        and only sees queries whose plan is still cached — this is a sample of recent
-        activity, not a complete audit log.
+        Reads BOTH sources and merges them (deduped by statement text):
+          - plan cache (sys.dm_exec_query_stats) — needs server-wide VIEW SERVER
+            STATE; volatile, evaporates on restart/memory pressure (seen live: a
+            server holding exactly 1 cached stat while Query Store held the real
+            ETL history).
+          - Query Store (sys.query_store_*) — per-database, persistent, needs only
+            VIEW DATABASE PERFORMANCE STATE (a grant DBAs hand out far more
+            readily), ON by default from SQL Server 2022.
+        A permission error on one source is fine as long as the other works; only
+        when BOTH are denied does this raise a PermissionError naming the exact
+        grants to request. Non-permission errors propagate untouched.
 
-        Deliberately lets a permission/connection error PROPAGATE rather than
-        swallowing it into an empty list: the caller (lineage_discovery service)
-        catches it and reports the real reason in query_log_unsupported_reason, so
-        "0 results because nothing matched" is never confused with "0 results
-        because the grant is missing" — those need very different follow-up action
-        from a steward.
+        Deliberately lets that error PROPAGATE rather than swallowing it into an
+        empty list: the caller reports the real reason in
+        query_log_unsupported_reason, so "0 results because nothing matched" is
+        never confused with "0 results because the grant is missing".
         """
+        entries: list[QueryLogEntry] = []
+        denied: list[Exception] = []
+        for source in (self._recent_queries_from_plan_cache, self._recent_queries_from_query_store):
+            try:
+                entries.extend(source(since_hours, limit))
+            except Exception as exc:
+                if not self._is_permission_error(exc):
+                    raise
+                logger.info("query-history source %s denied: %s", source.__name__, exc)
+                denied.append(exc)
+        if len(denied) == 2:
+            raise PermissionError(
+                "the connection's SQL login can read neither the plan cache nor Query Store. "
+                "Ask a DBA for one of: GRANT VIEW SERVER STATE TO [<login>]; "
+                "or, per database: GRANT VIEW DATABASE PERFORMANCE STATE TO [<user>];"
+            ) from denied[-1]
+        # Dedupe by normalized statement text — the same ETL statement often
+        # appears in both sources; keep the copy with the higher execution count.
+        best: dict[str, QueryLogEntry] = {}
+        for e in entries:
+            key = " ".join(e.query_text.split()).lower()
+            if key not in best or (e.execution_count or 0) > (best[key].execution_count or 0):
+                best[key] = e
+        merged = sorted(best.values(), key=lambda e: e.executed_at or "", reverse=True)
+        return merged[:limit]
+
+    def _recent_queries_from_plan_cache(self, since_hours: int, limit: int) -> list[QueryLogEntry]:
         sql = f"""
             SELECT TOP ({int(limit)})
                 st.text,
@@ -377,6 +429,73 @@ class SqlServerConnector(BaseConnector):
             )
             for row in result.rows if row[0]
         ]
+
+    def _recent_queries_from_query_store(self, since_hours: int, limit: int) -> list[QueryLogEntry]:
+        """Query Store fallback — per-database, so in cross-DB mode every in-scope
+        database is read and the results merged. A database with Query Store OFF
+        contributes nothing (its query_store_* views are empty), which is fine;
+        a permission error propagates to the caller's fallback logic."""
+        databases = self.list_schemas() if self._is_cross_db() else [None]
+        entries: list[QueryLogEntry] = []
+        denied_dbs: list[str] = []
+        for dbname in databases:
+            prefix = f"[{dbname.replace(']', ']]')}]." if dbname else ""
+            # last_execution_time in Query Store is DATETIMEOFFSET — ODBC type -155,
+            # which pyodbc cannot convert (seen live: "ODBC SQL type -155 is not yet
+            # supported"). CAST to DATETIME2 at the server. The window comparison
+            # uses SYSDATETIMEOFFSET() so both sides stay timezone-aware.
+            sql = f"""
+                SELECT TOP ({int(limit)})
+                    qt.query_sql_text,
+                    CAST(rs.last_execution_time AS DATETIME2) AS last_execution_time,
+                    rs.total_count
+                FROM {prefix}sys.query_store_query_text qt
+                JOIN {prefix}sys.query_store_query q ON q.query_text_id = qt.query_text_id
+                JOIN {prefix}sys.query_store_plan p ON p.query_id = q.query_id
+                JOIN (
+                    SELECT plan_id, MAX(last_execution_time) AS last_execution_time,
+                           SUM(count_executions) AS total_count
+                    FROM {prefix}sys.query_store_runtime_stats
+                    GROUP BY plan_id
+                ) rs ON rs.plan_id = p.plan_id
+                WHERE rs.last_execution_time >= DATEADD(HOUR, ?, SYSDATETIMEOFFSET())
+                  AND qt.query_sql_text IS NOT NULL
+                  AND (
+                        qt.query_sql_text LIKE '%INSERT%INTO%' OR
+                        qt.query_sql_text LIKE '%MERGE%' OR
+                        qt.query_sql_text LIKE '%SELECT%INTO%' OR
+                        qt.query_sql_text LIKE '%CREATE TABLE%AS%'
+                      )
+                ORDER BY rs.last_execution_time DESC
+            """
+            # Per-database permission handling: DBAs often grant VIEW DATABASE
+            # PERFORMANCE STATE only on the databases that matter (seen live: the
+            # medallion DBs granted, the SourceDB_* databases not) — one denied
+            # database must not throw away every readable database's history.
+            try:
+                result = self.query(sql, {"since_hours": -abs(int(since_hours))})
+            except Exception as exc:
+                if self._is_permission_error(exc):
+                    logger.info("Query Store denied on database %s — skipping: %s", dbname, exc)
+                    denied_dbs.append(dbname or "(current)")
+                    continue
+                raise
+            entries.extend(
+                QueryLogEntry(
+                    query_text=row[0],
+                    executed_at=row[1].isoformat() if row[1] else None,
+                    execution_count=int(row[2] or 1),
+                    database=dbname,
+                )
+                for row in result.rows if row[0]
+            )
+        if denied_dbs and len(denied_dbs) == len(databases):
+            raise PermissionError(
+                "Query Store read was denied on every in-scope database. Ask a DBA for, per database: "
+                "GRANT VIEW DATABASE PERFORMANCE STATE TO [<user>];"
+            )
+        entries.sort(key=lambda e: e.executed_at or "", reverse=True)
+        return entries[:limit]
 
     def close(self) -> None:
         if self._conn and not self._conn.closed:

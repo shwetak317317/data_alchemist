@@ -1,0 +1,278 @@
+- generic [ref=f3e4]:
+  - complementary [ref=f3e5]:
+    - generic [ref=f3e6]:
+      - img [ref=f3e8]
+      - generic [ref=f3e11]:
+        - generic [ref=f3e12]: DataTrust
+        - generic [ref=f3e13]: AGENTIC DQ PLATFORM
+    - generic [ref=f3e14] [cursor=pointer]:
+      - generic [ref=f3e15]: ⬡
+      - generic [ref=f3e16]:
+        - generic [ref=f3e17]: My Connection demo
+        - generic [ref=f3e18]: Active connection
+      - img [ref=f3e19]
+    - generic [ref=f3e22]:
+      - generic [ref=f3e23]: Workflow
+      - button "Workspace Home" [ref=f3e24] [cursor=pointer]:
+        - img [ref=f3e25]
+        - generic [ref=f3e30]: Workspace Home
+      - button "Profiling 1" [ref=f3e31] [cursor=pointer]:
+        - img [ref=f3e32]
+        - generic [ref=f3e39]: Profiling
+        - generic [ref=f3e40]: "1"
+      - button "Dictionary & CDEs 2" [ref=f3e41] [cursor=pointer]:
+        - img [ref=f3e42]
+        - generic [ref=f3e45]: Dictionary & CDEs
+        - generic [ref=f3e46]: "2"
+      - button "Rule Studio 3" [ref=f3e47] [cursor=pointer]:
+        - img [ref=f3e48]
+        - generic [ref=f3e51]: Rule Studio
+        - generic [ref=f3e52]: "3"
+      - button "DQ Execution 4" [ref=f3e53] [cursor=pointer]:
+        - img [ref=f3e54]
+        - generic [ref=f3e57]: DQ Execution
+        - generic [ref=f3e58]: "4"
+    - generic [ref=f3e59]:
+      - generic [ref=f3e60]: Monitoring
+      - button "Anomaly Inbox 14" [ref=f3e61] [cursor=pointer]:
+        - img [ref=f3e62]
+        - generic [ref=f3e67]: Anomaly Inbox
+        - generic [ref=f3e68]: "14"
+      - button "Impact Graph" [ref=f3e69] [cursor=pointer]:
+        - img [ref=f3e70]
+        - generic [ref=f3e75]: Impact Graph
+      - button "Trust Dashboard" [ref=f3e76] [cursor=pointer]:
+        - img [ref=f3e77]
+        - generic [ref=f3e80]: Trust Dashboard
+    - generic [ref=f3e81]:
+      - generic [ref=f3e82]: Intelligence
+      - button "Pre-run Advisory" [ref=f3e83] [cursor=pointer]:
+        - img [ref=f3e84]
+        - generic [ref=f3e87]: Pre-run Advisory
+      - button "Trust Receipt" [ref=f3e88] [cursor=pointer]:
+        - img [ref=f3e89]
+        - generic [ref=f3e91]: Trust Receipt
+    - generic [ref=f3e92]:
+      - generic [ref=f3e93]: Admin
+      - button "Connections" [ref=f3e94] [cursor=pointer]:
+        - img [ref=f3e95]
+        - generic [ref=f3e97]: Connections
+    - generic [ref=f3e98]:
+      - generic [ref=f3e99]: Operate
+      - button "Scenario Simulator" [ref=f3e100] [cursor=pointer]:
+        - img [ref=f3e101]
+        - generic [ref=f3e106]: Scenario Simulator
+      - button "Task Board" [ref=f3e108] [cursor=pointer]:
+        - img [ref=f3e109]
+        - generic [ref=f3e112]: Task Board
+      - button "Daily Summary" [ref=f3e113] [cursor=pointer]:
+        - img [ref=f3e114]
+        - generic [ref=f3e117]: Daily Summary
+    - generic [ref=f3e118]:
+      - generic [ref=f3e120]: SK
+      - generic [ref=f3e122]:
+        - generic [ref=f3e123]: shweta katkar
+        - generic [ref=f3e124]: shweta.katkar@pal.tech
+      - button "Sign out" [ref=f3e125] [cursor=pointer]:
+        - img [ref=f3e126]
+  - generic [ref=f3e129]:
+    - banner [ref=f3e130]:
+      - generic [ref=f3e131]:
+        - generic [ref=f3e132]:
+          - generic [ref=f3e133]: My Connection demo
+          - generic [ref=f3e134]: /
+          - generic [ref=f3e135]: Workflow
+        - generic [ref=f3e136]: Workspace Home
+      - generic [ref=f3e137]: Pipeline · Healthy
+      - generic [ref=f3e140]:
+        - generic [ref=f3e141]: TRUST SCORE
+        - generic [ref=f3e142]: 99/100
+      - button "Notifications" [ref=f3e143] [cursor=pointer]:
+        - img [ref=f3e144]
+    - main [ref=f3e147]:
+      - generic [ref=f3e148]:
+        - generic [ref=f3e149]:
+          - generic [ref=f3e150]:
+            - heading "Good evening, shweta." [level=1] [ref=f3e151]
+            - generic [ref=f3e152]:
+              - text: Thursday, July 2, 2026 · Last pipeline run
+              - strong [ref=f3e153]: 12:22 PM
+          - generic [ref=f3e154]:
+            - button "Open today's run" [ref=f3e155] [cursor=pointer]:
+              - img [ref=f3e156]
+              - text: Open today's run
+            - button "Live simulator" [ref=f3e163] [cursor=pointer]:
+              - img [ref=f3e164]
+              - text: Live simulator
+        - generic [ref=f3e169]:
+          - generic [ref=f3e170]:
+            - generic [ref=f3e171]: Overall Trust
+            - generic [ref=f3e172]:
+              - generic [ref=f3e173]:
+                - img [ref=f3e174]
+                - generic [ref=f3e178]: "99"
+              - generic [ref=f3e179]:
+                - generic [ref=f3e180]:
+                  - img [ref=f3e181]
+                  - text: +4 pts
+                - generic [ref=f3e184]: vs yesterday (91)
+          - generic [ref=f3e185]:
+            - generic [ref=f3e186]: Open Issues
+            - generic [ref=f3e187]:
+              - generic [ref=f3e188]:
+                - generic [ref=f3e190]: Critical
+                - generic [ref=f3e191]: "0"
+              - generic [ref=f3e192]:
+                - generic [ref=f3e194]: High
+                - generic [ref=f3e195]: "0"
+              - generic [ref=f3e196]:
+                - generic [ref=f3e198]: Medium
+                - generic [ref=f3e199]: "0"
+              - generic [ref=f3e200]: No open issues
+          - generic [ref=f3e201]:
+            - generic [ref=f3e202]: Anomalies
+            - generic [ref=f3e203]:
+              - generic [ref=f3e204]:
+                - generic [ref=f3e205]: "9"
+                - generic [ref=f3e206]: Volume drop
+              - generic [ref=f3e207]:
+                - generic [ref=f3e208]: "2"
+                - generic [ref=f3e209]: Segment / drift
+              - generic [ref=f3e210]:
+                - generic [ref=f3e211]: "2"
+                - generic [ref=f3e212]: Threshold breach
+              - generic [ref=f3e213]:
+                - generic [ref=f3e214]: "1"
+                - generic [ref=f3e215]: Freshness gap
+              - button "Go to Anomaly Inbox →" [ref=f3e216] [cursor=pointer]
+        - generic [ref=f3e217]:
+          - generic [ref=f3e218]:
+            - img [ref=f3e219]
+            - generic [ref=f3e224]: Layer scores
+            - generic [ref=f3e225]: Medallion architecture
+          - generic [ref=f3e226]:
+            - button "RAW 99/100 0 failing · 1 anomaly" [ref=f3e227] [cursor=pointer]:
+              - generic [ref=f3e228]:
+                - generic [ref=f3e229]: RAW
+                - img [ref=f3e230]
+              - generic [ref=f3e232]: 99/100
+              - generic [ref=f3e233]: 0 failing · 1 anomaly
+            - button "BRONZE 99/100 0 failing · 0 anomalies" [ref=f3e234] [cursor=pointer]:
+              - generic [ref=f3e235]:
+                - generic [ref=f3e236]: BRONZE
+                - img [ref=f3e237]
+              - generic [ref=f3e239]: 99/100
+              - generic [ref=f3e240]: 0 failing · 0 anomalies
+            - button "SILVER 99/100 0 failing · 1 anomaly" [ref=f3e241] [cursor=pointer]:
+              - generic [ref=f3e242]:
+                - generic [ref=f3e243]: SILVER
+                - img [ref=f3e244]
+              - generic [ref=f3e246]: 99/100
+              - generic [ref=f3e247]: 0 failing · 1 anomaly
+            - button "GOLD — — Not profiled" [ref=f3e248] [cursor=pointer]:
+              - generic [ref=f3e249]:
+                - generic [ref=f3e250]: GOLD
+                - generic [ref=f3e251]: —
+              - generic [ref=f3e252]: —
+              - generic [ref=f3e253]: Not profiled
+        - generic [ref=f3e254]:
+          - generic [ref=f3e255]:
+            - generic [ref=f3e256]:
+              - img [ref=f3e257]
+              - generic [ref=f3e259]:
+                - generic [ref=f3e260]: Recent activity
+                - generic [ref=f3e261]: Live · My Connection demo
+            - generic [ref=f3e262]:
+              - generic [ref=f3e263] [cursor=pointer]:
+                - generic [ref=f3e264]: 09:33
+                - generic [ref=f3e266]:
+                  - strong [ref=f3e267]: shweta.katkar@pal.tech
+                  - text: · APPROVE · RULE · 68abaff3-929b-4ded-aeab-92f9169f48a0
+                - img [ref=f3e268]
+              - generic [ref=f3e270] [cursor=pointer]:
+                - generic [ref=f3e271]: 09:32
+                - generic [ref=f3e273]:
+                  - strong [ref=f3e274]: shweta.katkar@pal.tech
+                  - text: · APPROVE · RULE · 4c65e20d-abc5-449f-b9ab-2365d2b23671
+                - img [ref=f3e275]
+              - generic [ref=f3e277] [cursor=pointer]:
+                - generic [ref=f3e278]: 09:32
+                - generic [ref=f3e280]:
+                  - strong [ref=f3e281]: shweta.katkar@pal.tech
+                  - text: · APPROVE · RULE · d11203af-0e94-43f1-ac00-4766c7e6c5db
+                - img [ref=f3e282]
+              - generic [ref=f3e284] [cursor=pointer]:
+                - generic [ref=f3e285]: 09:32
+                - generic [ref=f3e287]:
+                  - strong [ref=f3e288]: shweta.katkar@pal.tech
+                  - text: · APPROVE · RULE · 683a20d9-2b3b-4eea-a055-57284dbe6f4b
+                - img [ref=f3e289]
+              - generic [ref=f3e291] [cursor=pointer]:
+                - generic [ref=f3e292]: 09:32
+                - generic [ref=f3e294]:
+                  - strong [ref=f3e295]: shweta.katkar@pal.tech
+                  - text: · APPROVE · RULE · 4615306d-1ffa-48a0-a161-5e07debce06c
+                - img [ref=f3e296]
+              - generic [ref=f3e298] [cursor=pointer]:
+                - generic [ref=f3e299]: 07:00
+                - generic [ref=f3e301]:
+                  - strong [ref=f3e302]: shweta.katkar@pal.tech
+                  - text: · APPROVE · RULE · ebef8217-e2fc-47d4-a861-07da69c02d75
+                - img [ref=f3e303]
+              - generic [ref=f3e305] [cursor=pointer]:
+                - generic [ref=f3e306]: 07:00
+                - generic [ref=f3e308]:
+                  - strong [ref=f3e309]: shweta.katkar@pal.tech
+                  - text: · APPROVE · RULE · d192119d-effe-4c9d-8d7e-90257cda2a24
+                - img [ref=f3e310]
+              - generic [ref=f3e312] [cursor=pointer]:
+                - generic [ref=f3e313]: 07:00
+                - generic [ref=f3e315]:
+                  - strong [ref=f3e316]: shweta.katkar@pal.tech
+                  - text: · APPROVE · RULE · 60ad4688-1d1d-4573-b193-f24a85d1e0ff
+                - img [ref=f3e317]
+          - generic [ref=f3e319]:
+            - generic [ref=f3e320]:
+              - img [ref=f3e321]
+              - generic [ref=f3e326]: Agentic workflow
+            - generic [ref=f3e327]:
+              - generic [ref=f3e328] [cursor=pointer]:
+                - img [ref=f3e331]
+                - generic [ref=f3e334]:
+                  - generic [ref=f3e335]: Profiling
+                  - generic [ref=f3e336]: Complete
+              - generic [ref=f3e337] [cursor=pointer]:
+                - img [ref=f3e340]
+                - generic [ref=f3e343]:
+                  - generic [ref=f3e344]: Dictionary & CDEs
+                  - generic [ref=f3e345]: Complete
+              - generic [ref=f3e346] [cursor=pointer]:
+                - img [ref=f3e349]
+                - generic [ref=f3e352]:
+                  - generic [ref=f3e353]: Rule Studio
+                  - generic [ref=f3e354]: Complete
+              - generic [ref=f3e355] [cursor=pointer]:
+                - img [ref=f3e358]
+                - generic [ref=f3e361]:
+                  - generic [ref=f3e362]: DQ Execution
+                  - generic [ref=f3e363]: Complete
+              - generic [ref=f3e364] [cursor=pointer]:
+                - img [ref=f3e367]
+                - generic [ref=f3e370]:
+                  - generic [ref=f3e371]: Anomaly + Explain
+                  - generic [ref=f3e372]: Complete
+              - generic [ref=f3e373] [cursor=pointer]:
+                - generic [ref=f3e375]: "6"
+                - generic [ref=f3e376]:
+                  - generic [ref=f3e377]: Trust Dashboard
+                  - generic [ref=f3e378]: In progress
+            - generic [ref=f3e379]:
+              - generic [ref=f3e380]:
+                - generic [ref=f3e381]: Tables profiled
+                - generic [ref=f3e382]: "54"
+              - generic [ref=f3e383]:
+                - generic [ref=f3e384]: CDE health
+                - generic [ref=f3e385]: 100%
+              - generic [ref=f3e386]:
+                - generic [ref=f3e387]: Open issues
+                - generic [ref=f3e388]: "0"

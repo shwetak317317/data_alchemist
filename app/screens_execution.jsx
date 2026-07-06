@@ -1,8 +1,7 @@
 // DataTrust — Screen: DQ Execution results + failed records drill-down
 (function () {
-  const D = window.DT;
 
-  const FailedRecords = ({ onClose, records, ruleName, failCnt, resultId, ackId, ackNote, setAckNote, onAck, setAckId }) => {
+  const FailedRecords = ({ onClose, records, ruleName, failCnt, resultId, ackId, ackNote, setAckNote, onAck, setAckId, connectionId }) => {
     useIcons();
     const cols = records.length > 0 ? Object.keys(records[0]) : [];
     return (
@@ -24,7 +23,18 @@
             )}
             <div style={{ flex: 1 }}></div>
             <Button variant="danger" icon="siren"
-              onClick={() => { toast("Escalated to pipeline owner · ticket created", { kind: "warning" }); onClose(); }}>
+              onClick={() => {
+                window.DTApi?.createTask?.({
+                  title: `ESCALATED: ${ruleName || "rule"} — ${failCnt || records.length} failed records`,
+                  priority: "CRITICAL",
+                  related_entity_type: "dq_run_result",
+                  related_entity_id: resultId,
+                  connection_id: connectionId || null,
+                })
+                  .then(() => toast("Escalated · task created in Task Board", { kind: "warning" }))
+                  .catch(() => toast("Escalation failed — check backend", { kind: "error" }));
+                onClose();
+              }}>
               Escalate to pipeline owner
             </Button>
           </div>
@@ -203,6 +213,9 @@
     const [ackNote, setAckNote]         = React.useState("");
     const [ackedIds, setAckedIds]       = React.useState({});
     const [neverRunRules, setNeverRunRules] = React.useState([]);
+    // True from first paint until the saved run state loads — without it the screen
+    // flashes the "no run yet" zero-state (a false message) before data arrives.
+    const [execLoading, setExecLoading] = React.useState(!!window.DTApi);
     useIcons();
 
     // Sets the header trust/pipeline badge from a run response, or resets it to a
@@ -220,7 +233,8 @@
     };
 
     React.useEffect(() => {
-      if (!window.DTApi || !activeConnectionId) return;
+      if (!window.DTApi || !activeConnectionId) { setExecLoading(false); return; }
+      setExecLoading(true);
       setExecResults([]);
       setLayerScores([]);
       setRunMeta(null);
@@ -231,7 +245,8 @@
           _applyHealthBadge(r);
           setNeverRunRules(r?.never_run_rules || []);
         })
-        .catch(() => _applyHealthBadge(null));
+        .catch(() => _applyHealthBadge(null))
+        .finally(() => setExecLoading(false));
       window.DTApi.listRules(activeConnectionId, "approved")
         .then(r => setRuleCount(r?.length || 0))
         .catch(() => {});
@@ -261,6 +276,7 @@
 
     const handleOverlayDone = (error) => {
       if (error) toast(error, { kind: error.includes("No approved") ? "warning" : "error" });
+      else toast(`Re-run complete — ${runMeta?.rulesTotal ?? "all"} rules checked`, { kind: "success" });
       setPhase("results");
     };
 
@@ -286,7 +302,8 @@
           if (r?.run_id) setLastRunId(r.run_id);
           _mergeScopedResults(r, setExecResults, setLayerScores, setRunMeta);
           setRuleRun(s => ({ ...s, [id]: "done" }));
-          toast("Rule re-run complete", { kind: "success" });
+          const ruleName = r?.results?.[0]?.rule_name;
+          toast(ruleName ? `"${ruleName}" re-run complete` : "Rule re-run complete", { kind: "success" });
         })
         .catch(err => {
           setRuleRun(s => ({ ...s, [id]: null }));
@@ -423,6 +440,13 @@
                     </div>
                   )}
                 </>
+              ) : execLoading ? (
+                <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "5px 0 4px",
+                  fontFamily: "var(--font-doc-head)", fontWeight: 600, fontSize: 15, color: "var(--fg-3)" }}>
+                  <span className="dt-spin" style={{ width: 14, height: 14, border: "2px solid var(--brand-ring)",
+                    borderTopColor: "var(--brand)", borderRadius: "50%", display: "inline-block" }}></span>
+                  Loading last run…
+                </div>
               ) : (
                 <div style={{ fontFamily: "var(--font-doc-head)", fontWeight: 600, fontSize: 15,
                   margin: "5px 0 4px", color: "var(--fg-3)" }}>
@@ -444,7 +468,9 @@
         </Card>
 
         {/* ── Layer summary cards ── */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginBottom: 16 }}>
+        <div style={{ display: "grid",
+          gridTemplateColumns: `repeat(${Math.max(1, Math.min(layerScores.length, 4))},1fr)`,
+          gap: 12, marginBottom: 16 }}>
           {layerScores.map(l => (
             <Card key={l.layer} pad={16}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
@@ -504,9 +530,15 @@
               <tbody>
                 {visibleResults.length === 0 && (
                   <tr><td colSpan={7} style={{ padding: "32px 20px", textAlign: "center", color: "var(--fg-3)", fontSize: 13 }}>
-                    {execResults.length === 0
-                      ? "No results yet — run checks to populate this table."
-                      : "No results match the current filters."}
+                    {execLoading
+                      ? <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                          <span className="dt-spin" style={{ width: 14, height: 14, border: "2px solid var(--brand-ring)",
+                            borderTopColor: "var(--brand)", borderRadius: "50%", display: "inline-block" }}></span>
+                          Loading results…
+                        </span>
+                      : execResults.length === 0
+                        ? "No results yet — run checks to populate this table."
+                        : "No results match the current filters."}
                   </td></tr>
                 )}
                 {visibleResults.map((r) => {
@@ -523,8 +555,9 @@
                           <div style={{ marginTop: 3 }}>
                             <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
                               {r.isCde && (
-                                <span style={{ fontSize: 10.5, fontWeight: 700, color: "var(--brand)",
-                                  background: "var(--brand-soft)", borderRadius: 3, padding: "1px 5px" }}>CDE</span>
+                                <span style={{ fontSize: 11, fontWeight: 800, color: "var(--brand)",
+                                  background: "var(--brand-soft)", border: "1px solid var(--brand-ring)",
+                                  borderRadius: 4, padding: "2px 6px", letterSpacing: ".02em" }}>CDE</span>
                               )}
                               {r.tableFqn && (
                                 <span style={{ fontSize: 11, color: "var(--fg-3)" }}>{r.tableFqn}</span>
@@ -550,9 +583,9 @@
                         }
                       </td>
                       <td style={{ padding: "11px 18px", textAlign: "right", fontWeight: 600,
-                        color: fail && !isAcked ? "var(--red-500)" : "var(--fg-3)" }}>{r.failCnt}</td>
+                        color: fail && !isAcked ? "var(--red-500)" : "var(--fg-3)" }}>{isError ? "—" : r.failCnt}</td>
                       <td style={{ padding: "11px 18px", textAlign: "right", color: "var(--fg-2)" }}>
-                        {r.failPct ? r.failPct + "%" : "—"}
+                        {isError ? "—" : r.failPct ? r.failPct + "%" : "—"}
                       </td>
                       <td style={{ padding: "11px 18px" }}>
                         {r.sev !== "—" ? <Severity level={r.sev} size="sm" /> : <span style={{ color: "var(--fg-3)" }}>—</span>}
@@ -579,10 +612,11 @@
 
           <div style={{ display: "flex", gap: 10, padding: "14px 20px", background: "var(--grey-50)", flexWrap: "wrap" }}>
             <Button size="sm" variant="soft" icon="download" onClick={downloadCsv}>Download CSV</Button>
-            <Button size="sm" variant="soft" icon="share-2"
-              onClick={() => toast("Slack integration not configured — use Download CSV to share results", { kind: "info" })}>
-              Share to Slack
-            </Button>
+            <span title="Slack integration not configured yet — use Download CSV to share results">
+              <Button size="sm" variant="soft" icon="share-2" disabled style={{ opacity: 0.55 }}>
+                Share to Slack <span style={{ fontSize: 10, fontWeight: 700, marginLeft: 4, opacity: 0.8 }}>· COMING SOON</span>
+              </Button>
+            </span>
             <div style={{ flex: 1 }}></div>
             <Button size="sm" variant="primary" iconRight="arrow-right" onClick={() => go("anomalies")}>Review anomalies</Button>
           </div>
@@ -595,6 +629,7 @@
             ruleName={drillRecords.rule}
             failCnt={drillRecords.failCnt}
             resultId={drillRecords.resultId}
+            connectionId={activeConnectionId}
             ackId={ackId}
             ackNote={ackNote}
             setAckNote={setAckNote}

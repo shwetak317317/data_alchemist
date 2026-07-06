@@ -1,6 +1,5 @@
 // DataTrust — Screens: Pre-run Advisory + Trust Receipt
 (function () {
-  const D = window.DT;
 
   // ---------------- Pre-run Advisory ----------------
   const Advisory = () => {
@@ -38,11 +37,15 @@
             <ScoreRing score={a.predicted} size={104} stroke={10} sublabel="predicted" />
             <div style={{ flex: 1, minWidth: 220 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <Mono style={{ fontSize: 12, color: "var(--fg-2)" }}>{a.advisory_time || "05:20 AM"}</Mono>
+                <Mono style={{ fontSize: 12, color: "var(--fg-2)" }}>{a.advisory_time || "—"}</Mono>
                 <Chip intent="warning" dot>Before Bronze pipeline start</Chip>
               </div>
-              <div style={{ fontFamily: "var(--font-doc-head)", fontWeight: 700, fontSize: 18, margin: "8px 0 4px" }}>Predicted trust score for today's run: <span style={{ color: "var(--yellow-700)" }}>{a.predicted}/100</span></div>
-              <div style={{ fontSize: 13, color: "var(--fg-2)" }}>Below the 85 healthy threshold. Review the risk signals before launching the pipeline.</div>
+              <div style={{ fontFamily: "var(--font-doc-head)", fontWeight: 700, fontSize: 18, margin: "8px 0 4px" }}>Predicted trust score for today's run: <span style={{ color: a.predicted < 85 ? "var(--yellow-700)" : "var(--green-600)" }}>{a.predicted}/100</span></div>
+              <div style={{ fontSize: 13, color: "var(--fg-2)" }}>
+                {a.predicted < 85
+                  ? "Below the 85 healthy threshold. Review the risk signals before launching the pipeline."
+                  : "At or above the 85 healthy threshold — no elevated risk predicted for this run."}
+              </div>
             </div>
           </div>
 
@@ -65,17 +68,20 @@
             <div style={{ padding: 14, borderRadius: 10, background: decision === "hold" ? "var(--green-50)" : decision === "proceed" ? "var(--red-50)" : "var(--blue-50)", display: "flex", alignItems: "center", gap: 10 }}>
               <i data-lucide={decision === "hold" ? "check-circle-2" : decision === "proceed" ? "alert-triangle" : "bell"} style={{ width: 18, height: 18, color: decision === "hold" ? "var(--green-500)" : decision === "proceed" ? "var(--red-500)" : "var(--brand)" }}></i>
               <div style={{ flex: 1, fontSize: 13 }}>
-                {decision === "hold" && <span><strong>Pipeline held 20 minutes.</strong> Waiting for WMS feed confirmation. You'll be alerted when the OMS extract reaches full size.</span>}
-                {decision === "proceed" && <span><strong>Proceeding anyway.</strong> This is exactly the path that led to today's 11.2% net_revenue null incident — see the Impact Graph.</span>}
-                {decision === "alert" && <span><strong>Pipeline owner alerted.</strong> Deepa Nair notified of the elevated pre-run risk.</span>}
+                {/* No pipeline-scheduling or paging integration exists yet in this build — these
+                    decisions are recorded as your acknowledgment of the advisory, not a real
+                    hold/alert action taken against any external system. Don't claim otherwise. */}
+                {decision === "hold" && <span><strong>Hold acknowledged.</strong> This isn't wired to a pipeline scheduler yet — pause the run manually in your orchestrator if you intend to wait.</span>}
+                {decision === "proceed" && <span><strong>Proceeding acknowledged.</strong> You're launching this run despite the advisory above — check back after the run to see what happened.</span>}
+                {decision === "alert" && <span><strong>Alert acknowledged.</strong> No paging integration is configured yet — notify the pipeline owner directly.</span>}
               </div>
               {decision === "proceed" && <Button size="sm" variant="outline" onClick={() => go("impact")}>See what broke</Button>}
             </div>
           ) : (
             <div style={{ display: "flex", gap: 10 }}>
-              <Button variant="primary" icon="pause" onClick={() => { setDecision("hold"); toast("Bronze pipeline held 20 minutes", { kind: "success" }); }}>Hold pipeline</Button>
+              <Button variant="primary" icon="pause" onClick={() => { setDecision("hold"); toast("Hold acknowledged", { kind: "success" }); }}>Hold pipeline</Button>
               <Button variant="soft" icon="play" onClick={() => { setDecision("proceed"); toast("Proceeding against advisory", { kind: "warning" }); }}>Proceed anyway</Button>
-              <Button variant="ghost" icon="bell" onClick={() => { setDecision("alert"); toast("Pipeline owner alerted", { kind: "info" }); }}>Alert owner</Button>
+              <Button variant="ghost" icon="bell" onClick={() => { setDecision("alert"); toast("Alert acknowledged", { kind: "info" }); }}>Alert owner</Button>
             </div>
           )}
         </Card>
@@ -135,7 +141,14 @@
               <ScoreRing score={r.score} size={84} stroke={8} />
               <div>
                 <Eyebrow>Data trust score</Eyebrow>
-                <div style={{ fontSize: 13, color: "var(--fg-2)", marginTop: 6, maxWidth: 360 }}>This result mixes fully-trusted and uncertain fields. Read the field-level breakdown before using it.</div>
+                <div style={{ fontSize: 13, color: "var(--fg-2)", marginTop: 6, maxWidth: 360 }}>
+                  {(() => {
+                    const bad = r.fields.filter(f => f.status !== "ok").length;
+                    if (r.fields.length === 0) return "No field-level breakdown available for this query.";
+                    if (bad === 0) return "All fields in this result are fully trusted.";
+                    return `${bad} of ${r.fields.length} field${r.fields.length === 1 ? "" : "s"} in this result ${bad === 1 ? "is" : "are"} uncertain or degraded. Read the field-level breakdown before using it.`;
+                  })()}
+                </div>
               </div>
             </div>
 
@@ -163,9 +176,11 @@
             </div>
 
             <div style={{ padding: "16px 22px", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-              <span style={{ flex: 1, fontSize: 12, color: "var(--fg-3)" }}>Last fully-trusted snapshot: <strong style={{ color: "var(--green-600)" }}>{r.lastClean}</strong></span>
-              <Button size="sm" variant="soft" icon="history">Use yesterday's data</Button>
-              <Button size="sm" variant="primary" icon="check">Acknowledge & proceed</Button>
+              <span style={{ flex: 1, fontSize: 12, color: "var(--fg-3)" }}>Last fully-trusted snapshot: <strong style={{ color: "var(--green-600)" }}>{r.lastClean || "—"}</strong></span>
+              <span title="Not wired to a data-versioning system yet — no snapshot rollback is available in this build">
+                <Button size="sm" variant="soft" icon="history" disabled>Use yesterday's data</Button>
+              </span>
+              <Button size="sm" variant="primary" icon="check" onClick={() => toast("Acknowledged", { kind: "success" })}>Acknowledge & proceed</Button>
             </div>
           </Card>
         </div>

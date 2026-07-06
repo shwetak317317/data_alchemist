@@ -1,6 +1,5 @@
 // DataTrust — Screens: Live Scenario Simulator (hero) + Task Board + Daily Summary
 (function () {
-  const D = window.DT;
 
   // ---- Demo preset picker — used only when the backend is unreachable ----
   // This is NOT a classifier. It maps quick-pick preset phrases to their scenario object
@@ -555,7 +554,7 @@
       setDraft(""); setAdding(false);
       toast("Task added", { kind: "success" });
       if (window.DTApi) {
-        window.DTApi.createTask({ title: draft, priority: "MEDIUM", connection_id: activeConnectionId, assigned_to: ownerName }).catch(() => {
+        window.DTApi.createTask({ title: draft, priority: "MEDIUM", connection_id: activeConnectionId, owner: ownerName }).catch(() => {
           toast("Failed to save task", { kind: "error" });
           // Roll back the optimistic add
           setTaskList(t => t.filter(item => item.title !== draft || item.meta !== newTask.meta));

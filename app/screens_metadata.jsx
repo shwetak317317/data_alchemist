@@ -184,11 +184,16 @@
 
   // ── Main screen ──────────────────────────────────────────────────────────────
   const Metadata = () => {
-    const { go, activeConnectionId, activeConnectionName, activeTableFqn, datasets } = useApp();
+    const { go, activeConnectionId, activeConnectionName, activeTableFqn, datasets,
+      backgroundJobs, startJob, updateJob, endJob } = useApp();
 
     // ── State ────────────────────────────────────────────────────────────────
     const [metaRows, setMetaRows] = React.useState([]);
     const [cdeRows, setCdeRows]   = React.useState([]);
+    // True from first paint until the initial dictionary fetch resolves — effects run
+    // AFTER the first paint, so without this the empty "No column metadata yet" state
+    // (or a previous connection's rows) flashes before the real data arrives.
+    const [dictLoading, setDictLoading] = React.useState(!!window.DTApi);
     const [descs, setDescs]       = React.useState({});
     const [busNames, setBusNames] = React.useState({});
     const [owners, setOwners]     = React.useState({});
@@ -196,6 +201,14 @@
     const [enriching, setEnriching]         = React.useState(false);
     const [enrichingLayer, setEnrichingLayer] = React.useState(null);
     const [enrichProgress, setEnrichProgress] = React.useState({ done: 0, total: 0 });
+    // A layer-enrichment loop keeps running in the background after this screen
+    // unmounts (plain promise chain + the shell's global job registry). On remount
+    // mid-run, local state has reset — adopt the live job's progress so the UI shows
+    // the run and blocks a duplicate instead of pretending nothing is happening.
+    const liveEnrichJob = (backgroundJobs || []).find(j => j.id.startsWith(`enrich-layer-${activeConnectionId}-`));
+    const effEnrichingLayer = enrichingLayer || (liveEnrichJob ? liveEnrichJob.id.split('-').pop() : null);
+    const effEnrichProgress = enrichingLayer ? enrichProgress
+      : liveEnrichJob ? { done: liveEnrichJob.done || 0, total: liveEnrichJob.total || 0 } : enrichProgress;
     const [enrichError, setEnrichError]     = React.useState('');
     // Sidebar
     const [selectedFqn, setSelectedFqn]   = React.useState(activeTableFqn || null);
@@ -270,7 +283,17 @@
       return dictPromise;
     }, [activeConnectionId]);
 
-    React.useEffect(() => { loadData(); }, [loadData]);
+    React.useEffect(() => {
+      if (!window.DTApi || !activeConnectionId) { setDictLoading(false); return; }
+      setDictLoading(true);
+      // Clear the previous connection's rows immediately — showing them while the new
+      // connection loads reads as wrong data. (Only this initial/connection-switch
+      // load clears + spins; the loadData() refreshes after enrich/approve keep the
+      // current rows on screen, which is correct for an in-place update.)
+      setMetaRows([]);
+      setCdeRows([]);
+      loadData().finally(() => setDictLoading(false));
+    }, [loadData]);
 
     // ── Sidebar groups ──────────────────────────────────────────────────────
     const sidebarGroups = React.useMemo(() => {
@@ -355,6 +378,7 @@
     };
 
     const runEnrichAllLayer = async (group) => {
+      if (effEnrichingLayer) return;   // a run is already live (possibly started before a page switch)
       const eligible = group.tables.filter(t => {
         const cov = coverageByTable[t.fqn] || { total: 0, enriched: 0 };
         return t.profiled && cov.enriched === 0 && !brokenTables[t.fqn];
@@ -365,6 +389,12 @@
       }
       setEnrichingLayer(group.layer);
       setEnrichProgress({ done: 0, total: eligible.length });
+      // Register globally so the run survives navigation: the loop itself keeps
+      // executing after unmount, and the TopBar indicator + this screen's remount
+      // adoption (effEnrichingLayer above) keep it visible everywhere.
+      const jobId = `enrich-layer-${activeConnectionId}-${group.layer}`;
+      startJob(jobId, `Enriching ${group.layer} tables`);
+      updateJob(jobId, { total: eligible.length });
       let doneCount = 0;
       const failedTables = [];
 
@@ -406,12 +436,14 @@
           failedTables.push(t.name);
         }
         setEnrichProgress({ done: i + 1, total: eligible.length });
+        updateJob(jobId, { done: i + 1 });
         // Yield a macrotask so React flushes and paints before the next table starts
         await new Promise(resolve => setTimeout(resolve, 0));
       }
 
       setEnrichingLayer(null);
       setEnrichProgress({ done: 0, total: 0 });
+      endJob(jobId);
       if (doneCount === 0) {
         toast(`Could not enrich any tables in ${group.layer} — run Profiling first.`, { kind: 'error' });
       } else if (failedTables.length > 0) {
@@ -613,12 +645,12 @@
               {enrichError && (
                 <span style={{ fontSize: 11, color: 'var(--red-600)', maxWidth: 220, lineHeight: 1.3 }}>{enrichError}</span>
               )}
-              <Button variant="soft" disabled={enriching || !!enrichingLayer} onClick={() => runEnrichmentFor(selectedFqn)}>
+              <Button variant="soft" disabled={enriching || !!effEnrichingLayer} onClick={() => runEnrichmentFor(selectedFqn)}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <IcoRefresh size={13} cls={(enriching || enrichingLayer) ? 'dt-spin' : ''} />
+                  <IcoRefresh size={13} cls={(enriching || effEnrichingLayer) ? 'dt-spin' : ''} />
                   {enriching ? 'Enriching…'
-                    : enrichingLayer
-                      ? `Enriching ${enrichingLayer}… ${enrichProgress.done}/${enrichProgress.total}`
+                    : effEnrichingLayer
+                      ? `Enriching ${effEnrichingLayer}… ${effEnrichProgress.done}/${effEnrichProgress.total}`
                       : selectedFqn ? 'Enrich this table' : 'Run AI Enrichment'}
                 </span>
               </Button>
@@ -685,20 +717,20 @@
                             return t.profiled && cov.enriched === 0 && !brokenTables[t.fqn];
                           });
                           if (!eligible.length) return null;
-                          const busy = enrichingLayer === group.layer;
+                          const busy = effEnrichingLayer === group.layer;
                           return (
                             <button
-                              disabled={busy || !!enrichingLayer}
+                              disabled={busy || !!effEnrichingLayer}
                               onClick={e => { e.stopPropagation(); runEnrichAllLayer(group); }}
                               title={`Enrich all ${eligible.length} un-enriched table(s) in ${group.layer}`}
                               style={{ fontSize: 10, padding: '2px 7px', marginRight: 8, borderRadius: 4,
                                 background: busy ? 'var(--brand-ring)' : 'transparent',
                                 border: '1px solid var(--brand)', color: 'var(--brand)',
-                                cursor: (busy || !!enrichingLayer) ? 'not-allowed' : 'pointer',
-                                flexShrink: 0, opacity: (!!enrichingLayer && !busy) ? 0.4 : 1,
+                                cursor: (busy || !!effEnrichingLayer) ? 'not-allowed' : 'pointer',
+                                flexShrink: 0, opacity: (!!effEnrichingLayer && !busy) ? 0.4 : 1,
                                 whiteSpace: 'nowrap' }}>
                               {busy
-                                ? `Enriching… ${enrichProgress.done}/${enrichProgress.total}`
+                                ? `Enriching… ${effEnrichProgress.done}/${effEnrichProgress.total}`
                                 : 'Enrich all'}
                             </button>
                           );
@@ -744,7 +776,7 @@
                               </span>
                             ) : t.profiled && cov.total === 0 && (
                               <button
-                                disabled={enriching || !!enrichingLayer}
+                                disabled={enriching || !!effEnrichingLayer}
                                 onClick={e => { e.stopPropagation(); setSelectedFqn(t.fqn); runEnrichmentFor(t.fqn); }}
                                 style={{ fontSize: 10, padding: '2px 8px', margin: '0 10px 5px 16px',
                                   borderRadius: 4, background: 'var(--brand-ring)',
@@ -858,8 +890,19 @@
                 </div>
               )}
 
+              {/* Loading state — first paint after navigation/connection switch. Must
+                  render INSTEAD of the empty state: flashing "No column metadata yet"
+                  while the fetch is in flight tells the user something false. */}
+              {dictLoading && filteredRows.length === 0 && (
+                <div style={{ padding: '40px 24px', textAlign: 'center' }}>
+                  <span className="dt-spin" style={{ width: 22, height: 22, border: '2.5px solid var(--brand-ring)',
+                    borderTopColor: 'var(--brand)', borderRadius: '50%', display: 'inline-block', marginBottom: 12 }}></span>
+                  <div style={{ color: 'var(--fg-3)', fontSize: 13 }}>Loading data dictionary…</div>
+                </div>
+              )}
+
               {/* Empty state */}
-              {filteredRows.length === 0 && (
+              {!dictLoading && filteredRows.length === 0 && (
                 <div style={{ padding: '36px 24px', textAlign: 'center', color: 'var(--fg-3)', fontSize: 13 }}>
                   {metaRows.length === 0
                     ? selectedFqn

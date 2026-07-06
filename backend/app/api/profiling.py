@@ -131,8 +131,16 @@ def list_datasets(connection_id: str, use_cache: bool = False,
 
         result = []
         for schema in schemas:
+            schema_warning = None
             try:
                 tables = connector.list_tables(schema)
+            except PermissionError as perm_exc:
+                # The connector raises an already-actionable message (which GRANT
+                # to request) — carry it into the group so the sidebar can show
+                # WHY this schema looks empty instead of silently hiding it.
+                logger.error("list_tables schema=%s connection=%s: %s", schema, connection_id, perm_exc)
+                tables = []
+                schema_warning = str(perm_exc)
             except Exception as tbl_exc:
                 logger.error("list_tables schema=%s connection=%s: %s", schema, connection_id, tbl_exc)
                 tables = []
@@ -156,7 +164,10 @@ def list_datasets(connection_id: str, use_cache: bool = False,
             if not table_list:
                 logger.warning("list_datasets schema=%s returned 0 tables for connection=%s",
                                schema, connection_id)
-            result.append({"schema": schema, "layer": layer, "tables": table_list})
+            group = {"schema": schema, "layer": layer, "tables": table_list}
+            if schema_warning:
+                group["warning"] = schema_warning
+            result.append(group)
         connector.close()
         total_tables = sum(len(g["tables"]) for g in result)
         if result and total_tables == 0:
@@ -440,7 +451,16 @@ def run_profiling_stream(req: ProfilingRunRequest, db: Session = Depends(get_db)
                 yield f"data: {payload}\n\n"
         except Exception as e:
             logger.exception("Profiling stream error")
-            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+            # A permission denial must reach the user as the exact GRANT to
+            # request, not a raw ODBC string (product-wide contract, see
+            # connectors/base.py).
+            from app.connectors.base import is_permission_error, permission_denied_message
+            msg = str(e)
+            if is_permission_error(e):
+                login = getattr(connector, "_config", {}).get("username")
+                obj = f"{schema_name}.{req.table_name}" if schema_name else req.table_name
+                msg = permission_denied_message("select", obj, login)
+            yield f"data: {json.dumps({'type': 'error', 'message': msg})}\n\n"
         finally:
             connector.close()
 

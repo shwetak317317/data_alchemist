@@ -13,6 +13,7 @@ def build_anomaly_explanation_prompt(anomaly) -> list[dict]:
         metric_value=anomaly.metric_value,
         baseline_value=anomaly.baseline_value,
         deviation_pct=anomaly.deviation_pct,
+        detected_at=anomaly.detected_at.strftime("%b %d, %Y %H:%M UTC") if anomaly.detected_at else "unknown",
     )
 
 

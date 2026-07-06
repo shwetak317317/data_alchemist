@@ -1,0 +1,125 @@
+- generic [ref=f8e3]:
+  - complementary [ref=f8e4]:
+    - generic [ref=f8e8]:
+      - generic [ref=f8e9]: DataTrust
+      - generic [ref=f8e10]: AGENTIC DQ PLATFORM
+    - generic [ref=f8e11] [cursor=pointer]:
+      - generic [ref=f8e12]: ⬡
+      - generic [ref=f8e13]:
+        - generic [ref=f8e14]: My Connection demo
+        - generic [ref=f8e15]: Active connection
+    - generic [ref=f8e17]:
+      - generic [ref=f8e18]: Workflow
+      - button "Workspace Home" [ref=f8e19] [cursor=pointer]:
+        - generic [ref=f8e21]: Workspace Home
+      - button "Profiling 1" [ref=f8e22] [cursor=pointer]:
+        - generic [ref=f8e24]: Profiling
+        - generic [ref=f8e25]: "1"
+      - button "Dictionary & CDEs 2" [ref=f8e26] [cursor=pointer]:
+        - generic [ref=f8e28]: Dictionary & CDEs
+        - generic [ref=f8e29]: "2"
+      - button "Rule Studio 3" [ref=f8e30] [cursor=pointer]:
+        - generic [ref=f8e32]: Rule Studio
+        - generic [ref=f8e33]: "3"
+      - button "DQ Execution 4" [ref=f8e34] [cursor=pointer]:
+        - generic [ref=f8e36]: DQ Execution
+        - generic [ref=f8e37]: "4"
+    - generic [ref=f8e38]:
+      - generic [ref=f8e39]: Monitoring
+      - button "Anomaly Inbox" [ref=f8e40] [cursor=pointer]:
+        - generic [ref=f8e42]: Anomaly Inbox
+      - button "Impact Graph" [ref=f8e43] [cursor=pointer]:
+        - generic [ref=f8e45]: Impact Graph
+      - button "Trust Dashboard" [ref=f8e46] [cursor=pointer]:
+        - generic [ref=f8e48]: Trust Dashboard
+    - generic [ref=f8e49]:
+      - generic [ref=f8e50]: Intelligence
+      - button "Pre-run Advisory" [ref=f8e51] [cursor=pointer]:
+        - generic [ref=f8e53]: Pre-run Advisory
+      - button "Trust Receipt" [ref=f8e54] [cursor=pointer]:
+        - generic [ref=f8e56]: Trust Receipt
+    - generic [ref=f8e57]:
+      - generic [ref=f8e58]: Admin
+      - button "Connections" [ref=f8e59] [cursor=pointer]:
+        - generic [ref=f8e61]: Connections
+    - generic [ref=f8e62]:
+      - generic [ref=f8e63]: Operate
+      - button "Scenario Simulator" [ref=f8e64] [cursor=pointer]:
+        - generic [ref=f8e66]: Scenario Simulator
+      - button "Task Board" [ref=f8e68] [cursor=pointer]:
+        - generic [ref=f8e70]: Task Board
+      - button "Daily Summary" [ref=f8e71] [cursor=pointer]:
+        - generic [ref=f8e73]: Daily Summary
+    - generic [ref=f8e74]:
+      - generic [ref=f8e76]: TA
+      - generic [ref=f8e78]:
+        - generic [ref=f8e79]: Test Admin
+        - generic [ref=f8e80]: test@pal.tech
+      - button "Sign out" [ref=f8e81] [cursor=pointer]
+  - generic [ref=f8e83]:
+    - banner [ref=f8e84]:
+      - generic [ref=f8e85]:
+        - generic [ref=f8e86]:
+          - generic [ref=f8e87]: My Connection demo
+          - generic [ref=f8e88]: /
+          - generic [ref=f8e89]: Workflow
+        - generic [ref=f8e90]: Dictionary & CDEs
+      - generic [ref=f8e91]: Pipeline · Issues detected
+      - generic [ref=f8e94]:
+        - generic [ref=f8e95]: TRUST SCORE
+        - generic [ref=f8e96]: 69/100
+      - button "Notifications" [ref=f8e97] [cursor=pointer]
+    - main [ref=f8e99]:
+      - generic [ref=f8e100]:
+        - generic [ref=f8e102]:
+          - generic [ref=f8e106]:
+            - generic [ref=f8e107]: Data dictionary — My Connection demo
+            - generic [ref=f8e108]: Select a table in the sidebar and click "Run AI Enrichment" to generate metadata from a profiling report.
+          - generic [ref=f8e109]:
+            - button "Run AI Enrichment" [ref=f8e110] [cursor=pointer]:
+              - generic [ref=f8e111]:
+                - img [ref=f8e112]
+                - text: Run AI Enrichment
+            - generic [ref=f8e116]: 0 approved
+        - generic [ref=f8e118]:
+          - generic [ref=f8e120]:
+            - button "All tables 0 cols" [ref=f8e121] [cursor=pointer]:
+              - generic [ref=f8e122]: All tables
+              - generic [ref=f8e123]: 0 cols
+            - generic [ref=f8e125]: No tables found. Run Profiling first to populate the table list.
+          - generic [ref=f8e126]:
+            - generic [ref=f8e127]:
+              - textbox "Search columns…" [ref=f8e128]
+              - combobox [ref=f8e129] [cursor=pointer]:
+                - option "All layers" [selected]
+                - option "RAW"
+                - option "BRONZE"
+                - option "SILVER"
+                - option "GOLD"
+              - combobox [ref=f8e130] [cursor=pointer]:
+                - option "All statuses" [selected]
+                - option "Draft"
+                - option "Approved"
+                - option "Rejected"
+              - combobox [ref=f8e131] [cursor=pointer]:
+                - 'option "CDE: all" [selected]'
+                - option "CDE only"
+                - option "Non-CDE"
+              - combobox [ref=f8e132] [cursor=pointer]:
+                - 'option "PII: all" [selected]'
+                - option "PII only"
+                - option "Non-PII"
+              - generic [ref=f8e133]: 0 columns
+            - generic [ref=f8e137]: Loading data dictionary…
+            - generic [ref=f8e138]:
+              - generic [ref=f8e139]:
+                - generic [ref=f8e143]: Critical Data Element registry
+                - text: No CDEs registered. Promote columns with CDE score > 40 using the ↑ button.
+              - generic [ref=f8e144]:
+                - generic [ref=f8e148]: PII & sensitivity
+                - text: No PII columns detected.
+            - generic [ref=f8e149]:
+              - generic [ref=f8e150]:
+                - button "Add column manually" [ref=f8e151] [cursor=pointer]: Add column manually
+                - button "Export dictionary" [disabled] [ref=f8e153]: Export dictionary
+              - button "Proceed to Rule Studio" [ref=f8e155] [cursor=pointer]: Proceed to Rule Studio

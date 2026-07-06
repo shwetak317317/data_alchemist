@@ -17,12 +17,13 @@ anomaly:
     Column: {{ column_name }}
     Description: {{ description }}
     Severity: {{ severity }}
+    Detected at: {{ detected_at }}
     Metric value: {{ metric_value }}  Baseline: {{ baseline_value }}  Deviation: {{ deviation_pct }}%
 
     Return JSON matching this schema exactly. Each field must be substantive:
     - "what_happened": 1-2 sentences describing the anomaly in plain language (at least 60 characters)
     - "where": layer and table name
-    - "when_first_seen": timestamp or relative description
+    - "when_first_seen": when this was detected, based on the "Detected at" timestamp above — never invent a time
     - "why_it_matters": 2-3 sentences explaining the business impact — which reports, pipelines, or decisions are affected (at least 80 characters)
     - "how_bad": severity assessment in plain language
     - "recommended_actions": list of at least 3 specific, actionable steps the data team should take (each step at least 30 characters)

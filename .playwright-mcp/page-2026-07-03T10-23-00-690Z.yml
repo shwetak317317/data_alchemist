@@ -1,0 +1,228 @@
+- generic [ref=e129]:
+  - complementary [ref=e130]:
+    - generic [ref=e131]:
+      - img [ref=e761]
+      - generic [ref=e136]:
+        - generic [ref=e137]: DataTrust
+        - generic [ref=e138]: AGENTIC DQ PLATFORM
+    - generic [ref=e139] [cursor=pointer]:
+      - generic [ref=e140]: 🦆
+      - generic [ref=e141]:
+        - generic [ref=e142]: DQ Demo DuckDB
+        - generic [ref=e143]: Active connection
+      - img [ref=e764]
+    - generic [ref=e147]:
+      - generic [ref=e148]: Workflow
+      - button "Workspace Home" [ref=e149] [cursor=pointer]:
+        - img [ref=e767]
+        - generic [ref=e155]: Workspace Home
+      - button "Profiling 1" [ref=e156] [cursor=pointer]:
+        - img [ref=e772]
+        - generic [ref=e164]: Profiling
+        - generic [ref=e165]: "1"
+      - button "Dictionary & CDEs 2" [ref=e166] [cursor=pointer]:
+        - img [ref=e779]
+        - generic [ref=e170]: Dictionary & CDEs
+        - generic [ref=e171]: "2"
+      - button "Rule Studio 3" [ref=e172] [cursor=pointer]:
+        - img [ref=e782]
+        - generic [ref=e176]: Rule Studio
+        - generic [ref=e177]: "3"
+      - button "DQ Execution 4" [ref=e178] [cursor=pointer]:
+        - img [ref=e785]
+        - generic [ref=e182]: DQ Execution
+        - generic [ref=e183]: "4"
+    - generic [ref=e184]:
+      - generic [ref=e185]: Monitoring
+      - button "Anomaly Inbox" [ref=e788] [cursor=pointer]:
+        - img [ref=e789]
+        - generic [ref=e192]: Anomaly Inbox
+      - button "Impact Graph" [ref=e194] [cursor=pointer]:
+        - img [ref=e794]
+        - generic [ref=e200]: Impact Graph
+      - button "Trust Dashboard" [ref=e201] [cursor=pointer]:
+        - img [ref=e799]
+        - generic [ref=e205]: Trust Dashboard
+    - generic [ref=e206]:
+      - generic [ref=e207]: Intelligence
+      - button "Pre-run Advisory" [ref=e208] [cursor=pointer]:
+        - img [ref=e802]
+        - generic [ref=e212]: Pre-run Advisory
+      - button "Trust Receipt" [ref=e213] [cursor=pointer]:
+        - img [ref=e805]
+        - generic [ref=e216]: Trust Receipt
+    - generic [ref=e217]:
+      - generic [ref=e218]: Admin
+      - button "Connections" [ref=e219] [cursor=pointer]:
+        - img [ref=e807]
+        - generic [ref=e222]: Connections
+    - generic [ref=e223]:
+      - generic [ref=e224]: Operate
+      - button "Scenario Simulator" [ref=e225] [cursor=pointer]:
+        - img [ref=e809]
+        - generic [ref=e231]: Scenario Simulator
+      - button "Task Board" [ref=e233] [cursor=pointer]:
+        - img [ref=e814]
+        - generic [ref=e237]: Task Board
+      - button "Daily Summary" [ref=e238] [cursor=pointer]:
+        - img [ref=e817]
+        - generic [ref=e242]: Daily Summary
+    - generic [ref=e243]:
+      - generic [ref=e245]: TA
+      - generic [ref=e247]:
+        - generic [ref=e248]: Test Admin
+        - generic [ref=e249]: test@pal.tech
+      - button "Sign out" [ref=e250] [cursor=pointer]:
+        - img [ref=e820]
+  - generic [ref=e254]:
+    - banner [ref=e255]:
+      - generic [ref=e256]:
+        - generic [ref=e257]:
+          - generic [ref=e258]: DQ Demo DuckDB
+          - generic [ref=e259]: /
+          - generic [ref=e260]: Workflow
+        - generic [ref=e261]: Connections
+      - generic [ref=e262]: Pipeline · Issues detected
+      - generic [ref=e265]:
+        - generic [ref=e266]: TRUST SCORE
+        - generic [ref=e267]: 0/100
+      - button "Notifications" [ref=e268] [cursor=pointer]:
+        - img [ref=e823]
+    - main [ref=e272]:
+      - generic [ref=e584]:
+        - generic [ref=e586]:
+          - img [ref=e826]
+          - generic [ref=e589]:
+            - generic [ref=e590]: Connections
+            - generic [ref=e591]: Data platforms DataTrust monitors. Checks run in-warehouse — your data is never copied out.
+          - button "Add connection" [ref=e592] [cursor=pointer]:
+            - img [ref=e828]
+            - text: Add connection
+        - generic [ref=e594]:
+          - generic [ref=e596]:
+            - generic [ref=e597]:
+              - generic [ref=e598]: 🦆
+              - generic [ref=e599]:
+                - generic [ref=e600]:
+                  - generic [ref=e601]:
+                    - generic [ref=e602]: DQ Demo DuckDB
+                    - button "Rename connection" [ref=e603] [cursor=pointer]:
+                      - img [ref=e829]
+                  - generic [ref=e607]: production
+                  - generic [ref=e832]: Connected
+                  - generic [ref=e834]: Active
+                - generic [ref=e610]: duckdb
+              - generic [ref=e611]:
+                - button "Edit schemas" [ref=e616] [cursor=pointer]:
+                  - img [ref=e836]
+                  - text: Edit schemas
+                - button "Edit credentials" [ref=e621] [cursor=pointer]:
+                  - img [ref=e840]
+                  - text: Edit credentials
+                - button "Sync" [ref=e625] [cursor=pointer]:
+                  - img [ref=e843]
+                  - text: Sync
+                - button "Delete connection" [ref=e631] [cursor=pointer]:
+                  - img [ref=e848]
+            - generic [ref=e635]:
+              - generic [ref=e636]:
+                - generic [ref=e637]: Schemas
+                - generic [ref=e638]: "0"
+              - generic [ref=e639]:
+                - generic [ref=e640]: Tables
+                - generic [ref=e641]: "2"
+              - generic [ref=e642]:
+                - generic [ref=e643]: Auth
+                - generic [ref=e644]: sql auth
+              - generic [ref=e645]:
+                - generic [ref=e646]: Last sync
+                - generic [ref=e647]: 10:16 AM
+          - generic [ref=e649]:
+            - generic [ref=e650]:
+              - generic [ref=e651]: ⬡
+              - generic [ref=e652]:
+                - generic [ref=e653]:
+                  - generic [ref=e654]:
+                    - generic [ref=e655]: My Connection demo
+                    - button "Rename connection" [ref=e656] [cursor=pointer]:
+                      - img [ref=e851]
+                  - generic [ref=e660]: production
+                  - generic [ref=e854]: Connected
+                - generic [ref=e665]: 192.168.1.2
+              - generic [ref=e666]:
+                - button "Use this" [ref=e856] [cursor=pointer]:
+                  - img [ref=e857]
+                  - text: Use this
+                - button "Edit schemas" [ref=e667] [cursor=pointer]:
+                  - img [ref=e860]
+                  - text: Edit schemas
+                - button "Edit credentials" [ref=e672] [cursor=pointer]:
+                  - img [ref=e864]
+                  - text: Edit credentials
+                - button "Sync" [ref=e676] [cursor=pointer]:
+                  - img [ref=e867]
+                  - text: Sync
+                - button "Delete connection" [ref=e682] [cursor=pointer]:
+                  - img [ref=e872]
+            - generic [ref=e686]:
+              - generic [ref=e687]:
+                - generic [ref=e688]: Schemas
+                - generic [ref=e689]: "3"
+              - generic [ref=e690]:
+                - generic [ref=e691]: Tables
+                - generic [ref=e692]: "54"
+              - generic [ref=e693]:
+                - generic [ref=e694]: Auth
+                - generic [ref=e695]: sql auth
+              - generic [ref=e696]:
+                - generic [ref=e697]: Last sync
+                - generic [ref=e698]: 10:21 AM
+          - generic [ref=e700]:
+            - generic [ref=e701]:
+              - generic [ref=e702]: ⬡
+              - generic [ref=e703]:
+                - generic [ref=e704]:
+                  - generic [ref=e705]:
+                    - generic [ref=e706]: My Connection ofc
+                    - button "Rename connection" [ref=e707] [cursor=pointer]:
+                      - img [ref=e875]
+                  - generic [ref=e711]: production
+                  - generic [ref=e878]: Connected
+                - generic [ref=e714]: 10.10.97.36
+              - generic [ref=e715]:
+                - button "Use this" [ref=e716] [cursor=pointer]:
+                  - img [ref=e880]
+                  - text: Use this
+                - button "Edit schemas" [ref=e720] [cursor=pointer]:
+                  - img [ref=e883]
+                  - text: Edit schemas
+                - button "Edit credentials" [ref=e725] [cursor=pointer]:
+                  - img [ref=e887]
+                  - text: Edit credentials
+                - button "Sync" [ref=e729] [cursor=pointer]:
+                  - img [ref=e890]
+                  - text: Sync
+                - button "Delete connection" [ref=e735] [cursor=pointer]:
+                  - img [ref=e895]
+            - generic [ref=e739]:
+              - generic [ref=e740]:
+                - generic [ref=e741]: Schemas
+                - generic [ref=e742]: "3"
+              - generic [ref=e743]:
+                - generic [ref=e744]: Tables
+                - generic [ref=e745]: "15"
+              - generic [ref=e746]:
+                - generic [ref=e747]: Auth
+                - generic [ref=e748]: sql auth
+              - generic [ref=e749]:
+                - generic [ref=e750]: Last sync
+                - generic [ref=e751]: 08:48 AM
+        - generic [ref=e752]:
+          - img [ref=e898]
+          - generic [ref=e756]: All connections use least-privilege read roles. Credentials are encrypted (AES-256) in your tenant secret manager and rotated every 90 days.
+          - button "View access log" [ref=e757] [cursor=pointer]:
+            - img [ref=e901]
+            - text: View access log
+  - generic [ref=e905]:
+    - img [ref=e906]
+    - generic [ref=e910]: Switched to DQ Demo DuckDB

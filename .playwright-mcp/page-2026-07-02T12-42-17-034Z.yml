@@ -1,0 +1,218 @@
+- generic [ref=f4e3]:
+  - complementary [ref=f4e4]:
+    - generic [ref=f4e5]:
+      - img [ref=f4e1895]
+      - generic [ref=f4e8]:
+        - generic [ref=f4e9]: DataTrust
+        - generic [ref=f4e10]: AGENTIC DQ PLATFORM
+    - generic [ref=f4e11] [cursor=pointer]:
+      - generic [ref=f4e12]: ⬡
+      - generic [ref=f4e13]:
+        - generic [ref=f4e14]: My Connection ofc
+        - generic [ref=f4e15]: Active connection
+      - img [ref=f4e1898]
+    - generic [ref=f4e17]:
+      - generic [ref=f4e18]: Workflow
+      - button "Workspace Home" [ref=f4e19] [cursor=pointer]:
+        - img [ref=f4e1901]
+        - generic [ref=f4e21]: Workspace Home
+      - button "Profiling 1" [ref=f4e22] [cursor=pointer]:
+        - img [ref=f4e1906]
+        - generic [ref=f4e24]: Profiling
+        - generic [ref=f4e25]: "1"
+      - button "Dictionary & CDEs 2" [ref=f4e26] [cursor=pointer]:
+        - img [ref=f4e1913]
+        - generic [ref=f4e28]: Dictionary & CDEs
+        - generic [ref=f4e29]: "2"
+      - button "Rule Studio 3" [ref=f4e30] [cursor=pointer]:
+        - img [ref=f4e1916]
+        - generic [ref=f4e32]: Rule Studio
+        - generic [ref=f4e33]: "3"
+      - button "DQ Execution 4" [active] [ref=f4e34] [cursor=pointer]:
+        - img [ref=f4e1919]
+        - generic [ref=f4e36]: DQ Execution
+        - generic [ref=f4e37]: "4"
+    - generic [ref=f4e38]:
+      - generic [ref=f4e39]: Monitoring
+      - button "Anomaly Inbox 1" [ref=f4e248] [cursor=pointer]:
+        - img [ref=f4e1922]
+        - generic [ref=f4e42]: Anomaly Inbox
+        - generic [ref=f4e254]: "1"
+      - button "Impact Graph" [ref=f4e43] [cursor=pointer]:
+        - img [ref=f4e1927]
+        - generic [ref=f4e45]: Impact Graph
+      - button "Trust Dashboard" [ref=f4e46] [cursor=pointer]:
+        - img [ref=f4e1932]
+        - generic [ref=f4e48]: Trust Dashboard
+    - generic [ref=f4e49]:
+      - generic [ref=f4e50]: Intelligence
+      - button "Pre-run Advisory" [ref=f4e51] [cursor=pointer]:
+        - img [ref=f4e1935]
+        - generic [ref=f4e53]: Pre-run Advisory
+      - button "Trust Receipt" [ref=f4e54] [cursor=pointer]:
+        - img [ref=f4e1938]
+        - generic [ref=f4e56]: Trust Receipt
+    - generic [ref=f4e57]:
+      - generic [ref=f4e58]: Admin
+      - button "Connections" [ref=f4e59] [cursor=pointer]:
+        - img [ref=f4e1940]
+        - generic [ref=f4e61]: Connections
+    - generic [ref=f4e62]:
+      - generic [ref=f4e63]: Operate
+      - button "Scenario Simulator" [ref=f4e64] [cursor=pointer]:
+        - img [ref=f4e1942]
+        - generic [ref=f4e66]: Scenario Simulator
+      - button "Task Board" [ref=f4e68] [cursor=pointer]:
+        - img [ref=f4e1947]
+        - generic [ref=f4e70]: Task Board
+      - button "Daily Summary" [ref=f4e71] [cursor=pointer]:
+        - img [ref=f4e1950]
+        - generic [ref=f4e73]: Daily Summary
+    - generic [ref=f4e74]:
+      - generic [ref=f4e76]: SK
+      - generic [ref=f4e78]:
+        - generic [ref=f4e79]: shweta katkar
+        - generic [ref=f4e80]: shweta.katkar@pal.tech
+      - button "Sign out" [ref=f4e81] [cursor=pointer]:
+        - img [ref=f4e1953]
+  - generic [ref=f4e83]:
+    - banner [ref=f4e84]:
+      - generic [ref=f4e85]:
+        - generic [ref=f4e86]:
+          - generic [ref=f4e87]: My Connection ofc
+          - generic [ref=f4e88]: /
+          - generic [ref=f4e89]: Workflow
+        - generic [ref=f4e90]: DQ Execution
+      - generic [ref=f4e91]: Pipeline · Issues detected
+      - generic [ref=f4e94]:
+        - generic [ref=f4e95]: TRUST SCORE
+        - generic [ref=f4e96]: 97/100
+      - button "Notifications" [ref=f4e97] [cursor=pointer]:
+        - img [ref=f4e1956]
+    - main [ref=f4e99]:
+      - generic [ref=f4e1959]:
+        - generic [ref=f4e1961]:
+          - generic [ref=f4e1962]:
+            - generic [ref=f4e1963]: Execution results
+            - generic [ref=f4e1964]: "Run #08bb29df · all layers"
+            - generic [ref=f4e1965]:
+              - text: Jul 2, 12:39 PM · 3 rules ·
+              - strong [ref=f4e1966]: 1 failed
+            - generic [ref=f4e1967]:
+              - generic [ref=f4e1968]: Overall quality
+              - generic [ref=f4e1969]: "96.5"
+          - button "Re-run checks" [ref=f4e1970] [cursor=pointer]:
+            - img [ref=f4e1971]
+            - text: Re-run checks
+        - generic [ref=f4e1976]:
+          - generic [ref=f4e1977]:
+            - generic [ref=f4e1978]:
+              - generic [ref=f4e1979]: BRONZE
+              - generic [ref=f4e1980]: "95"
+            - generic [ref=f4e1983]:
+              - text: 1/2 passed ·
+              - generic [ref=f4e1984]: 1 failed
+            - button "Run layer" [ref=f4e1985] [cursor=pointer]:
+              - img [ref=f4e1986]
+              - text: Run layer
+          - generic [ref=f4e1989]:
+            - generic [ref=f4e1990]:
+              - generic [ref=f4e1991]: SILVER
+              - generic [ref=f4e1992]: "100"
+            - generic [ref=f4e1995]:
+              - text: 1/1 passed ·
+              - generic [ref=f4e1996]: 0 failed
+            - button "Run layer" [ref=f4e1997] [cursor=pointer]:
+              - img [ref=f4e1998]
+              - text: Run layer
+        - generic [ref=f4e2001]:
+          - generic [ref=f4e2003]:
+            - img [ref=f4e2004]
+            - generic [ref=f4e2008]: Rule results
+          - generic [ref=f4e2009]:
+            - generic [ref=f4e2010]: Status
+            - button "All" [ref=f4e2011] [cursor=pointer]
+            - button "Failed" [ref=f4e2012] [cursor=pointer]
+            - button "Passed" [ref=f4e2013] [cursor=pointer]
+            - button "Error" [ref=f4e2014] [cursor=pointer]
+            - button "Expected" [ref=f4e2015] [cursor=pointer]
+            - generic [ref=f4e2017]: Layer
+            - button "ALL" [ref=f4e2018] [cursor=pointer]
+            - button "RAW" [ref=f4e2019] [cursor=pointer]
+            - button "BRONZE" [ref=f4e2020] [cursor=pointer]
+            - button "SILVER" [ref=f4e2021] [cursor=pointer]
+            - button "GOLD" [ref=f4e2022] [cursor=pointer]
+          - table [ref=f4e2024]:
+            - rowgroup [ref=f4e2025]:
+              - row "Rule Layer Status Fail count Fail % Severity" [ref=f4e2026]:
+                - columnheader "Rule" [ref=f4e2027]
+                - columnheader "Layer" [ref=f4e2028]
+                - columnheader "Status" [ref=f4e2029]
+                - columnheader "Fail count" [ref=f4e2030]
+                - columnheader "Fail %" [ref=f4e2031]
+                - columnheader "Severity" [ref=f4e2032]
+                - columnheader [ref=f4e2033]
+            - rowgroup [ref=f4e2034]:
+              - row "cde_is_active_not_null CDE BronzeDB.br_categories BRONZE PASS 0 — HIGH" [ref=f4e2035]:
+                - cell "cde_is_active_not_null CDE BronzeDB.br_categories" [ref=f4e2036]:
+                  - text: cde_is_active_not_null
+                  - generic [ref=f4e2038]:
+                    - generic [ref=f4e2039]: CDE
+                    - generic [ref=f4e2040]: BronzeDB.br_categories
+                - cell "BRONZE" [ref=f4e2041]:
+                  - generic [ref=f4e2042]: BRONZE
+                - cell "PASS" [ref=f4e2043]:
+                  - generic [ref=f4e2044]:
+                    - img [ref=f4e2045]
+                    - text: PASS
+                - cell "0" [ref=f4e2047]
+                - cell "—" [ref=f4e2048]
+                - cell "HIGH" [ref=f4e2049]:
+                  - generic [ref=f4e2050]: HIGH
+                - cell [ref=f4e2052]:
+                  - button "Re-run this rule" [ref=f4e2054] [cursor=pointer]:
+                    - img [ref=f4e2055]
+              - row "cde_category_name_not_null CDE BronzeDB.br_categories BRONZE Expected 1 5.26% CRITICAL" [ref=f4e2057]:
+                - cell "cde_category_name_not_null CDE BronzeDB.br_categories" [ref=f4e2058]:
+                  - text: cde_category_name_not_null
+                  - generic [ref=f4e2060]:
+                    - generic [ref=f4e2061]: CDE
+                    - generic [ref=f4e2062]: BronzeDB.br_categories
+                - cell "BRONZE" [ref=f4e2063]:
+                  - generic [ref=f4e2064]: BRONZE
+                - cell "Expected" [ref=f4e2065]:
+                  - generic [ref=f4e2066]: Expected
+                - cell "1" [ref=f4e2067]
+                - cell "5.26%" [ref=f4e2068]
+                - cell "CRITICAL" [ref=f4e2069]:
+                  - generic [ref=f4e2070]: CRITICAL
+                - cell [ref=f4e2072]:
+                  - button "Re-run this rule" [ref=f4e2074] [cursor=pointer]:
+                    - img [ref=f4e2075]
+              - row "src_created_date_year_gt_2025 BronzeDB.br_categories SILVER PASS 0 — HIGH" [ref=f4e2077]:
+                - cell "src_created_date_year_gt_2025 BronzeDB.br_categories" [ref=f4e2078]:
+                  - text: src_created_date_year_gt_2025
+                  - generic [ref=f4e2081]: BronzeDB.br_categories
+                - cell "SILVER" [ref=f4e2082]:
+                  - generic [ref=f4e2083]: SILVER
+                - cell "PASS" [ref=f4e2084]:
+                  - generic [ref=f4e2085]:
+                    - img [ref=f4e2086]
+                    - text: PASS
+                - cell "0" [ref=f4e2088]
+                - cell "—" [ref=f4e2089]
+                - cell "HIGH" [ref=f4e2090]:
+                  - generic [ref=f4e2091]: HIGH
+                - cell [ref=f4e2093]:
+                  - button "Re-run this rule" [ref=f4e2095] [cursor=pointer]:
+                    - img [ref=f4e2096]
+          - generic [ref=f4e2098]:
+            - button "Download CSV" [ref=f4e2099] [cursor=pointer]:
+              - img [ref=f4e2100]
+              - text: Download CSV
+            - button "Share to Slack" [ref=f4e2103] [cursor=pointer]:
+              - img [ref=f4e2104]
+              - text: Share to Slack
+            - button "Review anomalies" [ref=f4e2111] [cursor=pointer]:
+              - text: Review anomalies
+              - img [ref=f4e2112]

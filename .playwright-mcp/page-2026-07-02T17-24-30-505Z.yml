@@ -1,0 +1,287 @@
+- generic [ref=f3e3]:
+  - complementary [ref=f3e4]:
+    - generic [ref=f3e5]:
+      - img [ref=f3e13646]
+      - generic [ref=f3e8]:
+        - generic [ref=f3e9]: DataTrust
+        - generic [ref=f3e10]: AGENTIC DQ PLATFORM
+    - generic [ref=f3e11] [cursor=pointer]:
+      - generic [ref=f3e12]: ⬡
+      - generic [ref=f3e13]:
+        - generic [ref=f3e14]: My Connection demo
+        - generic [ref=f3e15]: Active connection
+      - img [ref=f3e13649]
+    - generic [ref=f3e17]:
+      - generic [ref=f3e18]: Workflow
+      - button "Workspace Home" [ref=f3e19] [cursor=pointer]:
+        - img [ref=f3e13652]
+        - generic [ref=f3e21]: Workspace Home
+      - button "Profiling 1" [ref=f3e22] [cursor=pointer]:
+        - img [ref=f3e13657]
+        - generic [ref=f3e24]: Profiling
+        - generic [ref=f3e25]: "1"
+      - button "Dictionary & CDEs 2" [ref=f3e26] [cursor=pointer]:
+        - img [ref=f3e13664]
+        - generic [ref=f3e28]: Dictionary & CDEs
+        - generic [ref=f3e29]: "2"
+      - button "Rule Studio 3" [ref=f3e30] [cursor=pointer]:
+        - img [ref=f3e13667]
+        - generic [ref=f3e32]: Rule Studio
+        - generic [ref=f3e33]: "3"
+      - button "DQ Execution 4" [ref=f3e34] [cursor=pointer]:
+        - img [ref=f3e13670]
+        - generic [ref=f3e36]: DQ Execution
+        - generic [ref=f3e37]: "4"
+    - generic [ref=f3e38]:
+      - generic [ref=f3e39]: Monitoring
+      - button "Anomaly Inbox 14" [ref=f3e248] [cursor=pointer]:
+        - img [ref=f3e13673]
+        - generic [ref=f3e42]: Anomaly Inbox
+        - generic [ref=f3e254]: "14"
+      - button "Impact Graph" [ref=f3e43] [cursor=pointer]:
+        - img [ref=f3e13678]
+        - generic [ref=f3e45]: Impact Graph
+      - button "Trust Dashboard" [ref=f3e46] [cursor=pointer]:
+        - img [ref=f3e13683]
+        - generic [ref=f3e48]: Trust Dashboard
+    - generic [ref=f3e49]:
+      - generic [ref=f3e50]: Intelligence
+      - button "Pre-run Advisory" [ref=f3e51] [cursor=pointer]:
+        - img [ref=f3e13686]
+        - generic [ref=f3e53]: Pre-run Advisory
+      - button "Trust Receipt" [ref=f3e54] [cursor=pointer]:
+        - img [ref=f3e13689]
+        - generic [ref=f3e56]: Trust Receipt
+    - generic [ref=f3e57]:
+      - generic [ref=f3e58]: Admin
+      - button "Connections" [ref=f3e59] [cursor=pointer]:
+        - img [ref=f3e13691]
+        - generic [ref=f3e61]: Connections
+    - generic [ref=f3e62]:
+      - generic [ref=f3e63]: Operate
+      - button "Scenario Simulator" [ref=f3e64] [cursor=pointer]:
+        - img [ref=f3e13693]
+        - generic [ref=f3e66]: Scenario Simulator
+      - button "Task Board" [ref=f3e68] [cursor=pointer]:
+        - img [ref=f3e13698]
+        - generic [ref=f3e70]: Task Board
+      - button "Daily Summary" [ref=f3e71] [cursor=pointer]:
+        - img [ref=f3e13701]
+        - generic [ref=f3e73]: Daily Summary
+    - generic [ref=f3e74]:
+      - generic [ref=f3e76]: SK
+      - generic [ref=f3e78]:
+        - generic [ref=f3e79]: shweta katkar
+        - generic [ref=f3e80]: shweta.katkar@pal.tech
+      - button "Sign out" [ref=f3e81] [cursor=pointer]:
+        - img [ref=f3e13704]
+  - generic [ref=f3e83]:
+    - banner [ref=f3e84]:
+      - generic [ref=f3e85]:
+        - generic [ref=f3e86]:
+          - generic [ref=f3e87]: My Connection demo
+          - generic [ref=f3e88]: /
+          - generic [ref=f3e89]: Workflow
+        - generic [ref=f3e90]: Profiling
+      - generic [ref=f3e91]: Pipeline · Issues detected
+      - generic [ref=f3e94]:
+        - generic [ref=f3e95]: TRUST SCORE
+        - generic [ref=f3e96]: 12/100
+      - button "Notifications" [ref=f3e97] [cursor=pointer]:
+        - img [ref=f3e13707]
+    - main [ref=f3e99]:
+      - generic [ref=f3e13710]:
+        - generic [ref=f3e13711]:
+          - img [ref=f3e13712]
+          - generic [ref=f3e13716]:
+            - generic [ref=f3e13717]: Profiling — select dataset
+            - generic [ref=f3e13718]: Select a table to run the agentic profiler. Use Run all to profile an entire layer.
+        - generic [ref=f3e13719]:
+          - generic [ref=f3e13721]:
+            - img [ref=f3e13722]
+            - textbox "Search tables…" [ref=f3e13725]
+          - button "Refresh tables" [ref=f3e13726] [cursor=pointer]:
+            - img [ref=f3e13727]
+            - text: Refresh tables
+          - button "Profile now" [ref=f3e13732] [cursor=pointer]:
+            - img [ref=f3e13733]
+            - text: Profile now
+        - generic [ref=f3e13740]:
+          - generic [ref=f3e13741]:
+            - button "BRONZE 15 tables · 15 profiled" [ref=f3e13742] [cursor=pointer]:
+              - img [ref=f3e13743]
+              - generic [ref=f3e13745]: BRONZE
+              - generic [ref=f3e13746]: 15 tables
+              - generic [ref=f3e13747]: · 15 profiled
+            - button "Re-run all" [ref=f3e13748] [cursor=pointer]:
+              - img [ref=f3e13749]
+              - text: Re-run all
+          - generic [ref=f3e13754]:
+            - generic [ref=f3e13755] [cursor=pointer]:
+              - img [ref=f3e13756]
+              - generic [ref=f3e13758]: BrzLoadLog
+              - generic [ref=f3e13759]: 1 rows
+              - generic [ref=f3e13760]: 2026-07-01
+              - generic [ref=f3e13761]:
+                - generic [ref=f3e13762]: "100"
+                - img [ref=f3e13763]
+              - button "Re-run profiling" [ref=f3e13765]:
+                - img [ref=f3e13766]
+            - generic [ref=f3e13771] [cursor=pointer]:
+              - img [ref=f3e13772]
+              - generic [ref=f3e13774]: br_categories
+              - generic [ref=f3e13775]: 19 rows
+              - generic [ref=f3e13776]: 2026-07-01
+              - generic [ref=f3e13777]:
+                - generic [ref=f3e13778]: "99"
+                - img [ref=f3e13779]
+              - button "Re-run profiling" [ref=f3e13781]:
+                - img [ref=f3e13782]
+            - generic [ref=f3e13787] [cursor=pointer]:
+              - img [ref=f3e13788]
+              - generic [ref=f3e13790]: br_customers
+              - generic [ref=f3e13791]: 27 rows
+              - generic [ref=f3e13792]: 2026-07-01
+              - generic [ref=f3e13793]:
+                - generic [ref=f3e13794]: "100"
+                - img [ref=f3e13795]
+              - button "Re-run profiling" [ref=f3e13797]:
+                - img [ref=f3e13798]
+            - generic [ref=f3e13803] [cursor=pointer]:
+              - img [ref=f3e13804]
+              - generic [ref=f3e13806]: br_inventory
+              - generic [ref=f3e13807]: 144 rows
+              - generic [ref=f3e13808]: 2026-07-01
+              - generic [ref=f3e13809]:
+                - generic [ref=f3e13810]: "100"
+                - img [ref=f3e13811]
+              - button "Re-run profiling" [ref=f3e13813]:
+                - img [ref=f3e13814]
+            - generic [ref=f3e13819] [cursor=pointer]:
+              - img [ref=f3e13820]
+              - generic [ref=f3e13822]: br_order_items
+              - generic [ref=f3e13823]: 9,004 rows
+              - generic [ref=f3e13824]: 2026-07-01
+              - generic [ref=f3e13825]:
+                - generic [ref=f3e13826]: "100"
+                - img [ref=f3e13827]
+              - button "Re-run profiling" [ref=f3e13829]:
+                - img [ref=f3e13830]
+            - generic [ref=f3e13835] [cursor=pointer]:
+              - img [ref=f3e13836]
+              - generic [ref=f3e13838]: br_orders
+              - generic [ref=f3e13839]: 4,006 rows
+              - generic [ref=f3e13840]: 2026-07-01
+              - generic [ref=f3e13841]:
+                - generic [ref=f3e13842]: "99"
+                - img [ref=f3e13843]
+              - button "Re-run profiling" [ref=f3e13845]:
+                - img [ref=f3e13846]
+            - generic [ref=f3e13851] [cursor=pointer]:
+              - img [ref=f3e13852]
+              - generic [ref=f3e13854]: br_payments
+              - generic [ref=f3e13855]: 3,804 rows
+              - generic [ref=f3e13856]: 2026-07-01
+              - generic [ref=f3e13857]:
+                - generic [ref=f3e13858]: "100"
+                - img [ref=f3e13859]
+              - button "Re-run profiling" [ref=f3e13861]:
+                - img [ref=f3e13862]
+            - generic [ref=f3e13867] [cursor=pointer]:
+              - img [ref=f3e13868]
+              - generic [ref=f3e13870]: br_procurement
+              - generic [ref=f3e13871]: 404 rows
+              - generic [ref=f3e13872]: 2026-07-01
+              - generic [ref=f3e13873]:
+                - generic [ref=f3e13874]: "99"
+                - img [ref=f3e13875]
+              - button "Re-run profiling" [ref=f3e13877]:
+                - img [ref=f3e13878]
+            - generic [ref=f3e13883] [cursor=pointer]:
+              - img [ref=f3e13884]
+              - generic [ref=f3e13886]: br_products
+              - generic [ref=f3e13887]: 26 rows
+              - generic [ref=f3e13888]: 2026-07-01
+              - generic [ref=f3e13889]:
+                - generic [ref=f3e13890]: "100"
+                - img [ref=f3e13891]
+              - button "Re-run profiling" [ref=f3e13893]:
+                - img [ref=f3e13894]
+            - generic [ref=f3e13899] [cursor=pointer]:
+              - img [ref=f3e13900]
+              - generic [ref=f3e13902]: br_promotions
+              - generic [ref=f3e13903]: 8 rows
+              - generic [ref=f3e13904]: 2026-07-01
+              - generic [ref=f3e13905]:
+                - generic [ref=f3e13906]: "100"
+                - img [ref=f3e13907]
+              - button "Re-run profiling" [ref=f3e13909]:
+                - img [ref=f3e13910]
+            - generic [ref=f3e13915] [cursor=pointer]:
+              - img [ref=f3e13916]
+              - generic [ref=f3e13918]: br_returns
+              - generic [ref=f3e13919]: 605 rows
+              - generic [ref=f3e13920]: 2026-07-01
+              - generic [ref=f3e13921]:
+                - generic [ref=f3e13922]: "96"
+                - img [ref=f3e13923]
+              - button "Re-run profiling" [ref=f3e13925]:
+                - img [ref=f3e13926]
+            - generic [ref=f3e13931] [cursor=pointer]:
+              - img [ref=f3e13932]
+              - generic [ref=f3e13934]: br_reviews
+              - generic [ref=f3e13935]: 1,804 rows
+              - generic [ref=f3e13936]: 2026-07-01
+              - generic [ref=f3e13937]:
+                - generic [ref=f3e13938]: "100"
+                - img [ref=f3e13939]
+              - button "Re-run profiling" [ref=f3e13941]:
+                - img [ref=f3e13942]
+            - generic [ref=f3e13947] [cursor=pointer]:
+              - img [ref=f3e13948]
+              - generic [ref=f3e13950]: br_shipments
+              - generic [ref=f3e13951]: 2,504 rows
+              - generic [ref=f3e13952]: 2026-07-01
+              - generic [ref=f3e13953]:
+                - generic [ref=f3e13954]: "99"
+                - img [ref=f3e13955]
+              - button "Re-run profiling" [ref=f3e13957]:
+                - img [ref=f3e13958]
+            - generic [ref=f3e13963] [cursor=pointer]:
+              - img [ref=f3e13964]
+              - generic [ref=f3e13966]: br_suppliers
+              - generic [ref=f3e13967]: 13 rows
+              - generic [ref=f3e13968]: 2026-07-01
+              - generic [ref=f3e13969]:
+                - generic [ref=f3e13970]: "99"
+                - img [ref=f3e13971]
+              - button "Re-run profiling" [ref=f3e13973]:
+                - img [ref=f3e13974]
+            - generic [ref=f3e13979] [cursor=pointer]:
+              - img [ref=f3e13980]
+              - generic [ref=f3e13982]: br_warehouses
+              - generic [ref=f3e13983]: 9 rows
+              - generic [ref=f3e13984]: 2026-07-01
+              - generic [ref=f3e13985]:
+                - generic [ref=f3e13986]: "99"
+                - img [ref=f3e13987]
+              - button "Re-run profiling" [ref=f3e13989]:
+                - img [ref=f3e13990]
+        - generic [ref=f3e13996]:
+          - button "RAW 24 tables · 24 profiled" [ref=f3e13997] [cursor=pointer]:
+            - img [ref=f3e13998]
+            - generic [ref=f3e14000]: RAW
+            - generic [ref=f3e14001]: 24 tables
+            - generic [ref=f3e14002]: · 24 profiled
+          - button "Re-run all" [ref=f3e14003] [cursor=pointer]:
+            - img [ref=f3e14004]
+            - text: Re-run all
+        - generic [ref=f3e14010]:
+          - button "SILVER 15 tables · 15 profiled" [ref=f3e14011] [cursor=pointer]:
+            - img [ref=f3e14012]
+            - generic [ref=f3e14014]: SILVER
+            - generic [ref=f3e14015]: 15 tables
+            - generic [ref=f3e14016]: · 15 profiled
+          - button "Re-run all" [ref=f3e14017] [cursor=pointer]:
+            - img [ref=f3e14018]
+            - text: Re-run all

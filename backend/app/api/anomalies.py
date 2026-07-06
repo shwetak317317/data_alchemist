@@ -8,7 +8,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 
 from app.core.metadata_db import get_db
-from app.core.auth_deps import get_current_user, CurrentUser
+from app.core.auth_deps import get_current_user, assert_connection_access, CurrentUser
+from app.core.config import settings
 from app.models.anomaly import (AnomalyRecord, AnomalyAcknowledgeRequest,
     AnomalyExplanationResponse, AnomalyScanRequest,
     AnomalyThresholdsRequest, AnomalyThresholdsResponse, AnomalyShareRequest)
@@ -18,19 +19,51 @@ from app.services.audit_service import log_event
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/anomalies", tags=["anomalies"])
 
-# In-memory threshold store (keyed by connection_id).
-# Values survive until the backend process restarts — enough for per-session persistence.
-_thresholds: dict = {}
+
+def _assert_connection_org(connection_id: str, db: Session, current_user: CurrentUser) -> None:
+    """403 if the connection belongs to another org; 404 if it doesn't exist.
+    Every anomaly route must call this (directly, or via _assert_anomaly_org for
+    anomaly-id routes) — these endpoints previously accepted ANY connection_id
+    with no org check, letting one organisation read/ack/share another's anomalies."""
+    row = db.execute(text(
+        "SELECT org_id FROM connections WHERE id=:id AND deleted_at IS NULL"
+    ), {"id": connection_id}).fetchone()
+    if not row:
+        raise HTTPException(404, "Connection not found")
+    assert_connection_access(row[0], current_user)
+
+
+def _assert_anomaly_org(anomaly_id: str, db: Session, current_user: CurrentUser):
+    """Fetch (anomaly_id, connection_id) after enforcing org access via the
+    anomaly's connection. 404s on unknown anomaly."""
+    row = db.execute(text(
+        "SELECT al.anomaly_id, al.connection_id, c.org_id FROM anomaly_log al "
+        "LEFT JOIN connections c ON c.id = al.connection_id WHERE al.anomaly_id=:id"
+    ), {"id": anomaly_id}).fetchone()
+    if not row:
+        raise HTTPException(404, "Anomaly not found")
+    assert_connection_access(row[2], current_user)
+    return row
+
+
+def _require_test_endpoints_enabled() -> None:
+    """The /test-* seed/cleanup endpoints exist for the local Playwright suite
+    only. They insert and delete rows wholesale, so they must never be callable
+    in a production deployment."""
+    if settings.app_env.lower() in ("production", "prod"):
+        raise HTTPException(404, "Not found")
 
 
 def _row_to_anomaly(row) -> AnomalyRecord:
+    # `is not None` (not truthiness): a metric that legitimately dropped to 0 —
+    # the single worst volume anomaly there is — must not display as "no value".
     return AnomalyRecord(
         anomaly_id=row[0], connection_id=row[1],
         detected_at=row[2], layer=row[3], table_fqn=row[4],
         column_name=row[5], anomaly_type=row[6], description=row[7],
-        severity=row[8], metric_value=float(row[9]) if row[9] else None,
-        baseline_value=float(row[10]) if row[10] else None,
-        deviation_pct=float(row[11]) if row[11] else None,
+        severity=row[8], metric_value=float(row[9]) if row[9] is not None else None,
+        baseline_value=float(row[10]) if row[10] is not None else None,
+        deviation_pct=float(row[11]) if row[11] is not None else None,
         business_explanation=row[12], status=row[13],
     )
 
@@ -38,12 +71,17 @@ def _row_to_anomaly(row) -> AnomalyRecord:
 @router.get("/inbox", response_model=list[AnomalyRecord])
 def get_inbox(connection_id: str | None = None, db: Session = Depends(get_db),
               current_user: CurrentUser = Depends(get_current_user)):
-    """Return all open anomalies, newest first."""
-    filters, params = ["al.status='open'"], {}
+    """Return open anomalies for connections the caller's org can see, newest first."""
+    # Always scope by org via the connection join — without it, omitting
+    # connection_id returned every organisation's anomalies.
+    filters = ["al.status='open'", "(c.org_id = :org OR c.org_id = 'default' OR c.org_id IS NULL)"]
+    params: dict = {"org": current_user.org_id}
     if connection_id:
+        _assert_connection_org(connection_id, db, current_user)
         filters.append("al.connection_id=:conn")
         params["conn"] = connection_id
-    where = "WHERE " + " AND ".join(filters)
+    where = ("LEFT JOIN connections c ON c.id = al.connection_id WHERE "
+             + " AND ".join(filters))
     rows = db.execute(text(
         f"SELECT al.anomaly_id, al.connection_id, al.detected_at, al.layer, al.table_fqn, al.column_name, "
         f"al.anomaly_type, al.description, al.severity, al.metric_value, al.baseline_value, al.deviation_pct, "
@@ -84,15 +122,44 @@ def scan_anomalies(req: AnomalyScanRequest, db: Session = Depends(get_db),
         detect_volume_anomaly,
         detect_null_rate_anomaly,
         detect_metric_threshold_anomaly,
+        detect_freshness_anomaly,
     )
     from collections import defaultdict
 
-    connector = get_active_connector(req.connection_id, db)
+    _assert_connection_org(req.connection_id, db, current_user)
+
+    # User-configured thresholds now actually drive detection (they were saved
+    # but never read before — the Thresholds panel was a placebo).
+    th = _load_thresholds(req.connection_id, db)
+
+    try:
+        connector = get_active_connector(req.connection_id, db)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("anomaly scan: connector unavailable for %s: %s", req.connection_id, e)
+        raise HTTPException(502, "Could not reach the data source for this connection — check its health on the Connections page.")
     detected_ids = []
 
     tables_to_scan = req.tables or _get_active_tables(req.connection_id, db)
     for table_fqn in tables_to_scan:
-        layer = table_fqn.split(".")[0].upper() if "." in table_fqn else "UNKNOWN"
+        # Layer comes from the table's own profiling report — the old
+        # `table_fqn.split(".")[0].upper()` produced "BRONZEDB"/"MAIN"
+        # pseudo-layers that the UI's layer pills can't classify.
+        layer_row = db.execute(text(
+            "SELECT layer, run_at FROM profiling_reports "
+            "WHERE connection_id=:conn AND table_fqn=:table ORDER BY run_at DESC LIMIT 1"
+        ), {"conn": req.connection_id, "table": table_fqn}).fetchone()
+        layer = (layer_row[0] or "UNKNOWN").upper() if layer_row else "UNKNOWN"
+
+        # ── FRESHNESS: latest snapshot older than the configured SLA window ───
+        if layer_row and layer_row[1]:
+            anomaly = detect_freshness_anomaly(
+                connection_id=req.connection_id, table_fqn=table_fqn, layer=layer,
+                last_seen_at=layer_row[1], freshness_hours=float(th["freshness_hours"]),
+            )
+            if anomaly and _save_anomaly(db, anomaly):
+                detected_ids.append(anomaly.anomaly_id)
 
         # ── VOLUME: compare row_count across the last 8 profiling runs ────────
         vol_rows = db.execute(text(
@@ -110,9 +177,9 @@ def scan_anomalies(req: AnomalyScanRequest, db: Session = Depends(get_db),
                 layer=layer,
                 baseline_counts=counts[1:],
                 current_count=counts[0],
+                min_deviation_pct=float(th["vol_pct"]),
             )
-            if anomaly:
-                _save_anomaly(db, anomaly)
+            if anomaly and _save_anomaly(db, anomaly):
                 detected_ids.append(anomaly.anomaly_id)
 
         # ── DISTRIBUTION + THRESHOLD: per-column stats across last 8 runs ─────
@@ -144,9 +211,9 @@ def scan_anomalies(req: AnomalyScanRequest, db: Session = Depends(get_db),
                     column_name=col,
                     current_null_pct=null_hist[0],
                     baseline_null_pcts=null_hist[1:],
+                    min_deviation_pct=float(th["dist_pct"]),
                 )
-                if anomaly:
-                    _save_anomaly(db, anomaly)
+                if anomaly and _save_anomaly(db, anomaly):
                     detected_ids.append(anomaly.anomaly_id)
 
             for col, mean_hist in col_mean.items():
@@ -160,22 +227,21 @@ def scan_anomalies(req: AnomalyScanRequest, db: Session = Depends(get_db),
                     column_name=col,
                     current_value=mean_hist[0],
                     baseline_values=mean_hist[1:],
+                    min_deviation_pct=float(th["vol_pct"]),
                 )
-                if anomaly:
-                    _save_anomaly(db, anomaly)
+                if anomaly and _save_anomaly(db, anomaly):
                     detected_ids.append(anomaly.anomaly_id)
 
     connector.close()
+    logger.info("anomaly scan complete: connection=%s tables=%d detected=%d",
+                req.connection_id, len(tables_to_scan), len(detected_ids))
     return {"detected": len(detected_ids), "anomaly_ids": detected_ids}
 
 
 @router.post("/{anomaly_id}/acknowledge")
 def acknowledge(anomaly_id: str, req: AnomalyAcknowledgeRequest, db: Session = Depends(get_db),
                 current_user: CurrentUser = Depends(get_current_user)):
-    row = db.execute(text("SELECT anomaly_id, connection_id FROM anomaly_log WHERE anomaly_id=:id"),
-                     {"id": anomaly_id}).fetchone()
-    if not row:
-        raise HTTPException(404, "Anomaly not found")
+    row = _assert_anomaly_org(anomaly_id, db, current_user)
 
     db.execute(text(
         "UPDATE anomaly_log SET status='acknowledged', acknowledged_by=:by, "
@@ -193,6 +259,7 @@ def acknowledge(anomaly_id: str, req: AnomalyAcknowledgeRequest, db: Session = D
 @router.post("/{anomaly_id}/explain", response_model=AnomalyExplanationResponse)
 def get_explanation(anomaly_id: str, db: Session = Depends(get_db),
                     current_user: CurrentUser = Depends(get_current_user)):
+    _assert_anomaly_org(anomaly_id, db, current_user)
     row = db.execute(text(
         "SELECT anomaly_id, connection_id, detected_at, layer, table_fqn, column_name, "
         "anomaly_type, description, severity, metric_value, baseline_value, deviation_pct, "
@@ -204,7 +271,7 @@ def get_explanation(anomaly_id: str, db: Session = Depends(get_db),
         raise HTTPException(404, "Anomaly not found")
 
     anomaly = _row_to_anomaly(row)
-    explanation = explain_anomaly(anomaly)
+    explanation = explain_anomaly(anomaly, db=db)
 
     # Persist explanation back to the record
     db.execute(text(
@@ -215,7 +282,38 @@ def get_explanation(anomaly_id: str, db: Session = Depends(get_db),
     return explanation
 
 
-def _save_anomaly(db: Session, anomaly: AnomalyRecord) -> None:
+def _save_anomaly(db: Session, anomaly: AnomalyRecord) -> bool:
+    """Persist a detected anomaly, deduplicating against the open inbox.
+
+    Every scan re-detects the same condition until it's fixed, and the old
+    unconditional INSERT filled the inbox with identical rows (seen live:
+    the same 'NetPayable is 184% above average' anomaly logged twice). If an
+    OPEN anomaly for the same (connection, table, column, type) already
+    exists, refresh its numbers/description/timestamp in place instead.
+    Returns True only when a NEW anomaly row was created, so the scan's
+    'N new anomalies detected' count means what it says.
+    """
+    existing = db.execute(text("""
+        SELECT anomaly_id FROM anomaly_log
+        WHERE connection_id = :conn AND table_fqn = :table_fqn
+          AND COALESCE(column_name, '') = COALESCE(:col, '')
+          AND anomaly_type = :type AND status = 'open'
+        LIMIT 1
+    """), {"conn": anomaly.connection_id, "table_fqn": anomaly.table_fqn,
+           "col": anomaly.column_name, "type": anomaly.anomaly_type}).fetchone()
+    if existing:
+        db.execute(text("""
+            UPDATE anomaly_log
+            SET detected_at=:detected, description=:desc, severity=:sev,
+                metric_value=:metric, baseline_value=:baseline, deviation_pct=:dev_pct
+            WHERE anomaly_id=:id
+        """), {"id": existing[0], "detected": anomaly.detected_at,
+               "desc": anomaly.description, "sev": anomaly.severity,
+               "metric": anomaly.metric_value, "baseline": anomaly.baseline_value,
+               "dev_pct": anomaly.deviation_pct})
+        db.commit()
+        return False
+
     db.execute(text("""
         INSERT INTO anomaly_log
             (anomaly_id, connection_id, detected_at, layer, table_fqn, column_name,
@@ -234,6 +332,17 @@ def _save_anomaly(db: Session, anomaly: AnomalyRecord) -> None:
         "baseline": anomaly.baseline_value, "dev_pct": anomaly.deviation_pct,
     })
     db.commit()
+    return True
+
+
+def _load_thresholds(connection_id: str, db: Session) -> dict:
+    """Read persisted thresholds (DB-backed since migration 32), defaults if unset."""
+    row = db.execute(text(
+        "SELECT vol_pct, dist_pct, freshness_hours FROM anomaly_thresholds WHERE connection_id=:id"
+    ), {"id": connection_id}).fetchone()
+    if row:
+        return {"vol_pct": float(row[0]), "dist_pct": float(row[1]), "freshness_hours": float(row[2])}
+    return {"vol_pct": 30.0, "dist_pct": 20.0, "freshness_hours": 24.0}
 
 
 @router.post("/test-seed")
@@ -245,6 +354,8 @@ def test_seed(connection_id: str, db: Session = Depends(get_db),
     without needing a statistical baseline from profiling history.
     Returns the list of created anomaly_ids.
     """
+    _require_test_endpoints_enabled()
+    _assert_connection_org(connection_id, db, current_user)
     from datetime import datetime, timezone
     import uuid as _uuid
 
@@ -310,6 +421,8 @@ def test_seed(connection_id: str, db: Session = Depends(get_db),
 def test_cleanup(connection_id: str, db: Session = Depends(get_db),
                  current_user: CurrentUser = Depends(get_current_user)):
     """DEV/TEST ONLY — delete all [TEST] anomalies and fingerprints for a connection."""
+    _require_test_endpoints_enabled()
+    _assert_connection_org(connection_id, db, current_user)
     anomaly_result = db.execute(text(
         "DELETE FROM anomaly_log WHERE connection_id=:conn AND description LIKE '[TEST]%'"
     ), {"conn": connection_id})
@@ -327,8 +440,14 @@ def get_fingerprints(connection_id: str | None = None, db: Session = Depends(get
     params: dict = {}
     where = ""
     if connection_id:
+        _assert_connection_org(connection_id, db, current_user)
         where = "WHERE connection_id=:conn"
         params["conn"] = connection_id
+    else:
+        # No connection filter: still restrict to the caller's org's connections.
+        where = ("WHERE connection_id IN (SELECT id FROM connections "
+                 "WHERE org_id = :org OR org_id = 'default')")
+        params["org"] = current_user.org_id
     rows = db.execute(text(
         f"SELECT similarity_pct, incident_date, incident_day, root_cause, "
         f"resolution, resolution_time, resolved_by, related_table "
@@ -355,29 +474,34 @@ def _get_active_tables(connection_id: str, db: Session) -> list[str]:
 def get_thresholds(connection_id: str, db: Session = Depends(get_db),
                    current_user: CurrentUser = Depends(get_current_user)):
     """Return saved detection thresholds for a connection (defaults if none saved)."""
-    saved = _thresholds.get(connection_id, {})
-    return AnomalyThresholdsResponse(
-        connection_id=connection_id,
-        vol_pct=saved.get("vol_pct", 30.0),
-        dist_pct=saved.get("dist_pct", 20.0),
-        freshness_hours=saved.get("freshness_hours", 24.0),
-    )
+    _assert_connection_org(connection_id, db, current_user)
+    th = _load_thresholds(connection_id, db)
+    return AnomalyThresholdsResponse(connection_id=connection_id, **th)
 
 
 @router.post("/thresholds", response_model=AnomalyThresholdsResponse)
 def save_thresholds(req: AnomalyThresholdsRequest, db: Session = Depends(get_db),
                     current_user: CurrentUser = Depends(get_current_user)):
-    """Persist detection thresholds for a connection (in-memory for this session)."""
-    _thresholds[req.connection_id] = {
-        "vol_pct": req.vol_pct,
-        "dist_pct": req.dist_pct,
-        "freshness_hours": req.freshness_hours,
-    }
+    """Persist detection thresholds for a connection (DB-backed — survives restarts,
+    and the scan reads them at detection time)."""
+    _assert_connection_org(req.connection_id, db, current_user)
+    if req.vol_pct <= 0 or req.dist_pct <= 0 or req.freshness_hours <= 0:
+        raise HTTPException(400, "Thresholds must be positive numbers.")
+    db.execute(text("""
+        INSERT INTO anomaly_thresholds (connection_id, vol_pct, dist_pct, freshness_hours, updated_by, updated_at)
+        VALUES (:conn, :vol, :dist, :fresh, :by, NOW())
+        ON CONFLICT (connection_id) DO UPDATE
+            SET vol_pct=:vol, dist_pct=:dist, freshness_hours=:fresh, updated_by=:by, updated_at=NOW()
+    """), {"conn": req.connection_id, "vol": req.vol_pct, "dist": req.dist_pct,
+           "fresh": req.freshness_hours, "by": current_user.email})
     log_event(db, user_email=current_user.email, event_type="THRESHOLD_CHANGE",
               entity_type="CONNECTION", entity_id=req.connection_id,
-              new_value=_thresholds[req.connection_id], connection_id=req.connection_id)
+              new_value={"vol_pct": req.vol_pct, "dist_pct": req.dist_pct,
+                         "freshness_hours": req.freshness_hours},
+              connection_id=req.connection_id)
     db.commit()
-    return AnomalyThresholdsResponse(connection_id=req.connection_id, **_thresholds[req.connection_id])
+    return AnomalyThresholdsResponse(connection_id=req.connection_id, vol_pct=req.vol_pct,
+                                     dist_pct=req.dist_pct, freshness_hours=req.freshness_hours)
 
 
 # ── Share anomaly explanation ──────────────────────────────────────────────────
@@ -387,14 +511,11 @@ def share_anomaly(anomaly_id: str, req: AnomalyShareRequest,
                   db: Session = Depends(get_db),
                   current_user: CurrentUser = Depends(get_current_user)):
     """Log a SHARE event to the audit trail (actual Slack delivery handled externally)."""
-    row = db.execute(text("SELECT connection_id FROM anomaly_log WHERE anomaly_id=:id"),
-                     {"id": anomaly_id}).fetchone()
-    if not row:
-        raise HTTPException(404, "Anomaly not found")
+    row = _assert_anomaly_org(anomaly_id, db, current_user)
     log_event(db, user_email=current_user.email, event_type="SHARE",
               entity_type="ANOMALY", entity_id=anomaly_id,
               new_value={"channel": req.channel, "message": req.message},
-              connection_id=row[0])
+              connection_id=row[1])
     db.commit()
     return {"shared": True, "channel": req.channel, "anomaly_id": anomaly_id}
 
@@ -409,6 +530,8 @@ def test_seed_profiling(connection_id: str, db: Session = Depends(get_db),
     a dramatic volume drop so the scan algorithm (2σ rule) fires reliably.
     Baseline: ~4 300 rows/run. Current run: 450 rows (≈ -3 900σ deviation).
     """
+    _require_test_endpoints_enabled()
+    _assert_connection_org(connection_id, db, current_user)
     from datetime import timedelta
     import uuid as _uuid2
 
@@ -450,6 +573,8 @@ def test_cleanup_profiling(connection_id: str, report_ids: str,
                            db: Session = Depends(get_db),
                            current_user: CurrentUser = Depends(get_current_user)):
     """DEV/TEST ONLY — delete seeded profiling reports and any scan-created anomalies."""
+    _require_test_endpoints_enabled()
+    _assert_connection_org(connection_id, db, current_user)
     ids = [i.strip() for i in report_ids.split(",") if i.strip()]
     deleted_reports = 0
     for rid in ids:

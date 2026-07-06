@@ -22,6 +22,33 @@ def build_recommend_rules_prompt(
     )
 
 
+def build_cross_table_rules_prompt(
+    table_fqn: str,
+    layer: str,
+    primary_columns: list[dict],
+    sibling_tables: list[dict],
+    sql_dialect: str = "postgresql",
+) -> list[dict]:
+    primary_text = "\n".join(f"- {c['name']} ({c.get('type') or 'unknown type'})" for c in primary_columns)
+
+    def _col_line(c: dict) -> str:
+        suffix = ", unique" if c.get("unique") is True else (", has duplicates" if c.get("unique") is False else "")
+        return f"  - {c['name']} ({c.get('type') or 'unknown type'}{suffix})"
+
+    sibling_text = "\n\n".join(
+        f"{t['table_fqn']}:\n" + "\n".join(_col_line(c) for c in t["columns"])
+        for t in sibling_tables
+    ) or "(no other tables available)"
+    return load_prompt(
+        "rules", "cross_table_rules",
+        table_fqn=table_fqn,
+        layer=layer,
+        sql_dialect=sql_dialect,
+        primary_columns=primary_text,
+        sibling_tables=sibling_text,
+    )
+
+
 def build_nl_to_rule_prompt(
     table_fqn: str,
     layer: str,

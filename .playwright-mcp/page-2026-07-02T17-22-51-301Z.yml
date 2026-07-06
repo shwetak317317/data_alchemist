@@ -1,0 +1,649 @@
+- generic [ref=f3e3]:
+  - complementary [ref=f3e4]:
+    - generic [ref=f3e5]:
+      - img [ref=f3e6900]
+      - generic [ref=f3e8]:
+        - generic [ref=f3e9]: DataTrust
+        - generic [ref=f3e10]: AGENTIC DQ PLATFORM
+    - generic [ref=f3e11] [cursor=pointer]:
+      - generic [ref=f3e12]: ⬡
+      - generic [ref=f3e13]:
+        - generic [ref=f3e14]: My Connection demo
+        - generic [ref=f3e15]: Active connection
+      - img [ref=f3e6903]
+    - generic [ref=f3e17]:
+      - generic [ref=f3e18]: Workflow
+      - button "Workspace Home" [ref=f3e19] [cursor=pointer]:
+        - img [ref=f3e6906]
+        - generic [ref=f3e21]: Workspace Home
+      - button "Profiling 1" [ref=f3e22] [cursor=pointer]:
+        - img [ref=f3e6911]
+        - generic [ref=f3e24]: Profiling
+        - generic [ref=f3e25]: "1"
+      - button "Dictionary & CDEs 2" [ref=f3e26] [cursor=pointer]:
+        - img [ref=f3e6918]
+        - generic [ref=f3e28]: Dictionary & CDEs
+        - generic [ref=f3e29]: "2"
+      - button "Rule Studio 3" [ref=f3e30] [cursor=pointer]:
+        - img [ref=f3e6921]
+        - generic [ref=f3e32]: Rule Studio
+        - generic [ref=f3e33]: "3"
+      - button "DQ Execution 4" [active] [ref=f3e34] [cursor=pointer]:
+        - img [ref=f3e6924]
+        - generic [ref=f3e36]: DQ Execution
+        - generic [ref=f3e37]: "4"
+    - generic [ref=f3e38]:
+      - generic [ref=f3e39]: Monitoring
+      - button "Anomaly Inbox 14" [ref=f3e248] [cursor=pointer]:
+        - img [ref=f3e6927]
+        - generic [ref=f3e42]: Anomaly Inbox
+        - generic [ref=f3e254]: "14"
+      - button "Impact Graph" [ref=f3e43] [cursor=pointer]:
+        - img [ref=f3e6932]
+        - generic [ref=f3e45]: Impact Graph
+      - button "Trust Dashboard" [ref=f3e46] [cursor=pointer]:
+        - img [ref=f3e6937]
+        - generic [ref=f3e48]: Trust Dashboard
+    - generic [ref=f3e49]:
+      - generic [ref=f3e50]: Intelligence
+      - button "Pre-run Advisory" [ref=f3e51] [cursor=pointer]:
+        - img [ref=f3e6940]
+        - generic [ref=f3e53]: Pre-run Advisory
+      - button "Trust Receipt" [ref=f3e54] [cursor=pointer]:
+        - img [ref=f3e6943]
+        - generic [ref=f3e56]: Trust Receipt
+    - generic [ref=f3e57]:
+      - generic [ref=f3e58]: Admin
+      - button "Connections" [ref=f3e59] [cursor=pointer]:
+        - img [ref=f3e6945]
+        - generic [ref=f3e61]: Connections
+    - generic [ref=f3e62]:
+      - generic [ref=f3e63]: Operate
+      - button "Scenario Simulator" [ref=f3e64] [cursor=pointer]:
+        - img [ref=f3e6947]
+        - generic [ref=f3e66]: Scenario Simulator
+      - button "Task Board" [ref=f3e68] [cursor=pointer]:
+        - img [ref=f3e6952]
+        - generic [ref=f3e70]: Task Board
+      - button "Daily Summary" [ref=f3e71] [cursor=pointer]:
+        - img [ref=f3e6955]
+        - generic [ref=f3e73]: Daily Summary
+    - generic [ref=f3e74]:
+      - generic [ref=f3e76]: SK
+      - generic [ref=f3e78]:
+        - generic [ref=f3e79]: shweta katkar
+        - generic [ref=f3e80]: shweta.katkar@pal.tech
+      - button "Sign out" [ref=f3e81] [cursor=pointer]:
+        - img [ref=f3e6958]
+  - generic [ref=f3e83]:
+    - banner [ref=f3e84]:
+      - generic [ref=f3e85]:
+        - generic [ref=f3e86]:
+          - generic [ref=f3e87]: My Connection demo
+          - generic [ref=f3e88]: /
+          - generic [ref=f3e89]: Workflow
+        - generic [ref=f3e90]: DQ Execution
+      - generic [ref=f3e91]: Pipeline · Issues detected
+      - generic [ref=f3e94]:
+        - generic [ref=f3e95]: TRUST SCORE
+        - generic [ref=f3e96]: 13/100
+      - button "Notifications" [ref=f3e97] [cursor=pointer]:
+        - img [ref=f3e6961]
+    - main [ref=f3e99]:
+      - generic [ref=f3e6964]:
+        - generic [ref=f3e6966]:
+          - generic [ref=f3e6967]:
+            - generic [ref=f3e6968]: Execution results
+            - generic [ref=f3e6969]: "Run #6dca486b · all layers"
+            - generic [ref=f3e6970]:
+              - text: Jul 2, 04:47 PM · 23 rules ·
+              - strong [ref=f3e6971]: 11 failed
+              - text: ·
+              - strong [ref=f3e6972]: 8 couldn't run
+            - generic [ref=f3e6973]:
+              - generic [ref=f3e6974]: Overall quality
+              - generic [ref=f3e6975]: "12.5"
+          - button "Re-run checks" [ref=f3e6976] [cursor=pointer]:
+            - img [ref=f3e6977]
+            - text: Re-run checks
+        - generic [ref=f3e6983]:
+          - generic [ref=f3e6984]:
+            - generic [ref=f3e6985]: BRONZE
+            - generic [ref=f3e6986]: "19"
+          - generic [ref=f3e6989]:
+            - text: 4/23 passed ·
+            - generic [ref=f3e6990]: 11 failed
+          - button "Run layer" [ref=f3e6991] [cursor=pointer]:
+            - img [ref=f3e6992]
+            - text: Run layer
+        - generic [ref=f3e6995]:
+          - generic [ref=f3e6997]:
+            - img [ref=f3e6998]
+            - generic [ref=f3e7002]: Rule results
+          - generic [ref=f3e7003]:
+            - generic [ref=f3e7004]: Status
+            - button "All" [ref=f3e7005] [cursor=pointer]
+            - button "Failed" [ref=f3e7006] [cursor=pointer]
+            - button "Passed" [ref=f3e7007] [cursor=pointer]
+            - button "Error" [ref=f3e7008] [cursor=pointer]
+            - button "Expected" [ref=f3e7009] [cursor=pointer]
+            - generic [ref=f3e7011]: Layer
+            - button "ALL" [ref=f3e7012] [cursor=pointer]
+            - button "RAW" [ref=f3e7013] [cursor=pointer]
+            - button "BRONZE" [ref=f3e7014] [cursor=pointer]
+            - button "SILVER" [ref=f3e7015] [cursor=pointer]
+            - button "GOLD" [ref=f3e7016] [cursor=pointer]
+          - table [ref=f3e7018]:
+            - rowgroup [ref=f3e7019]:
+              - row "Rule Layer Status Fail count Fail % Severity" [ref=f3e7020]:
+                - columnheader "Rule" [ref=f3e7021]
+                - columnheader "Layer" [ref=f3e7022]
+                - columnheader "Status" [ref=f3e7023]
+                - columnheader "Fail count" [ref=f3e7024]
+                - columnheader "Fail %" [ref=f3e7025]
+                - columnheader "Severity" [ref=f3e7026]
+                - columnheader [ref=f3e7027]
+            - rowgroup [ref=f3e7028]:
+              - row "status_valid_values BronzeDB.BrzLoadLog This rule could not be executed due to a data source error. Check the connection's health, or contact support if the problem persists. BRONZE ERROR 0 — MEDIUM" [ref=f3e7029]:
+                - cell "status_valid_values BronzeDB.BrzLoadLog This rule could not be executed due to a data source error. Check the connection's health, or contact support if the problem persists." [ref=f3e7030]:
+                  - text: status_valid_values
+                  - generic [ref=f3e7031]:
+                    - generic [ref=f3e7033]: BronzeDB.BrzLoadLog
+                    - generic [ref=f3e7034]: This rule could not be executed due to a data source error. Check the connection's health, or contact support if the problem persists.
+                - cell "BRONZE" [ref=f3e7035]:
+                  - generic [ref=f3e7036]: BRONZE
+                - cell "ERROR" [ref=f3e7037]:
+                  - generic [ref=f3e7038]:
+                    - img [ref=f3e7039]
+                    - text: ERROR
+                - cell "0" [ref=f3e7041]
+                - cell "—" [ref=f3e7042]
+                - cell "MEDIUM" [ref=f3e7043]:
+                  - generic [ref=f3e7044]: MEDIUM
+                - cell [ref=f3e7046]:
+                  - button "Re-run this rule" [ref=f3e7048] [cursor=pointer]:
+                    - img [ref=f3e7049]
+              - row "run_duration_positive BronzeDB.BrzLoadLog This rule could not be executed due to a data source error. Check the connection's health, or contact support if the problem persists. BRONZE ERROR 0 — HIGH" [ref=f3e7051]:
+                - cell "run_duration_positive BronzeDB.BrzLoadLog This rule could not be executed due to a data source error. Check the connection's health, or contact support if the problem persists." [ref=f3e7052]:
+                  - text: run_duration_positive
+                  - generic [ref=f3e7053]:
+                    - generic [ref=f3e7055]: BronzeDB.BrzLoadLog
+                    - generic [ref=f3e7056]: This rule could not be executed due to a data source error. Check the connection's health, or contact support if the problem persists.
+                - cell "BRONZE" [ref=f3e7057]:
+                  - generic [ref=f3e7058]: BRONZE
+                - cell "ERROR" [ref=f3e7059]:
+                  - generic [ref=f3e7060]:
+                    - img [ref=f3e7061]
+                    - text: ERROR
+                - cell "0" [ref=f3e7063]
+                - cell "—" [ref=f3e7064]
+                - cell "HIGH" [ref=f3e7065]:
+                  - generic [ref=f3e7066]: HIGH
+                - cell [ref=f3e7068]:
+                  - button "Re-run this rule" [ref=f3e7070] [cursor=pointer]:
+                    - img [ref=f3e7071]
+              - row "notes_valid_length BronzeDB.BrzLoadLog BRONZE PASS 0 — LOW" [ref=f3e7073]:
+                - cell "notes_valid_length BronzeDB.BrzLoadLog" [ref=f3e7074]:
+                  - text: notes_valid_length
+                  - generic [ref=f3e7077]: BronzeDB.BrzLoadLog
+                - cell "BRONZE" [ref=f3e7078]:
+                  - generic [ref=f3e7079]: BRONZE
+                - cell "PASS" [ref=f3e7080]:
+                  - generic [ref=f3e7081]:
+                    - img [ref=f3e7082]
+                    - text: PASS
+                - cell "0" [ref=f3e7084]
+                - cell "—" [ref=f3e7085]
+                - cell "LOW" [ref=f3e7086]:
+                  - generic [ref=f3e7087]: LOW
+                - cell [ref=f3e7089]:
+                  - button "Re-run this rule" [ref=f3e7091] [cursor=pointer]:
+                    - img [ref=f3e7092]
+              - row "cde_category_id_not_null CDE BronzeDB.br_categories cde_category_id_not_null failed on 100.0% of records. Review the affected data. BRONZE FAIL 19 100% HIGH Records" [ref=f3e7094]:
+                - cell "cde_category_id_not_null CDE BronzeDB.br_categories cde_category_id_not_null failed on 100.0% of records. Review the affected data." [ref=f3e7095]:
+                  - text: cde_category_id_not_null
+                  - generic [ref=f3e7096]:
+                    - generic [ref=f3e7097]:
+                      - generic [ref=f3e7098]: CDE
+                      - generic [ref=f3e7099]: BronzeDB.br_categories
+                    - generic [ref=f3e7100]: cde_category_id_not_null failed on 100.0% of records. Review the affected data.
+                - cell "BRONZE" [ref=f3e7101]:
+                  - generic [ref=f3e7102]: BRONZE
+                - cell "FAIL" [ref=f3e7103]:
+                  - generic [ref=f3e7104]:
+                    - img [ref=f3e7105]
+                    - text: FAIL
+                - cell "19" [ref=f3e7108]
+                - cell "100%" [ref=f3e7109]
+                - cell "HIGH" [ref=f3e7110]:
+                  - generic [ref=f3e7111]: HIGH
+                - cell "Records" [ref=f3e7113]:
+                  - generic [ref=f3e7114]:
+                    - button "Records" [ref=f3e7115] [cursor=pointer]:
+                      - img [ref=f3e7116]
+                      - text: Records
+                    - button "Re-run this rule" [ref=f3e7119] [cursor=pointer]:
+                      - img [ref=f3e7120]
+              - row "cde_run_started_at_not_null CDE BronzeDB.BrzLoadLog This rule could not be executed due to a data source error. Check the connection's health, or contact support if the problem persists. BRONZE ERROR 0 — CRITICAL" [ref=f3e7122]:
+                - cell "cde_run_started_at_not_null CDE BronzeDB.BrzLoadLog This rule could not be executed due to a data source error. Check the connection's health, or contact support if the problem persists." [ref=f3e7123]:
+                  - text: cde_run_started_at_not_null
+                  - generic [ref=f3e7124]:
+                    - generic [ref=f3e7125]:
+                      - generic [ref=f3e7126]: CDE
+                      - generic [ref=f3e7127]: BronzeDB.BrzLoadLog
+                    - generic [ref=f3e7128]: This rule could not be executed due to a data source error. Check the connection's health, or contact support if the problem persists.
+                - cell "BRONZE" [ref=f3e7129]:
+                  - generic [ref=f3e7130]: BRONZE
+                - cell "ERROR" [ref=f3e7131]:
+                  - generic [ref=f3e7132]:
+                    - img [ref=f3e7133]
+                    - text: ERROR
+                - cell "0" [ref=f3e7135]
+                - cell "—" [ref=f3e7136]
+                - cell "CRITICAL" [ref=f3e7137]:
+                  - generic [ref=f3e7138]: CRITICAL
+                - cell [ref=f3e7140]:
+                  - button "Re-run this rule" [ref=f3e7142] [cursor=pointer]:
+                    - img [ref=f3e7143]
+              - row "cde_category_name_not_null CDE BronzeDB.br_categories cde_category_name_not_null failed on 94.7% of records. Review the affected data. BRONZE FAIL 18 94.74% HIGH Records" [ref=f3e7145]:
+                - cell "cde_category_name_not_null CDE BronzeDB.br_categories cde_category_name_not_null failed on 94.7% of records. Review the affected data." [ref=f3e7146]:
+                  - text: cde_category_name_not_null
+                  - generic [ref=f3e7147]:
+                    - generic [ref=f3e7148]:
+                      - generic [ref=f3e7149]: CDE
+                      - generic [ref=f3e7150]: BronzeDB.br_categories
+                    - generic [ref=f3e7151]: cde_category_name_not_null failed on 94.7% of records. Review the affected data.
+                - cell "BRONZE" [ref=f3e7152]:
+                  - generic [ref=f3e7153]: BRONZE
+                - cell "FAIL" [ref=f3e7154]:
+                  - generic [ref=f3e7155]:
+                    - img [ref=f3e7156]
+                    - text: FAIL
+                - cell "18" [ref=f3e7159]
+                - cell "94.74%" [ref=f3e7160]
+                - cell "HIGH" [ref=f3e7161]:
+                  - generic [ref=f3e7162]: HIGH
+                - cell "Records" [ref=f3e7164]:
+                  - generic [ref=f3e7165]:
+                    - button "Records" [ref=f3e7166] [cursor=pointer]:
+                      - img [ref=f3e7167]
+                      - text: Records
+                    - button "Re-run this rule" [ref=f3e7170] [cursor=pointer]:
+                      - img [ref=f3e7171]
+              - row "br_inventory_id_not_null CDE BronzeDB.br_inventory This rule could not be executed due to a data source error. Check the connection's health, or contact support if the problem persists. BRONZE ERROR 0 — CRITICAL" [ref=f3e7173]:
+                - cell "br_inventory_id_not_null CDE BronzeDB.br_inventory This rule could not be executed due to a data source error. Check the connection's health, or contact support if the problem persists." [ref=f3e7174]:
+                  - text: br_inventory_id_not_null
+                  - generic [ref=f3e7175]:
+                    - generic [ref=f3e7176]:
+                      - generic [ref=f3e7177]: CDE
+                      - generic [ref=f3e7178]: BronzeDB.br_inventory
+                    - generic [ref=f3e7179]: This rule could not be executed due to a data source error. Check the connection's health, or contact support if the problem persists.
+                - cell "BRONZE" [ref=f3e7180]:
+                  - generic [ref=f3e7181]: BRONZE
+                - cell "ERROR" [ref=f3e7182]:
+                  - generic [ref=f3e7183]:
+                    - img [ref=f3e7184]
+                    - text: ERROR
+                - cell "0" [ref=f3e7186]
+                - cell "—" [ref=f3e7187]
+                - cell "CRITICAL" [ref=f3e7188]:
+                  - generic [ref=f3e7189]: CRITICAL
+                - cell [ref=f3e7191]:
+                  - button "Re-run this rule" [ref=f3e7193] [cursor=pointer]:
+                    - img [ref=f3e7194]
+              - row "cde_notes_not_null CDE BronzeDB.BrzLoadLog This rule could not be executed due to a data source error. Check the connection's health, or contact support if the problem persists. BRONZE ERROR 0 — CRITICAL" [ref=f3e7196]:
+                - cell "cde_notes_not_null CDE BronzeDB.BrzLoadLog This rule could not be executed due to a data source error. Check the connection's health, or contact support if the problem persists." [ref=f3e7197]:
+                  - text: cde_notes_not_null
+                  - generic [ref=f3e7198]:
+                    - generic [ref=f3e7199]:
+                      - generic [ref=f3e7200]: CDE
+                      - generic [ref=f3e7201]: BronzeDB.BrzLoadLog
+                    - generic [ref=f3e7202]: This rule could not be executed due to a data source error. Check the connection's health, or contact support if the problem persists.
+                - cell "BRONZE" [ref=f3e7203]:
+                  - generic [ref=f3e7204]: BRONZE
+                - cell "ERROR" [ref=f3e7205]:
+                  - generic [ref=f3e7206]:
+                    - img [ref=f3e7207]
+                    - text: ERROR
+                - cell "0" [ref=f3e7209]
+                - cell "—" [ref=f3e7210]
+                - cell "CRITICAL" [ref=f3e7211]:
+                  - generic [ref=f3e7212]: CRITICAL
+                - cell [ref=f3e7214]:
+                  - button "Re-run this rule" [ref=f3e7216] [cursor=pointer]:
+                    - img [ref=f3e7217]
+              - row "category_id_positive BronzeDB.br_categories BRONZE PASS 0 — MEDIUM" [ref=f3e7219]:
+                - cell "category_id_positive BronzeDB.br_categories" [ref=f3e7220]:
+                  - text: category_id_positive
+                  - generic [ref=f3e7223]: BronzeDB.br_categories
+                - cell "BRONZE" [ref=f3e7224]:
+                  - generic [ref=f3e7225]: BRONZE
+                - cell "PASS" [ref=f3e7226]:
+                  - generic [ref=f3e7227]:
+                    - img [ref=f3e7228]
+                    - text: PASS
+                - cell "0" [ref=f3e7230]
+                - cell "—" [ref=f3e7231]
+                - cell "MEDIUM" [ref=f3e7232]:
+                  - generic [ref=f3e7233]: MEDIUM
+                - cell [ref=f3e7235]:
+                  - button "Re-run this rule" [ref=f3e7237] [cursor=pointer]:
+                    - img [ref=f3e7238]
+              - row "batch_id_not_null BronzeDB.br_categories The system detected that nineteen records in our category master table are missing a unique batch identifier, which is required to track how these categories were updated during this specific processing run. While marked as low severity because the data still contains valid information and does not block immediate reporting, we must fix these gaps now so future reports can accurately attribute changes to their correct source batches without confusion or duplication risks. The next step for our team is to manually review those nineteen records in the raw database and assign them a temporary batch ID before re-running the extraction process. BRONZE FAIL 19 100% LOW Records" [ref=f3e7240]:
+                - cell "batch_id_not_null BronzeDB.br_categories The system detected that nineteen records in our category master table are missing a unique batch identifier, which is required to track how these categories were updated during this specific processing run. While marked as low severity because the data still contains valid information and does not block immediate reporting, we must fix these gaps now so future reports can accurately attribute changes to their correct source batches without confusion or duplication risks. The next step for our team is to manually review those nineteen records in the raw database and assign them a temporary batch ID before re-running the extraction process." [ref=f3e7241]:
+                  - text: batch_id_not_null
+                  - generic [ref=f3e7242]:
+                    - generic [ref=f3e7244]: BronzeDB.br_categories
+                    - generic [ref=f3e7245]: The system detected that nineteen records in our category master table are missing a unique batch identifier, which is required to track how these categories were updated during this specific processing run. While marked as low severity because the data still contains valid information and does not block immediate reporting, we must fix these gaps now so future reports can accurately attribute changes to their correct source batches without confusion or duplication risks. The next step for our team is to manually review those nineteen records in the raw database and assign them a temporary batch ID before re-running the extraction process.
+                - cell "BRONZE" [ref=f3e7246]:
+                  - generic [ref=f3e7247]: BRONZE
+                - cell "FAIL" [ref=f3e7248]:
+                  - generic [ref=f3e7249]:
+                    - img [ref=f3e7250]
+                    - text: FAIL
+                - cell "19" [ref=f3e7253]
+                - cell "100%" [ref=f3e7254]
+                - cell "LOW" [ref=f3e7255]:
+                  - generic [ref=f3e7256]: LOW
+                - cell "Records" [ref=f3e7258]:
+                  - generic [ref=f3e7259]:
+                    - button "Records" [ref=f3e7260] [cursor=pointer]:
+                      - img [ref=f3e7261]
+                      - text: Records
+                    - button "Re-run this rule" [ref=f3e7264] [cursor=pointer]:
+                      - img [ref=f3e7265]
+              - row "Src_UpdatedDateNotNullCheck BronzeDB.br_customers The system flagged that twenty-seven customer records in our raw database layer are missing an update date, which means we cannot track when these profiles were last modified or verify if they represent current information. While this is marked as a low-severity issue and does not block core operations like billing or login access, it creates uncertainty for any future analysis relying on data freshness timelines. The immediate next step is to investigate the source of these gaps by checking which specific customer IDs are affected so we can either correct the missing dates in the raw layer or flag them as incomplete profiles before they move into our main reporting systems. BRONZE FAIL 27 100% LOW Records" [ref=f3e7267]:
+                - cell "Src_UpdatedDateNotNullCheck BronzeDB.br_customers The system flagged that twenty-seven customer records in our raw database layer are missing an update date, which means we cannot track when these profiles were last modified or verify if they represent current information. While this is marked as a low-severity issue and does not block core operations like billing or login access, it creates uncertainty for any future analysis relying on data freshness timelines. The immediate next step is to investigate the source of these gaps by checking which specific customer IDs are affected so we can either correct the missing dates in the raw layer or flag them as incomplete profiles before they move into our main reporting systems." [ref=f3e7268]:
+                  - text: Src_UpdatedDateNotNullCheck
+                  - generic [ref=f3e7269]:
+                    - generic [ref=f3e7271]: BronzeDB.br_customers
+                    - generic [ref=f3e7272]: The system flagged that twenty-seven customer records in our raw database layer are missing an update date, which means we cannot track when these profiles were last modified or verify if they represent current information. While this is marked as a low-severity issue and does not block core operations like billing or login access, it creates uncertainty for any future analysis relying on data freshness timelines. The immediate next step is to investigate the source of these gaps by checking which specific customer IDs are affected so we can either correct the missing dates in the raw layer or flag them as incomplete profiles before they move into our main reporting systems.
+                - cell "BRONZE" [ref=f3e7273]:
+                  - generic [ref=f3e7274]: BRONZE
+                - cell "FAIL" [ref=f3e7275]:
+                  - generic [ref=f3e7276]:
+                    - img [ref=f3e7277]
+                    - text: FAIL
+                - cell "27" [ref=f3e7280]
+                - cell "100%" [ref=f3e7281]
+                - cell "LOW" [ref=f3e7282]:
+                  - generic [ref=f3e7283]: LOW
+                - cell "Records" [ref=f3e7285]:
+                  - generic [ref=f3e7286]:
+                    - button "Records" [ref=f3e7287] [cursor=pointer]:
+                      - img [ref=f3e7288]
+                      - text: Records
+                    - button "Re-run this rule" [ref=f3e7291] [cursor=pointer]:
+                      - img [ref=f3e7292]
+              - row "parent_category_id_not_null BronzeDB.br_categories parent_category_id_not_null failed on 68.4% of records. Review the affected data. BRONZE FAIL 13 68.42% CRITICAL Records" [ref=f3e7294]:
+                - cell "parent_category_id_not_null BronzeDB.br_categories parent_category_id_not_null failed on 68.4% of records. Review the affected data." [ref=f3e7295]:
+                  - text: parent_category_id_not_null
+                  - generic [ref=f3e7296]:
+                    - generic [ref=f3e7298]: BronzeDB.br_categories
+                    - generic [ref=f3e7299]: parent_category_id_not_null failed on 68.4% of records. Review the affected data.
+                - cell "BRONZE" [ref=f3e7300]:
+                  - generic [ref=f3e7301]: BRONZE
+                - cell "FAIL" [ref=f3e7302]:
+                  - generic [ref=f3e7303]:
+                    - img [ref=f3e7304]
+                    - text: FAIL
+                - cell "13" [ref=f3e7307]
+                - cell "68.42%" [ref=f3e7308]
+                - cell "CRITICAL" [ref=f3e7309]:
+                  - generic [ref=f3e7310]: CRITICAL
+                - cell "Records" [ref=f3e7312]:
+                  - generic [ref=f3e7313]:
+                    - button "Records" [ref=f3e7314] [cursor=pointer]:
+                      - img [ref=f3e7315]
+                      - text: Records
+                    - button "Re-run this rule" [ref=f3e7318] [cursor=pointer]:
+                      - img [ref=f3e7319]
+              - row "loaded_at_not_null BronzeDB.br_categories The system detected that nineteen records in our category master table were missing a timestamp indicating when they were loaded into the database. While this is marked as low severity because it does not block core business operations, having incomplete load times can make it difficult to track data freshness and identify recent changes during audits or troubleshooting. The next step for the team is to investigate why these specific entries lack timestamps and update them so that every record has a valid loading date. BRONZE FAIL 19 100% LOW Records" [ref=f3e7321]:
+                - cell "loaded_at_not_null BronzeDB.br_categories The system detected that nineteen records in our category master table were missing a timestamp indicating when they were loaded into the database. While this is marked as low severity because it does not block core business operations, having incomplete load times can make it difficult to track data freshness and identify recent changes during audits or troubleshooting. The next step for the team is to investigate why these specific entries lack timestamps and update them so that every record has a valid loading date." [ref=f3e7322]:
+                  - text: loaded_at_not_null
+                  - generic [ref=f3e7323]:
+                    - generic [ref=f3e7325]: BronzeDB.br_categories
+                    - generic [ref=f3e7326]: The system detected that nineteen records in our category master table were missing a timestamp indicating when they were loaded into the database. While this is marked as low severity because it does not block core business operations, having incomplete load times can make it difficult to track data freshness and identify recent changes during audits or troubleshooting. The next step for the team is to investigate why these specific entries lack timestamps and update them so that every record has a valid loading date.
+                - cell "BRONZE" [ref=f3e7327]:
+                  - generic [ref=f3e7328]: BRONZE
+                - cell "FAIL" [ref=f3e7329]:
+                  - generic [ref=f3e7330]:
+                    - img [ref=f3e7331]
+                    - text: FAIL
+                - cell "19" [ref=f3e7334]
+                - cell "100%" [ref=f3e7335]
+                - cell "LOW" [ref=f3e7336]:
+                  - generic [ref=f3e7337]: LOW
+                - cell "Records" [ref=f3e7339]:
+                  - generic [ref=f3e7340]:
+                    - button "Records" [ref=f3e7341] [cursor=pointer]:
+                      - img [ref=f3e7342]
+                      - text: Records
+                    - button "Re-run this rule" [ref=f3e7345] [cursor=pointer]:
+                      - img [ref=f3e7346]
+              - row "Brz_BatchIDNotNullCheck BronzeDB.br_customers The system flagged twenty-seven customer records in our raw source layer where a unique batch identifier was missing entirely. While this is currently marked as low severity because these are initial unverified entries from external systems, it prevents us from confidently linking new customers to their transaction history or tracking data changes over time until the issue is resolved. The immediate next step for the team is to investigate why those specific sources failed to include the ID and either correct them in the source system or exclude this field temporarily while we verify its reliability. BRONZE FAIL 27 100% LOW Records" [ref=f3e7348]:
+                - cell "Brz_BatchIDNotNullCheck BronzeDB.br_customers The system flagged twenty-seven customer records in our raw source layer where a unique batch identifier was missing entirely. While this is currently marked as low severity because these are initial unverified entries from external systems, it prevents us from confidently linking new customers to their transaction history or tracking data changes over time until the issue is resolved. The immediate next step for the team is to investigate why those specific sources failed to include the ID and either correct them in the source system or exclude this field temporarily while we verify its reliability." [ref=f3e7349]:
+                  - text: Brz_BatchIDNotNullCheck
+                  - generic [ref=f3e7350]:
+                    - generic [ref=f3e7352]: BronzeDB.br_customers
+                    - generic [ref=f3e7353]: The system flagged twenty-seven customer records in our raw source layer where a unique batch identifier was missing entirely. While this is currently marked as low severity because these are initial unverified entries from external systems, it prevents us from confidently linking new customers to their transaction history or tracking data changes over time until the issue is resolved. The immediate next step for the team is to investigate why those specific sources failed to include the ID and either correct them in the source system or exclude this field temporarily while we verify its reliability.
+                - cell "BRONZE" [ref=f3e7354]:
+                  - generic [ref=f3e7355]: BRONZE
+                - cell "FAIL" [ref=f3e7356]:
+                  - generic [ref=f3e7357]:
+                    - img [ref=f3e7358]
+                    - text: FAIL
+                - cell "27" [ref=f3e7361]
+                - cell "100%" [ref=f3e7362]
+                - cell "LOW" [ref=f3e7363]:
+                  - generic [ref=f3e7364]: LOW
+                - cell "Records" [ref=f3e7366]:
+                  - generic [ref=f3e7367]:
+                    - button "Records" [ref=f3e7368] [cursor=pointer]:
+                      - img [ref=f3e7369]
+                      - text: Records
+                    - button "Re-run this rule" [ref=f3e7372] [cursor=pointer]:
+                      - img [ref=f3e7373]
+              - row "source_system_not_null CDE BronzeDB.br_inventory This rule could not be executed due to a data source error. Check the connection's health, or contact support if the problem persists. BRONZE ERROR 0 — CRITICAL" [ref=f3e7375]:
+                - cell "source_system_not_null CDE BronzeDB.br_inventory This rule could not be executed due to a data source error. Check the connection's health, or contact support if the problem persists." [ref=f3e7376]:
+                  - text: source_system_not_null
+                  - generic [ref=f3e7377]:
+                    - generic [ref=f3e7378]:
+                      - generic [ref=f3e7379]: CDE
+                      - generic [ref=f3e7380]: BronzeDB.br_inventory
+                    - generic [ref=f3e7381]: This rule could not be executed due to a data source error. Check the connection's health, or contact support if the problem persists.
+                - cell "BRONZE" [ref=f3e7382]:
+                  - generic [ref=f3e7383]: BRONZE
+                - cell "ERROR" [ref=f3e7384]:
+                  - generic [ref=f3e7385]:
+                    - img [ref=f3e7386]
+                    - text: ERROR
+                - cell "0" [ref=f3e7388]
+                - cell "—" [ref=f3e7389]
+                - cell "CRITICAL" [ref=f3e7390]:
+                  - generic [ref=f3e7391]: CRITICAL
+                - cell [ref=f3e7393]:
+                  - button "Re-run this rule" [ref=f3e7395] [cursor=pointer]:
+                    - img [ref=f3e7396]
+              - row "status_valid_length BronzeDB.BrzLoadLog BRONZE PASS 0 — MEDIUM" [ref=f3e7398]:
+                - cell "status_valid_length BronzeDB.BrzLoadLog" [ref=f3e7399]:
+                  - text: status_valid_length
+                  - generic [ref=f3e7402]: BronzeDB.BrzLoadLog
+                - cell "BRONZE" [ref=f3e7403]:
+                  - generic [ref=f3e7404]: BRONZE
+                - cell "PASS" [ref=f3e7405]:
+                  - generic [ref=f3e7406]:
+                    - img [ref=f3e7407]
+                    - text: PASS
+                - cell "0" [ref=f3e7409]
+                - cell "—" [ref=f3e7410]
+                - cell "MEDIUM" [ref=f3e7411]:
+                  - generic [ref=f3e7412]: MEDIUM
+                - cell [ref=f3e7414]:
+                  - button "Re-run this rule" [ref=f3e7416] [cursor=pointer]:
+                    - img [ref=f3e7417]
+              - row "cde_source_category_id_not_null CDE BronzeDB.br_categories The system detected that nineteen records in our category master table are missing a required source ID tag, which is critical because this identifier links every product to its correct supplier or origin for accurate reporting. Without these tags, we cannot reliably track where inventory comes from or calculate costs by vendor, leading to potential errors in pricing and supply chain analysis. The data team should immediately investigate the root cause of these missing IDs—such as a failed upstream capture—and update those records so that future reports remain consistent and trustworthy. BRONZE FAIL 19 100% MEDIUM Records" [ref=f3e7419]:
+                - cell "cde_source_category_id_not_null CDE BronzeDB.br_categories The system detected that nineteen records in our category master table are missing a required source ID tag, which is critical because this identifier links every product to its correct supplier or origin for accurate reporting. Without these tags, we cannot reliably track where inventory comes from or calculate costs by vendor, leading to potential errors in pricing and supply chain analysis. The data team should immediately investigate the root cause of these missing IDs—such as a failed upstream capture—and update those records so that future reports remain consistent and trustworthy." [ref=f3e7420]:
+                  - text: cde_source_category_id_not_null
+                  - generic [ref=f3e7421]:
+                    - generic [ref=f3e7422]:
+                      - generic [ref=f3e7423]: CDE
+                      - generic [ref=f3e7424]: BronzeDB.br_categories
+                    - generic [ref=f3e7425]: The system detected that nineteen records in our category master table are missing a required source ID tag, which is critical because this identifier links every product to its correct supplier or origin for accurate reporting. Without these tags, we cannot reliably track where inventory comes from or calculate costs by vendor, leading to potential errors in pricing and supply chain analysis. The data team should immediately investigate the root cause of these missing IDs—such as a failed upstream capture—and update those records so that future reports remain consistent and trustworthy.
+                - cell "BRONZE" [ref=f3e7426]:
+                  - generic [ref=f3e7427]: BRONZE
+                - cell "FAIL" [ref=f3e7428]:
+                  - generic [ref=f3e7429]:
+                    - img [ref=f3e7430]
+                    - text: FAIL
+                - cell "19" [ref=f3e7433]
+                - cell "100%" [ref=f3e7434]
+                - cell "MEDIUM" [ref=f3e7435]:
+                  - generic [ref=f3e7436]: MEDIUM
+                - cell "Records" [ref=f3e7438]:
+                  - generic [ref=f3e7439]:
+                    - button "Records" [ref=f3e7440] [cursor=pointer]:
+                      - img [ref=f3e7441]
+                      - text: Records
+                    - button "Re-run this rule" [ref=f3e7444] [cursor=pointer]:
+                      - img [ref=f3e7445]
+              - row "no_null_warehouse_name BronzeDB.br_warehouses This rule could not be executed due to a data source error. Check the connection's health, or contact support if the problem persists. BRONZE ERROR 0 — HIGH" [ref=f3e7447]:
+                - cell "no_null_warehouse_name BronzeDB.br_warehouses This rule could not be executed due to a data source error. Check the connection's health, or contact support if the problem persists." [ref=f3e7448]:
+                  - text: no_null_warehouse_name
+                  - generic [ref=f3e7449]:
+                    - generic [ref=f3e7451]: BronzeDB.br_warehouses
+                    - generic [ref=f3e7452]: This rule could not be executed due to a data source error. Check the connection's health, or contact support if the problem persists.
+                - cell "BRONZE" [ref=f3e7453]:
+                  - generic [ref=f3e7454]: BRONZE
+                - cell "ERROR" [ref=f3e7455]:
+                  - generic [ref=f3e7456]:
+                    - img [ref=f3e7457]
+                    - text: ERROR
+                - cell "0" [ref=f3e7459]
+                - cell "—" [ref=f3e7460]
+                - cell "HIGH" [ref=f3e7461]:
+                  - generic [ref=f3e7462]: HIGH
+                - cell [ref=f3e7464]:
+                  - button "Re-run this rule" [ref=f3e7466] [cursor=pointer]:
+                    - img [ref=f3e7467]
+              - row "cde_isactive_not_null CDE BronzeDB.br_categories The system flagged nineteen records in our category master list where a critical \"active\" status was missing entirely, which means we cannot currently confirm if these categories are available for use or reporting. While this is marked as low severity because it does not block immediate transactions, the absence of this flag creates uncertainty that could lead to inconsistent customer experiences and inaccurate analytics on product availability. The data team should prioritize updating those nineteen specific records with a clear active status so our downstream systems can reliably process category information without ambiguity. BRONZE FAIL 19 100% LOW Records" [ref=f3e7469]:
+                - cell "cde_isactive_not_null CDE BronzeDB.br_categories The system flagged nineteen records in our category master list where a critical \"active\" status was missing entirely, which means we cannot currently confirm if these categories are available for use or reporting. While this is marked as low severity because it does not block immediate transactions, the absence of this flag creates uncertainty that could lead to inconsistent customer experiences and inaccurate analytics on product availability. The data team should prioritize updating those nineteen specific records with a clear active status so our downstream systems can reliably process category information without ambiguity." [ref=f3e7470]:
+                  - text: cde_isactive_not_null
+                  - generic [ref=f3e7471]:
+                    - generic [ref=f3e7472]:
+                      - generic [ref=f3e7473]: CDE
+                      - generic [ref=f3e7474]: BronzeDB.br_categories
+                    - generic [ref=f3e7475]: The system flagged nineteen records in our category master list where a critical "active" status was missing entirely, which means we cannot currently confirm if these categories are available for use or reporting. While this is marked as low severity because it does not block immediate transactions, the absence of this flag creates uncertainty that could lead to inconsistent customer experiences and inaccurate analytics on product availability. The data team should prioritize updating those nineteen specific records with a clear active status so our downstream systems can reliably process category information without ambiguity.
+                - cell "BRONZE" [ref=f3e7476]:
+                  - generic [ref=f3e7477]: BRONZE
+                - cell "FAIL" [ref=f3e7478]:
+                  - generic [ref=f3e7479]:
+                    - img [ref=f3e7480]
+                    - text: FAIL
+                - cell "19" [ref=f3e7483]
+                - cell "100%" [ref=f3e7484]
+                - cell "LOW" [ref=f3e7485]:
+                  - generic [ref=f3e7486]: LOW
+                - cell "Records" [ref=f3e7488]:
+                  - generic [ref=f3e7489]:
+                    - button "Records" [ref=f3e7490] [cursor=pointer]:
+                      - img [ref=f3e7491]
+                      - text: Records
+                    - button "Re-run this rule" [ref=f3e7494] [cursor=pointer]:
+                      - img [ref=f3e7495]
+              - row "source_category_id_positive BronzeDB.br_categories BRONZE PASS 0 — MEDIUM" [ref=f3e7497]:
+                - cell "source_category_id_positive BronzeDB.br_categories" [ref=f3e7498]:
+                  - text: source_category_id_positive
+                  - generic [ref=f3e7501]: BronzeDB.br_categories
+                - cell "BRONZE" [ref=f3e7502]:
+                  - generic [ref=f3e7503]: BRONZE
+                - cell "PASS" [ref=f3e7504]:
+                  - generic [ref=f3e7505]:
+                    - img [ref=f3e7506]
+                    - text: PASS
+                - cell "0" [ref=f3e7508]
+                - cell "—" [ref=f3e7509]
+                - cell "MEDIUM" [ref=f3e7510]:
+                  - generic [ref=f3e7511]: MEDIUM
+                - cell [ref=f3e7513]:
+                  - button "Re-run this rule" [ref=f3e7515] [cursor=pointer]:
+                    - img [ref=f3e7516]
+              - row "cde_status_not_null CDE BronzeDB.BrzLoadLog This rule could not be executed due to a data source error. Check the connection's health, or contact support if the problem persists. BRONZE ERROR 0 — CRITICAL" [ref=f3e7518]:
+                - cell "cde_status_not_null CDE BronzeDB.BrzLoadLog This rule could not be executed due to a data source error. Check the connection's health, or contact support if the problem persists." [ref=f3e7519]:
+                  - text: cde_status_not_null
+                  - generic [ref=f3e7520]:
+                    - generic [ref=f3e7521]:
+                      - generic [ref=f3e7522]: CDE
+                      - generic [ref=f3e7523]: BronzeDB.BrzLoadLog
+                    - generic [ref=f3e7524]: This rule could not be executed due to a data source error. Check the connection's health, or contact support if the problem persists.
+                - cell "BRONZE" [ref=f3e7525]:
+                  - generic [ref=f3e7526]: BRONZE
+                - cell "ERROR" [ref=f3e7527]:
+                  - generic [ref=f3e7528]:
+                    - img [ref=f3e7529]
+                    - text: ERROR
+                - cell "0" [ref=f3e7531]
+                - cell "—" [ref=f3e7532]
+                - cell "CRITICAL" [ref=f3e7533]:
+                  - generic [ref=f3e7534]: CRITICAL
+                - cell [ref=f3e7536]:
+                  - button "Re-run this rule" [ref=f3e7538] [cursor=pointer]:
+                    - img [ref=f3e7539]
+              - row "Brz_LoadedAtNotNullCheck BronzeDB.br_customers The system flagged twenty-seven customer records in our raw database where the loading timestamp was missing entirely, which means we cannot track when these customers were initially added to ensure accurate reporting on recent activity. While this is marked as a low-severity issue and does not block core business operations, it creates gaps that could skew historical trends if left unaddressed for future analysis. The data team should prioritize cleaning or filling in the missing timestamps by cross-referencing external logs before re-running the load process to restore full traceability. BRONZE FAIL 27 100% LOW Records" [ref=f3e7541]:
+                - cell "Brz_LoadedAtNotNullCheck BronzeDB.br_customers The system flagged twenty-seven customer records in our raw database where the loading timestamp was missing entirely, which means we cannot track when these customers were initially added to ensure accurate reporting on recent activity. While this is marked as a low-severity issue and does not block core business operations, it creates gaps that could skew historical trends if left unaddressed for future analysis. The data team should prioritize cleaning or filling in the missing timestamps by cross-referencing external logs before re-running the load process to restore full traceability." [ref=f3e7542]:
+                  - text: Brz_LoadedAtNotNullCheck
+                  - generic [ref=f3e7543]:
+                    - generic [ref=f3e7545]: BronzeDB.br_customers
+                    - generic [ref=f3e7546]: The system flagged twenty-seven customer records in our raw database where the loading timestamp was missing entirely, which means we cannot track when these customers were initially added to ensure accurate reporting on recent activity. While this is marked as a low-severity issue and does not block core business operations, it creates gaps that could skew historical trends if left unaddressed for future analysis. The data team should prioritize cleaning or filling in the missing timestamps by cross-referencing external logs before re-running the load process to restore full traceability.
+                - cell "BRONZE" [ref=f3e7547]:
+                  - generic [ref=f3e7548]: BRONZE
+                - cell "FAIL" [ref=f3e7549]:
+                  - generic [ref=f3e7550]:
+                    - img [ref=f3e7551]
+                    - text: FAIL
+                - cell "27" [ref=f3e7554]
+                - cell "100%" [ref=f3e7555]
+                - cell "LOW" [ref=f3e7556]:
+                  - generic [ref=f3e7557]: LOW
+                - cell "Records" [ref=f3e7559]:
+                  - generic [ref=f3e7560]:
+                    - button "Records" [ref=f3e7561] [cursor=pointer]:
+                      - img [ref=f3e7562]
+                      - text: Records
+                    - button "Re-run this rule" [ref=f3e7565] [cursor=pointer]:
+                      - img [ref=f3e7566]
+              - row "cde_source_system_not_null CDE BronzeDB.br_categories The system flagged nineteen records in our category master table where a critical source field was missing entirely, which means we cannot reliably match these items to their original suppliers or track them across different departments. This gap risks disrupting downstream reporting and could lead to duplicate entries if the data team does not address it immediately by identifying the root cause of the empty values before they propagate into our operational dashboards. BRONZE FAIL 19 100% MEDIUM Records" [ref=f3e7568]:
+                - cell "cde_source_system_not_null CDE BronzeDB.br_categories The system flagged nineteen records in our category master table where a critical source field was missing entirely, which means we cannot reliably match these items to their original suppliers or track them across different departments. This gap risks disrupting downstream reporting and could lead to duplicate entries if the data team does not address it immediately by identifying the root cause of the empty values before they propagate into our operational dashboards." [ref=f3e7569]:
+                  - text: cde_source_system_not_null
+                  - generic [ref=f3e7570]:
+                    - generic [ref=f3e7571]:
+                      - generic [ref=f3e7572]: CDE
+                      - generic [ref=f3e7573]: BronzeDB.br_categories
+                    - generic [ref=f3e7574]: The system flagged nineteen records in our category master table where a critical source field was missing entirely, which means we cannot reliably match these items to their original suppliers or track them across different departments. This gap risks disrupting downstream reporting and could lead to duplicate entries if the data team does not address it immediately by identifying the root cause of the empty values before they propagate into our operational dashboards.
+                - cell "BRONZE" [ref=f3e7575]:
+                  - generic [ref=f3e7576]: BRONZE
+                - cell "FAIL" [ref=f3e7577]:
+                  - generic [ref=f3e7578]:
+                    - img [ref=f3e7579]
+                    - text: FAIL
+                - cell "19" [ref=f3e7582]
+                - cell "100%" [ref=f3e7583]
+                - cell "MEDIUM" [ref=f3e7584]:
+                  - generic [ref=f3e7585]: MEDIUM
+                - cell "Records" [ref=f3e7587]:
+                  - generic [ref=f3e7588]:
+                    - button "Records" [ref=f3e7589] [cursor=pointer]:
+                      - img [ref=f3e7590]
+                      - text: Records
+                    - button "Re-run this rule" [ref=f3e7593] [cursor=pointer]:
+                      - img [ref=f3e7594]
+          - generic [ref=f3e7596]:
+            - button "Download CSV" [ref=f3e7597] [cursor=pointer]:
+              - img [ref=f3e7598]
+              - text: Download CSV
+            - button "Share to Slack" [ref=f3e7601] [cursor=pointer]:
+              - img [ref=f3e7602]
+              - text: Share to Slack
+            - button "Review anomalies" [ref=f3e7609] [cursor=pointer]:
+              - text: Review anomalies
+              - img [ref=f3e7610]

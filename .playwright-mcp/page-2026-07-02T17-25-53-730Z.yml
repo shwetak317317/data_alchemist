@@ -1,0 +1,159 @@
+- generic [ref=f5e3]:
+  - complementary [ref=f5e4]:
+    - generic [ref=f5e8]:
+      - generic [ref=f5e9]: DataTrust
+      - generic [ref=f5e10]: AGENTIC DQ PLATFORM
+    - generic [ref=f5e11] [cursor=pointer]:
+      - generic [ref=f5e12]: ⬡
+      - generic [ref=f5e13]:
+        - generic [ref=f5e14]: My Connection demo
+        - generic [ref=f5e15]: Active connection
+    - generic [ref=f5e17]:
+      - generic [ref=f5e18]: Workflow
+      - button "Workspace Home" [ref=f5e19] [cursor=pointer]:
+        - generic [ref=f5e21]: Workspace Home
+      - button "Profiling 1" [ref=f5e22] [cursor=pointer]:
+        - generic [ref=f5e24]: Profiling
+        - generic [ref=f5e25]: "1"
+      - button "Dictionary & CDEs 2" [ref=f5e26] [cursor=pointer]:
+        - generic [ref=f5e28]: Dictionary & CDEs
+        - generic [ref=f5e29]: "2"
+      - button "Rule Studio 3" [ref=f5e30] [cursor=pointer]:
+        - generic [ref=f5e32]: Rule Studio
+        - generic [ref=f5e33]: "3"
+      - button "DQ Execution 4" [ref=f5e34] [cursor=pointer]:
+        - generic [ref=f5e36]: DQ Execution
+        - generic [ref=f5e37]: "4"
+    - generic [ref=f5e38]:
+      - generic [ref=f5e39]: Monitoring
+      - button "Anomaly Inbox" [ref=f5e40] [cursor=pointer]:
+        - generic [ref=f5e42]: Anomaly Inbox
+      - button "Impact Graph" [ref=f5e43] [cursor=pointer]:
+        - generic [ref=f5e45]: Impact Graph
+      - button "Trust Dashboard" [ref=f5e46] [cursor=pointer]:
+        - generic [ref=f5e48]: Trust Dashboard
+    - generic [ref=f5e49]:
+      - generic [ref=f5e50]: Intelligence
+      - button "Pre-run Advisory" [ref=f5e51] [cursor=pointer]:
+        - generic [ref=f5e53]: Pre-run Advisory
+      - button "Trust Receipt" [ref=f5e54] [cursor=pointer]:
+        - generic [ref=f5e56]: Trust Receipt
+    - generic [ref=f5e57]:
+      - generic [ref=f5e58]: Admin
+      - button "Connections" [ref=f5e59] [cursor=pointer]:
+        - generic [ref=f5e61]: Connections
+    - generic [ref=f5e62]:
+      - generic [ref=f5e63]: Operate
+      - button "Scenario Simulator" [ref=f5e64] [cursor=pointer]:
+        - generic [ref=f5e66]: Scenario Simulator
+      - button "Task Board" [ref=f5e68] [cursor=pointer]:
+        - generic [ref=f5e70]: Task Board
+      - button "Daily Summary" [ref=f5e71] [cursor=pointer]:
+        - generic [ref=f5e73]: Daily Summary
+    - generic [ref=f5e74]:
+      - generic [ref=f5e76]: SK
+      - generic [ref=f5e78]:
+        - generic [ref=f5e79]: shweta katkar
+        - generic [ref=f5e80]: shweta.katkar@pal.tech
+      - button "Sign out" [ref=f5e81] [cursor=pointer]
+  - generic [ref=f5e83]:
+    - banner [ref=f5e84]:
+      - generic [ref=f5e85]:
+        - generic [ref=f5e86]:
+          - generic [ref=f5e87]: My Connection demo
+          - generic [ref=f5e88]: /
+          - generic [ref=f5e89]: Workflow
+        - generic [ref=f5e90]: Workspace Home
+      - generic [ref=f5e91]: Pipeline · Issues detected
+      - generic [ref=f5e94]:
+        - generic [ref=f5e95]: TRUST SCORE
+        - generic [ref=f5e96]: 69/100
+      - button "Notifications" [ref=f5e97] [cursor=pointer]
+    - main [ref=f5e99]:
+      - generic [ref=f5e100]:
+        - generic [ref=f5e101]:
+          - generic [ref=f5e102]:
+            - heading "Good evening, shweta." [level=1] [ref=f5e103]
+            - generic [ref=f5e104]: Thursday, July 2, 2026
+          - generic [ref=f5e105]:
+            - button "Open today's run" [ref=f5e106] [cursor=pointer]: Open today's run
+            - button "Live simulator" [ref=f5e108] [cursor=pointer]: Live simulator
+        - generic [ref=f5e110]:
+          - generic [ref=f5e111]:
+            - generic [ref=f5e112]: Overall Trust
+            - generic [ref=f5e113]:
+              - generic [ref=f5e114]:
+                - img [ref=f5e115]
+                - generic [ref=f5e119]: "0"
+              - generic [ref=f5e121]: Loading…
+          - generic [ref=f5e122]:
+            - generic [ref=f5e123]: Open Issues
+            - generic [ref=f5e124]:
+              - generic [ref=f5e125]:
+                - generic [ref=f5e127]: Critical
+                - generic [ref=f5e128]: "0"
+              - generic [ref=f5e129]:
+                - generic [ref=f5e131]: High
+                - generic [ref=f5e132]: "0"
+              - generic [ref=f5e133]:
+                - generic [ref=f5e135]: Medium
+                - generic [ref=f5e136]: "0"
+          - generic [ref=f5e137]:
+            - generic [ref=f5e138]: Anomalies
+            - generic [ref=f5e140]: Loading…
+        - generic [ref=f5e141]:
+          - generic [ref=f5e142]:
+            - generic [ref=f5e145]: Layer scores
+            - generic [ref=f5e146]: Medallion architecture
+          - generic [ref=f5e147]:
+            - button "RAW — — Not profiled" [ref=f5e148] [cursor=pointer]:
+              - generic [ref=f5e149]:
+                - generic [ref=f5e150]: RAW
+                - generic [ref=f5e151]: —
+              - generic [ref=f5e152]: —
+              - generic [ref=f5e153]: Not profiled
+            - button "BRONZE — — Not profiled" [ref=f5e154] [cursor=pointer]:
+              - generic [ref=f5e155]:
+                - generic [ref=f5e156]: BRONZE
+                - generic [ref=f5e157]: —
+              - generic [ref=f5e158]: —
+              - generic [ref=f5e159]: Not profiled
+            - button "SILVER — — Not profiled" [ref=f5e160] [cursor=pointer]:
+              - generic [ref=f5e161]:
+                - generic [ref=f5e162]: SILVER
+                - generic [ref=f5e163]: —
+              - generic [ref=f5e164]: —
+              - generic [ref=f5e165]: Not profiled
+            - button "GOLD — — Not profiled" [ref=f5e166] [cursor=pointer]:
+              - generic [ref=f5e167]:
+                - generic [ref=f5e168]: GOLD
+                - generic [ref=f5e169]: —
+              - generic [ref=f5e170]: —
+              - generic [ref=f5e171]: Not profiled
+        - generic [ref=f5e172]:
+          - generic [ref=f5e173]:
+            - generic [ref=f5e176]:
+              - generic [ref=f5e177]: Recent activity
+              - generic [ref=f5e178]: Live · My Connection demo
+            - generic [ref=f5e179]: Loading…
+          - generic [ref=f5e180]:
+            - generic [ref=f5e184]: Agentic workflow
+            - generic [ref=f5e185]:
+              - generic [ref=f5e186] [cursor=pointer]:
+                - generic [ref=f5e188]: "1"
+                - generic [ref=f5e191]: Profiling
+              - generic [ref=f5e192] [cursor=pointer]:
+                - generic [ref=f5e194]: "2"
+                - generic [ref=f5e197]: Dictionary & CDEs
+              - generic [ref=f5e198] [cursor=pointer]:
+                - generic [ref=f5e200]: "3"
+                - generic [ref=f5e203]: Rule Studio
+              - generic [ref=f5e204] [cursor=pointer]:
+                - generic [ref=f5e206]: "4"
+                - generic [ref=f5e209]: DQ Execution
+              - generic [ref=f5e210] [cursor=pointer]:
+                - generic [ref=f5e212]: "5"
+                - generic [ref=f5e215]: Anomaly + Explain
+              - generic [ref=f5e216] [cursor=pointer]:
+                - generic [ref=f5e218]: "6"
+                - generic [ref=f5e220]: Trust Dashboard

@@ -1,6 +1,5 @@
 // DataTrust — Screen: Trust Dashboard (Exec / Technical / Steward)
 (function () {
-  const D = window.DT;
 
   function useDashboard(activeConnectionId) {
     const [summary, setSummary] = React.useState(null);
@@ -9,6 +8,9 @@
     const [layerScores, setLayerScores] = React.useState(null);
     const [auditTrail, setAuditTrail] = React.useState(null);
     const [ruleFailTrend, setRuleFailTrend] = React.useState(null);
+    const [topAnomalies, setTopAnomalies] = React.useState(null);
+    const [openTasks, setOpenTasks] = React.useState(null);
+    const [layerCoverage, setLayerCoverage] = React.useState(null); // [{layer, dictPct, rulePct}]
 
     React.useEffect(() => {
       if (!window.DTApi) return;
@@ -18,6 +20,9 @@
       setLayerScores(null);
       setAuditTrail(null);
       setRuleFailTrend(null);
+      setTopAnomalies(null);
+      setOpenTasks(null);
+      setLayerCoverage(null);
 
       window.DTApi.getDashboardSummary(activeConnectionId)
         .then(s => {
@@ -56,9 +61,73 @@
           .then(rows => { if (rows && rows.length) setAuditTrail(rows.map(r => ({ time: r.time || "—", user: r.user_name || r.user || "System", action: r.action, entity: r.entity || "—" }))); })
           .catch(() => {});
       }
+      // Real top issues — severity-ranked open anomalies, in the AI's own
+      // business-language explanation (falls back to the raw description if an
+      // anomaly hasn't been explained yet).
+      if (window.DTApi.getAnomalyInbox) {
+        window.DTApi.getAnomalyInbox(activeConnectionId)
+          .then(rows => {
+            const sevRank = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
+            const sorted = (rows || []).slice().sort((a, b) =>
+              (sevRank[a.severity] ?? 9) - (sevRank[b.severity] ?? 9) ||
+              new Date(b.detected_at || 0) - new Date(a.detected_at || 0));
+            setTopAnomalies(sorted.slice(0, 3).map(a => ({
+              text: a.business_explanation || a.description || `${a.anomaly_type || "Anomaly"} detected on ${a.table_fqn || "a table"}`,
+              severity: a.severity || "MEDIUM",
+              table: a.table_fqn, layer: a.layer,
+            })));
+          })
+          .catch(() => setTopAnomalies([]));
+      }
+      // Real open tasks with real owners (task_board), not invented names.
+      if (window.DTApi.listTasks) {
+        window.DTApi.listTasks(activeConnectionId, "open")
+          .then(rows => {
+            setOpenTasks((rows || []).slice(0, 6).map(t => ({
+              title: t.title, owner: t.owner || "Unassigned",
+              due: t.due_date || (t.priority === "CRITICAL" || t.priority === "HIGH" ? "Now" : "—"),
+            })));
+          })
+          .catch(() => setOpenTasks([]));
+      }
+      // Real per-layer dictionary completeness + rule coverage, computed from the
+      // same data the Dictionary & CDEs and Rule Studio screens themselves show —
+      // not a separately-invented number.
+      if (window.DTApi.listDictionary && window.DTApi.listRules) {
+        Promise.all([
+          window.DTApi.listDictionary(activeConnectionId).catch(() => []),
+          window.DTApi.listRules(activeConnectionId).catch(() => []),
+        ]).then(([dictRows, ruleRows]) => {
+          const byLayer = {};
+          (dictRows || []).forEach(d => {
+            const layer = (d.layer || "UNKNOWN").toUpperCase();
+            if (!byLayer[layer]) byLayer[layer] = { total: 0, described: 0, columnsWithRule: new Set() };
+            byLayer[layer].total++;
+            if (d.business_name || d.description) byLayer[layer].described++;
+          });
+          const activeRuleColumnsByLayer = {};
+          (ruleRows || []).forEach(r => {
+            if (!["approved", "active"].includes(r.status) || !r.column_name) return;
+            const layer = (r.layer || "UNKNOWN").toUpperCase();
+            (activeRuleColumnsByLayer[layer] ||= new Set()).add(r.column_name);
+          });
+          const coverage = Object.keys(byLayer).map(layer => {
+            const b = byLayer[layer];
+            const ruleCols = activeRuleColumnsByLayer[layer]?.size || 0;
+            return {
+              layer,
+              dictPct: b.total ? Math.round((b.described / b.total) * 100) : 0,
+              rulePct: b.total ? Math.round((Math.min(ruleCols, b.total) / b.total) * 100) : 0,
+            };
+          });
+          const order = { RAW: 0, BRONZE: 1, SILVER: 2, GOLD: 3 };
+          coverage.sort((a, b) => (order[a.layer] ?? 9) - (order[b.layer] ?? 9));
+          setLayerCoverage(coverage);
+        });
+      }
     }, [activeConnectionId]);
 
-    return { summary, trends, cdeStatus, layerScores, auditTrail, ruleFailTrend };
+    return { summary, trends, cdeStatus, layerScores, auditTrail, ruleFailTrend, topAnomalies, openTasks, layerCoverage };
   }
 
   const Tabs = ({ tab, setTab }) => (
@@ -74,8 +143,18 @@
     </div>
   );
 
-  const Exec = ({ trustScore, trustHistory }) => {
+  const Spinner = ({ label = "Loading…" }) => (
+    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "18px 4px", color: "var(--fg-3)", fontSize: 12.5 }}>
+      <span className="dt-spin" style={{ width: 14, height: 14, border: "2px solid var(--grey-200)",
+        borderTopColor: "var(--brand)", borderRadius: "50%", display: "inline-block" }}></span>
+      {label}
+    </div>
+  );
+
+  const Exec = ({ trustScore, trustHistory, scoreDelta, yesterdayScore, topAnomalies, layerScores }) => {
     const history = trustHistory || [];
+    const impactedLayers = (layerScores || []).filter(l => l.failed > 0);
+    const healthyLayers = (layerScores || []).filter(l => l.failed === 0 && l.rules > 0);
     return (
     <div className="dt-fade-up">
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 16 }}>
@@ -83,68 +162,78 @@
           <ScoreRing score={trustScore} size={120} stroke={11} sublabel="overall trust" />
           <div>
             <Eyebrow>Data trust score</Eyebrow>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 700, color: trustScore < 77 ? "var(--red-500)" : "var(--green-500)", marginTop: 8 }}>
-              <i data-lucide={trustScore < 77 ? "trending-down" : "trending-up"} style={{ width: 15, height: 15 }}></i>{trustScore - 77} pts vs yesterday</div>
-            <div style={{ fontSize: 12, color: "var(--fg-2)", marginTop: 6, maxWidth: 200 }}>Pipeline issue under active remediation. ETA 10:50 AM.</div>
+            {yesterdayScore != null ? (
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 700,
+                color: scoreDelta < 0 ? "var(--red-500)" : "var(--green-500)", marginTop: 8 }}>
+                <i data-lucide={scoreDelta < 0 ? "trending-down" : "trending-up"} style={{ width: 15, height: 15 }}></i>
+                {scoreDelta > 0 ? "+" : ""}{scoreDelta} pts vs yesterday ({yesterdayScore})
+              </div>
+            ) : (
+              <div style={{ fontSize: 12.5, color: "var(--fg-3)", marginTop: 8 }}>No history yet</div>
+            )}
           </div>
         </Card>
         <Card style={{ flex: 2, minWidth: 320 }}>
           <SectionTitle icon="trending-up">Trust score — last 14 days</SectionTitle>
-          <LineChart data={history} height={150} yMin={40} yMax={100} />
-          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
-            {history.map(d => <span key={d.label} style={{ fontSize: 10, color: "var(--fg-3)" }}>{d.label}</span>)}
-          </div>
+          {trustHistory === null ? <Spinner label="Loading trend…" /> : history.length ? (
+            <>
+              <LineChart data={history} height={150} yMin={40} yMax={100} />
+              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
+                {history.map(d => <span key={d.label} style={{ fontSize: 10, color: "var(--fg-3)" }}>{d.label}</span>)}
+              </div>
+            </>
+          ) : <div style={{ fontSize: 12.5, color: "var(--fg-3)", padding: "10px 0" }}>No trend history yet — check back after a few days of runs.</div>}
         </Card>
       </div>
 
       <Card style={{ marginBottom: 16 }}>
-        <SectionTitle icon="alert-circle">Top issues — in plain English</SectionTitle>
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {[
-            ["Today's revenue is understated by ~$221M because 12% of orders are missing their revenue value. A pipeline step failed; fix is in progress.", "CRITICAL"],
-            ["The order count is 57% lower than normal — over 2.5M orders are missing from today's data due to a late source feed.", "CRITICAL"],
-            ["The shipment feed arrived 85 minutes late, so delivery status data is slightly stale.", "HIGH"],
-          ].map(([t, sev], i) => (
-            <div key={i} style={{ display: "flex", gap: 12, padding: 14, background: SEV[sev].bg, borderRadius: 10 }}>
-              <span style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 18, color: SEV[sev].c, width: 22 }}>{i + 1}</span>
-              <div style={{ flex: 1, fontSize: 13, color: "var(--fg-1)", lineHeight: 1.5 }}>{t}</div>
-              <Severity level={sev} size="sm" />
-            </div>
-          ))}
-        </div>
+        <SectionTitle icon="alert-circle">Top open issues</SectionTitle>
+        {topAnomalies === null ? <Spinner label="Loading open issues…" /> : topAnomalies.length ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {topAnomalies.map((a, i) => (
+              <div key={i} style={{ display: "flex", gap: 12, padding: 14, background: SEV[a.severity]?.bg || SEV.MEDIUM.bg, borderRadius: 10 }}>
+                <span style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 18, color: (SEV[a.severity] || SEV.MEDIUM).c, width: 22 }}>{i + 1}</span>
+                <div style={{ flex: 1, fontSize: 13, color: "var(--fg-1)", lineHeight: 1.5 }}>{a.text}</div>
+                <Severity level={a.severity} size="sm" />
+              </div>
+            ))}
+          </div>
+        ) : <div style={{ fontSize: 12.5, color: "var(--green-600)", fontWeight: 600, padding: "6px 0" }}>No open issues.</div>}
       </Card>
 
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
         <Card style={{ flex: 1, minWidth: 240 }}>
-          <SectionTitle icon="x-octagon">Impacted business areas</SectionTitle>
-          {[["Finance Reporting", "fail"], ["Revenue Analytics", "fail"], ["Operations / Fulfilment", "warn"], ["ML Revenue Models", "warn"]].map(([a, s]) => (
-            <div key={a} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid var(--grey-100)" }}>
-              <i data-lucide={s === "fail" ? "x-circle" : "alert-triangle"} style={{ width: 16, height: 16, color: s === "fail" ? "var(--red-500)" : "var(--yellow-600)" }}></i>
-              <span style={{ fontSize: 13 }}>{a}</span>
+          <SectionTitle icon="x-octagon">Impacted layers</SectionTitle>
+          {layerScores === null ? <Spinner /> : impactedLayers.length ? impactedLayers.map(l => (
+            <div key={l.layer} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid var(--grey-100)" }}>
+              <i data-lucide="x-circle" style={{ width: 16, height: 16, color: "var(--red-500)" }}></i>
+              <span style={{ fontSize: 13, flex: 1 }}>{l.layer}</span>
+              <span style={{ fontSize: 12, color: "var(--fg-2)" }}>{l.failed} open issue{l.failed === 1 ? "" : "s"}</span>
             </div>
-          ))}
+          )) : <div style={{ fontSize: 12.5, color: "var(--fg-3)", padding: "6px 0" }}>No impacted layers.</div>}
         </Card>
         <Card style={{ flex: 1, minWidth: 240 }}>
-          <SectionTitle icon="check-circle-2">Areas unaffected</SectionTitle>
-          {["Customer Intelligence", "Product Performance", "Marketing Segmentation"].map(a => (
-            <div key={a} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid var(--grey-100)" }}>
+          <SectionTitle icon="check-circle-2">Healthy layers</SectionTitle>
+          {layerScores === null ? <Spinner /> : healthyLayers.length ? healthyLayers.map(l => (
+            <div key={l.layer} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid var(--grey-100)" }}>
               <i data-lucide="check-circle-2" style={{ width: 16, height: 16, color: "var(--green-500)" }}></i>
-              <span style={{ fontSize: 13 }}>{a}</span>
+              <span style={{ fontSize: 13 }}>{l.layer}</span>
             </div>
-          ))}
+          )) : <div style={{ fontSize: 12.5, color: "var(--fg-3)", padding: "6px 0" }}>None yet.</div>}
         </Card>
       </div>
     </div>
     );
   };
 
-  const Tech = ({ layerScores: lsProps, cdes: cdesProps, connName, ruleFailTrend: rftProps }) => {
+  const Tech = ({ layerScores: lsProps, cdes: cdesProps, connName, ruleFailTrend: rftProps, openTasks }) => {
     const layerScores = lsProps || [];
     const cdes = cdesProps || [];
     return (
     <div className="dt-fade-up">
       <Card style={{ marginBottom: 16, padding: 0, overflow: "hidden" }}>
         <div style={{ padding: "16px 20px" }}><SectionTitle icon="layers">Layer scorecard</SectionTitle></div>
+        {lsProps === null ? <div style={{ padding: "0 20px 16px" }}><Spinner /></div> : (
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
           <thead><tr style={{ background: "var(--grey-50)", textAlign: "left" }}>
             {["Layer", "Score", "Rules", "Failed", "Anomalies", "Trend"].map(h => <th key={h} style={{ padding: "9px 20px", fontSize: 11, fontWeight: 700, color: "var(--fg-2)", textTransform: "uppercase", letterSpacing: ".04em" }}>{h}</th>)}
@@ -157,51 +246,52 @@
                 <td style={{ padding: "11px 20px", color: "var(--fg-2)" }}>{l.rules}</td>
                 <td style={{ padding: "11px 20px", fontWeight: 600, color: l.failed ? "var(--red-500)" : "var(--fg-3)" }}>{l.failed}</td>
                 <td style={{ padding: "11px 20px", color: "var(--fg-2)" }}>{l.anomalies}</td>
-                <td style={{ padding: "11px 20px", color: "var(--red-500)", fontWeight: 600 }}>▼ {l.trend} pts</td>
+                <td style={{ padding: "11px 20px", color: "var(--fg-3)" }}>—</td>
               </tr>
             ))}
+            {layerScores.length === 0 && (
+              <tr><td colSpan={6} style={{ padding: "20px", textAlign: "center", color: "var(--fg-3)", fontSize: 12.5 }}>No layers profiled yet.</td></tr>
+            )}
           </tbody>
         </table>
+        )}
       </Card>
 
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 16 }}>
         <Card style={{ flex: 1, minWidth: 300 }}>
           <SectionTitle icon="columns-3">CDE column health{connName ? ` — ${connName}` : ""}</SectionTitle>
-          {cdes.map(c => (
+          {cdesProps === null ? <Spinner /> : cdes.length ? cdes.map(c => (
             <div key={c.name || c.column_name} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 0", borderBottom: "1px solid var(--grey-100)" }}>
               <Mono style={{ flex: 1, fontWeight: 700 }}>{c.name || c.column_name}</Mono>
               <Chip intent="brand" size="sm">CDE</Chip>
-              <span style={{ fontWeight: 700, fontSize: 13, color: scoreColor(c.score || c.cde_score || 80), width: 30, textAlign: "right" }}>{c.score || c.cde_score || "—"}</span>
+              <span style={{ fontWeight: 700, fontSize: 13, color: scoreColor(c.score || c.cde_score || 0), width: 30, textAlign: "right" }}>{c.score || c.cde_score || "—"}</span>
               <Health status={c.health || (c.status === "PASS" ? "HEALTHY" : c.status === "WARN" ? "WARN" : "CRIT")} />
             </div>
-          ))}
+          )) : <div style={{ fontSize: 12.5, color: "var(--fg-3)", padding: "6px 0" }}>No CDEs registered yet.</div>}
         </Card>
         <Card style={{ flex: 1, minWidth: 300 }}>
-          <SectionTitle icon="bar-chart-3" sub="Today 5 vs 7-day avg 2.3">Rule failures — last 7 days</SectionTitle>
-          <div style={{ marginTop: 18 }}><BarSeries data={rftProps || []} height={120} highlightLast lastColor="var(--red-500)" baseColor="var(--blue-300)" /></div>
+          <SectionTitle icon="bar-chart-3">Rule failures — last 7 days</SectionTitle>
+          {rftProps === null ? <Spinner /> : rftProps && rftProps.length ? (
+            <div style={{ marginTop: 18 }}><BarSeries data={rftProps} height={120} highlightLast lastColor="var(--red-500)" baseColor="var(--blue-300)" /></div>
+          ) : <div style={{ fontSize: 12.5, color: "var(--fg-3)", padding: "10px 0" }}>No execution history yet.</div>}
         </Card>
       </div>
 
       <Card>
-        <SectionTitle icon="user-cog">Open issues with owners</SectionTitle>
-        {[
-          ["Re-run Silver pipeline (net_revenue null)", "Deepa Nair", "10:50 AM"],
-          ["Investigate bronze duplicate orders (23)", "Ravi Kumar", "Today"],
-          ["Clarify RTN_INIT status code (OMS team)", "Ravi Kumar", "This week"],
-          ["WMS feed SLA — raise with infra team", "Ravi Kumar", "Today"],
-        ].map(([t, o, eta], i) => (
+        <SectionTitle icon="user-cog">Open tasks with owners</SectionTitle>
+        {openTasks === null ? <Spinner label="Loading tasks…" /> : openTasks.length ? openTasks.map((t, i) => (
           <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: "1px solid var(--grey-100)" }}>
-            <span style={{ flex: 1, fontSize: 13 }}>{t}</span>
-            <Avatar name={o} size={24} color="blue" /><span style={{ fontSize: 12.5, color: "var(--fg-2)", width: 90 }}>{o}</span>
-            <Chip intent="neutral" size="sm" icon="clock">{eta}</Chip>
+            <span style={{ flex: 1, fontSize: 13 }}>{t.title}</span>
+            <Avatar name={t.owner} size={24} color="blue" /><span style={{ fontSize: 12.5, color: "var(--fg-2)", width: 90 }}>{t.owner}</span>
+            <Chip intent="neutral" size="sm" icon="clock">{t.due}</Chip>
           </div>
-        ))}
+        )) : <div style={{ fontSize: 12.5, color: "var(--green-600)", fontWeight: 600, padding: "6px 0" }}>No open tasks — go to Task Board to create one.</div>}
       </Card>
     </div>
     );
   };
 
-  const Steward = ({ cdes: cdesProps, auditTrail: auditProp }) => {
+  const Steward = ({ cdes: cdesProps, auditTrail: auditProp, layerCoverage }) => {
     const cdes = cdesProps || [];
     const auditTrail = auditProp || [];
     return (
@@ -221,6 +311,9 @@
                 <td style={{ padding: "11px 20px", color: "var(--fg-2)" }}>{c.validated}</td>
               </tr>
             ))}
+            {cdesProps !== null && cdes.length === 0 && (
+              <tr><td colSpan={4} style={{ padding: "20px", textAlign: "center", color: "var(--fg-3)", fontSize: 12.5 }}>No CDEs registered yet.</td></tr>
+            )}
           </tbody>
         </table>
       </Card>
@@ -228,36 +321,37 @@
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 16 }}>
         <Card style={{ flex: 1, minWidth: 300 }}>
           <SectionTitle icon="book-open">Dictionary completeness</SectionTitle>
-          {[["Raw", 48], ["Bronze", 72], ["Silver", 91], ["Gold", 83]].map(([l, p]) => (
-            <div key={l} style={{ marginBottom: 12 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, marginBottom: 5 }}><span>{l}</span><span style={{ fontWeight: 700 }}>{p}%</span></div>
-              <Bar pct={p} color={p >= 85 ? "var(--green-500)" : p >= 65 ? "var(--brand)" : "var(--yellow-500)"} height={7} />
+          <div style={{ fontSize: 12, color: "var(--fg-2)", marginBottom: 14 }}>% of columns with a business name or description</div>
+          {layerCoverage === null ? <Spinner /> : layerCoverage.length ? layerCoverage.map(({ layer, dictPct }) => (
+            <div key={layer} style={{ marginBottom: 12 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, marginBottom: 5 }}><span>{layer}</span><span style={{ fontWeight: 700 }}>{dictPct}%</span></div>
+              <Bar pct={dictPct} color={dictPct >= 85 ? "var(--green-500)" : dictPct >= 65 ? "var(--brand)" : "var(--yellow-500)"} height={7} />
             </div>
-          ))}
+          )) : <div style={{ fontSize: 12.5, color: "var(--fg-3)" }}>No cataloged columns yet.</div>}
         </Card>
         <Card style={{ flex: 1, minWidth: 300 }}>
           <SectionTitle icon="percent">Rule coverage</SectionTitle>
-          <div style={{ fontSize: 12, color: "var(--fg-2)", marginBottom: 14 }}>% of columns with at least one active rule</div>
-          {[["Raw", 40], ["Bronze", 65], ["Silver", 88], ["Gold", 75]].map(([l, p]) => (
-            <div key={l} style={{ marginBottom: 12 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, marginBottom: 5 }}><span>{l}</span><span style={{ fontWeight: 700 }}>{p}%</span></div>
-              <Bar pct={p} color="var(--navy-500)" height={7} />
+          <div style={{ fontSize: 12, color: "var(--fg-2)", marginBottom: 14 }}>% of cataloged columns with at least one approved/active rule</div>
+          {layerCoverage === null ? <Spinner /> : layerCoverage.length ? layerCoverage.map(({ layer, rulePct }) => (
+            <div key={layer} style={{ marginBottom: 12 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, marginBottom: 5 }}><span>{layer}</span><span style={{ fontWeight: 700 }}>{rulePct}%</span></div>
+              <Bar pct={rulePct} color="var(--navy-500)" height={7} />
             </div>
-          ))}
+          )) : <div style={{ fontSize: 12.5, color: "var(--fg-3)" }}>No cataloged columns yet.</div>}
         </Card>
       </div>
 
       <Card>
         <SectionTitle icon="scroll-text" right={<Button size="sm" variant="soft" icon="download">Export for compliance</Button>}>Recent audit trail</SectionTitle>
-        {auditTrail.map((a, i) => (
+        {auditProp === null ? <Spinner label="Loading audit trail…" /> : auditTrail.length ? auditTrail.map((a, i) => (
           <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: i < auditTrail.length - 1 ? "1px solid var(--grey-100)" : "none" }}>
             <Mono style={{ fontSize: 11.5, color: "var(--fg-3)", width: 64 }}>{a.time}</Mono>
-            <Avatar name={a.user} size={24} color={a.user.includes("Priya") ? "purple" : "blue"} />
+            <Avatar name={a.user} size={24} color="blue" />
             <span style={{ fontSize: 12.5, fontWeight: 600, width: 100 }}>{a.user}</span>
             <Chip intent={a.action === "APPROVE" ? "success" : a.action === "SUPPRESS" ? "warning" : "brand"} size="sm">{a.action}</Chip>
             <span style={{ flex: 1, fontSize: 12.5, color: "var(--fg-2)" }}>{a.entity}</span>
           </div>
-        ))}
+        )) : <div style={{ fontSize: 12.5, color: "var(--fg-3)", padding: "6px 0" }}>No audit trail entries yet.</div>}
       </Card>
     </div>
     );
@@ -266,13 +360,18 @@
   const Dashboard = () => {
     const { trustScore, activeConnectionId, activeConnectionName } = useApp();
     const [tab, setTab] = React.useState("tech");
-    const { summary, trends, cdeStatus, layerScores, auditTrail, ruleFailTrend } = useDashboard(activeConnectionId);
+    const { summary, trends, cdeStatus, layerScores, auditTrail, ruleFailTrend, topAnomalies, openTasks, layerCoverage } = useDashboard(activeConnectionId);
     const effectiveTrustScore = summary ? Math.round(summary.overall_score) || trustScore : trustScore;
     useIcons();
     return (
       <div>
         <Tabs tab={tab} setTab={setTab} />
-        {tab === "exec" ? <Exec trustScore={effectiveTrustScore} trustHistory={trends} /> : tab === "tech" ? <Tech layerScores={layerScores} cdes={cdeStatus} connName={activeConnectionName} ruleFailTrend={ruleFailTrend} /> : <Steward cdes={cdeStatus} auditTrail={auditTrail} />}
+        {tab === "exec"
+          ? <Exec trustScore={effectiveTrustScore} trustHistory={trends} scoreDelta={summary?.score_delta}
+              yesterdayScore={summary?.yesterday_score} topAnomalies={topAnomalies} layerScores={layerScores} />
+          : tab === "tech"
+          ? <Tech layerScores={layerScores} cdes={cdeStatus} connName={activeConnectionName} ruleFailTrend={ruleFailTrend} openTasks={openTasks} />
+          : <Steward cdes={cdeStatus} auditTrail={auditTrail} layerCoverage={layerCoverage} />}
       </div>
     );
   };

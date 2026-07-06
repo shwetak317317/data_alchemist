@@ -1,0 +1,357 @@
+- generic [ref=f10e121]:
+  - complementary [ref=f10e122]:
+    - generic [ref=f10e123]:
+      - img [ref=f10e125]
+      - generic [ref=f10e128]:
+        - generic [ref=f10e129]: DataTrust
+        - generic [ref=f10e130]: AGENTIC DQ PLATFORM
+    - generic [ref=f10e131] [cursor=pointer]:
+      - generic [ref=f10e132]: 🦆
+      - generic [ref=f10e133]:
+        - generic [ref=f10e134]: DQ Demo DuckDB
+        - generic [ref=f10e135]: Active connection
+      - img [ref=f10e136]
+    - generic [ref=f10e139]:
+      - generic [ref=f10e140]: Workflow
+      - button "Workspace Home" [ref=f10e141] [cursor=pointer]:
+        - img [ref=f10e142]
+        - generic [ref=f10e147]: Workspace Home
+      - button "Profiling 1" [ref=f10e148] [cursor=pointer]:
+        - img [ref=f10e149]
+        - generic [ref=f10e156]: Profiling
+        - generic [ref=f10e157]: "1"
+      - button "Dictionary & CDEs 2" [ref=f10e158] [cursor=pointer]:
+        - img [ref=f10e159]
+        - generic [ref=f10e162]: Dictionary & CDEs
+        - generic [ref=f10e163]: "2"
+      - button "Rule Studio 3" [ref=f10e164] [cursor=pointer]:
+        - img [ref=f10e165]
+        - generic [ref=f10e168]: Rule Studio
+        - generic [ref=f10e169]: "3"
+      - button "DQ Execution 4" [ref=f10e170] [cursor=pointer]:
+        - img [ref=f10e171]
+        - generic [ref=f10e174]: DQ Execution
+        - generic [ref=f10e175]: "4"
+    - generic [ref=f10e176]:
+      - generic [ref=f10e177]: Monitoring
+      - button "Anomaly Inbox 2" [ref=f10e178] [cursor=pointer]:
+        - img [ref=f10e179]
+        - generic [ref=f10e184]: Anomaly Inbox
+        - generic [ref=f10e185]: "2"
+      - button "Impact Graph" [ref=f10e186] [cursor=pointer]:
+        - img [ref=f10e187]
+        - generic [ref=f10e192]: Impact Graph
+      - button "Trust Dashboard" [ref=f10e193] [cursor=pointer]:
+        - img [ref=f10e194]
+        - generic [ref=f10e197]: Trust Dashboard
+    - generic [ref=f10e198]:
+      - generic [ref=f10e199]: Intelligence
+      - button "Pre-run Advisory" [ref=f10e200] [cursor=pointer]:
+        - img [ref=f10e201]
+        - generic [ref=f10e204]: Pre-run Advisory
+      - button "Trust Receipt" [ref=f10e205] [cursor=pointer]:
+        - img [ref=f10e206]
+        - generic [ref=f10e208]: Trust Receipt
+    - generic [ref=f10e209]:
+      - generic [ref=f10e210]: Admin
+      - button "Connections" [ref=f10e211] [cursor=pointer]:
+        - img [ref=f10e212]
+        - generic [ref=f10e214]: Connections
+    - generic [ref=f10e215]:
+      - generic [ref=f10e216]: Operate
+      - button "Scenario Simulator" [ref=f10e217] [cursor=pointer]:
+        - img [ref=f10e218]
+        - generic [ref=f10e223]: Scenario Simulator
+      - button "Task Board" [ref=f10e225] [cursor=pointer]:
+        - img [ref=f10e226]
+        - generic [ref=f10e229]: Task Board
+      - button "Daily Summary" [ref=f10e230] [cursor=pointer]:
+        - img [ref=f10e231]
+        - generic [ref=f10e234]: Daily Summary
+    - generic [ref=f10e235]:
+      - generic [ref=f10e237]: TA
+      - generic [ref=f10e239]:
+        - generic [ref=f10e240]: Test Admin
+        - generic [ref=f10e241]: test@pal.tech
+      - button "Sign out" [ref=f10e242] [cursor=pointer]:
+        - img [ref=f10e243]
+  - generic [ref=f10e246]:
+    - banner [ref=f10e247]:
+      - generic [ref=f10e248]:
+        - generic [ref=f10e249]:
+          - generic [ref=f10e250]: DQ Demo DuckDB
+          - generic [ref=f10e251]: /
+          - generic [ref=f10e252]: Workflow
+        - generic [ref=f10e253]: Dictionary & CDEs
+      - generic [ref=f10e254]: Pipeline · Issues detected
+      - generic [ref=f10e257]:
+        - generic [ref=f10e258]: TRUST SCORE
+        - generic [ref=f10e259]: 69/100
+      - button "Notifications" [ref=f10e260] [cursor=pointer]:
+        - img [ref=f10e261]
+    - main [ref=f10e264]:
+      - generic [ref=f10e265]:
+        - generic [ref=f10e267]:
+          - generic [ref=f10e269]:
+            - img [ref=f10e270]
+            - generic [ref=f10e273]:
+              - generic [ref=f10e274]: Data dictionary — DQ Demo DuckDB
+              - generic [ref=f10e275]: 0 of 9 columns enriched · 0 approved
+          - generic [ref=f10e276]:
+            - button "Run AI Enrichment" [ref=f10e277] [cursor=pointer]:
+              - generic [ref=f10e278]:
+                - img [ref=f10e279]
+                - text: Run AI Enrichment
+            - generic [ref=f10e283]: 0 approved
+        - generic [ref=f10e285]:
+          - generic [ref=f10e287]:
+            - button "All tables 9 cols" [ref=f10e288] [cursor=pointer]:
+              - generic [ref=f10e289]: All tables
+              - generic [ref=f10e290]: 9 cols
+            - generic [ref=f10e292]:
+              - generic [ref=f10e293]:
+                - button "UNKNOWN 2 0/9" [ref=f10e294] [cursor=pointer]:
+                  - img [ref=f10e296]
+                  - generic [ref=f10e298]: UNKNOWN
+                  - generic [ref=f10e299]: "2"
+                  - generic [ref=f10e300]: 0/9
+                - button "Enrich all" [ref=f10e301] [cursor=pointer]
+              - button "customers 0/2" [ref=f10e303] [cursor=pointer]:
+                - generic [ref=f10e304]: customers
+                - generic [ref=f10e305]: 0/2
+              - button "orders 0/7" [ref=f10e307] [cursor=pointer]:
+                - generic [ref=f10e308]: orders
+                - generic [ref=f10e309]: 0/7
+          - generic [ref=f10e310]:
+            - generic [ref=f10e311]:
+              - textbox "Search columns…" [ref=f10e312]
+              - combobox [ref=f10e313] [cursor=pointer]:
+                - option "All layers" [selected]
+                - option "RAW"
+                - option "BRONZE"
+                - option "SILVER"
+                - option "GOLD"
+              - combobox [ref=f10e314] [cursor=pointer]:
+                - option "All statuses" [selected]
+                - option "Draft"
+                - option "Approved"
+                - option "Rejected"
+              - combobox [ref=f10e315] [cursor=pointer]:
+                - 'option "CDE: all" [selected]'
+                - option "CDE only"
+                - option "Non-CDE"
+              - combobox [ref=f10e316] [cursor=pointer]:
+                - 'option "PII: all" [selected]'
+                - option "PII only"
+                - option "Non-PII"
+              - button "Expand all" [ref=f10e317] [cursor=pointer]
+              - generic [ref=f10e318]: 9 columns
+            - generic [ref=f10e319]:
+              - generic [ref=f10e320]:
+                - checkbox [ref=f10e321]
+                - button "Column" [ref=f10e323] [cursor=pointer]:
+                  - text: Column
+                  - img [ref=f10e324]
+                - button "Score" [ref=f10e327] [cursor=pointer]
+                - button "Status" [ref=f10e329] [cursor=pointer]
+              - generic [ref=f10e330] [cursor=pointer]:
+                - generic [ref=f10e331]: main.customers
+                - generic [ref=f10e332]: RAW
+                - generic [ref=f10e333]: 0/2 enriched
+              - generic [ref=f10e336]:
+                - checkbox [ref=f10e337]
+                - button [ref=f10e338] [cursor=pointer]:
+                  - img [ref=f10e339]
+                - generic [ref=f10e342]:
+                  - generic [ref=f10e343]: customer_id
+                  - generic [ref=f10e344]: INTEGER
+                  - generic [ref=f10e345]: RAW
+                  - generic [ref=f10e346]: AI
+                - generic [ref=f10e347]:
+                  - generic [ref=f10e348]: —
+                  - generic [ref=f10e349]: Draft
+                  - generic [ref=f10e350]:
+                    - button "Approve" [ref=f10e351] [cursor=pointer]:
+                      - img [ref=f10e352]
+                    - button "Edit" [ref=f10e354] [cursor=pointer]:
+                      - img [ref=f10e355]
+                    - button "Reject" [ref=f10e358] [cursor=pointer]:
+                      - img [ref=f10e359]
+              - generic [ref=f10e363]:
+                - checkbox [ref=f10e364]
+                - button [ref=f10e365] [cursor=pointer]:
+                  - img [ref=f10e366]
+                - generic [ref=f10e369]:
+                  - generic [ref=f10e370]: customer_name
+                  - generic [ref=f10e371]: VARCHAR
+                  - generic [ref=f10e372]: RAW
+                  - generic [ref=f10e373]: AI
+                - generic [ref=f10e374]:
+                  - generic [ref=f10e375]: —
+                  - generic [ref=f10e376]: Draft
+                  - generic [ref=f10e377]:
+                    - button "Approve" [ref=f10e378] [cursor=pointer]:
+                      - img [ref=f10e379]
+                    - button "Edit" [ref=f10e381] [cursor=pointer]:
+                      - img [ref=f10e382]
+                    - button "Reject" [ref=f10e385] [cursor=pointer]:
+                      - img [ref=f10e386]
+              - generic [ref=f10e389] [cursor=pointer]:
+                - generic [ref=f10e390]: main.orders
+                - generic [ref=f10e391]: RAW
+                - generic [ref=f10e392]: 0/7 enriched
+              - generic [ref=f10e395]:
+                - checkbox [ref=f10e396]
+                - button [ref=f10e397] [cursor=pointer]:
+                  - img [ref=f10e398]
+                - generic [ref=f10e401]:
+                  - generic [ref=f10e402]: customer_id
+                  - generic [ref=f10e403]: INTEGER
+                  - generic [ref=f10e404]: RAW
+                  - generic [ref=f10e405]: AI
+                - generic [ref=f10e406]:
+                  - generic [ref=f10e407]: —
+                  - generic [ref=f10e408]: Draft
+                  - generic [ref=f10e409]:
+                    - button "Approve" [ref=f10e410] [cursor=pointer]:
+                      - img [ref=f10e411]
+                    - button "Edit" [ref=f10e413] [cursor=pointer]:
+                      - img [ref=f10e414]
+                    - button "Reject" [ref=f10e417] [cursor=pointer]:
+                      - img [ref=f10e418]
+              - generic [ref=f10e422]:
+                - checkbox [ref=f10e423]
+                - button [ref=f10e424] [cursor=pointer]:
+                  - img [ref=f10e425]
+                - generic [ref=f10e428]:
+                  - generic [ref=f10e429]: order_date
+                  - generic [ref=f10e430]: DATE
+                  - generic [ref=f10e431]: RAW
+                  - generic [ref=f10e432]: AI
+                - generic [ref=f10e433]:
+                  - generic [ref=f10e434]: —
+                  - generic [ref=f10e435]: Draft
+                  - generic [ref=f10e436]:
+                    - button "Approve" [ref=f10e437] [cursor=pointer]:
+                      - img [ref=f10e438]
+                    - button "Edit" [ref=f10e440] [cursor=pointer]:
+                      - img [ref=f10e441]
+                    - button "Reject" [ref=f10e444] [cursor=pointer]:
+                      - img [ref=f10e445]
+              - generic [ref=f10e449]:
+                - checkbox [ref=f10e450]
+                - button [ref=f10e451] [cursor=pointer]:
+                  - img [ref=f10e452]
+                - generic [ref=f10e455]:
+                  - generic [ref=f10e456]: order_id
+                  - generic [ref=f10e457]: INTEGER
+                  - generic [ref=f10e458]: RAW
+                  - generic [ref=f10e459]: AI
+                - generic [ref=f10e460]:
+                  - generic [ref=f10e461]: —
+                  - generic [ref=f10e462]: Draft
+                  - generic [ref=f10e463]:
+                    - button "Approve" [ref=f10e464] [cursor=pointer]:
+                      - img [ref=f10e465]
+                    - button "Edit" [ref=f10e467] [cursor=pointer]:
+                      - img [ref=f10e468]
+                    - button "Reject" [ref=f10e471] [cursor=pointer]:
+                      - img [ref=f10e472]
+              - generic [ref=f10e476]:
+                - checkbox [ref=f10e477]
+                - button [ref=f10e478] [cursor=pointer]:
+                  - img [ref=f10e479]
+                - generic [ref=f10e482]:
+                  - generic [ref=f10e483]: quantity
+                  - generic [ref=f10e484]: INTEGER
+                  - generic [ref=f10e485]: RAW
+                  - generic [ref=f10e486]: AI
+                - generic [ref=f10e487]:
+                  - generic [ref=f10e488]: —
+                  - generic [ref=f10e489]: Draft
+                  - generic [ref=f10e490]:
+                    - button "Approve" [ref=f10e491] [cursor=pointer]:
+                      - img [ref=f10e492]
+                    - button "Edit" [ref=f10e494] [cursor=pointer]:
+                      - img [ref=f10e495]
+                    - button "Reject" [ref=f10e498] [cursor=pointer]:
+                      - img [ref=f10e499]
+              - generic [ref=f10e503]:
+                - checkbox [ref=f10e504]
+                - button [ref=f10e505] [cursor=pointer]:
+                  - img [ref=f10e506]
+                - generic [ref=f10e509]:
+                  - generic [ref=f10e510]: ship_date
+                  - generic [ref=f10e511]: DATE
+                  - generic [ref=f10e512]: RAW
+                  - generic [ref=f10e513]: AI
+                - generic [ref=f10e514]:
+                  - generic [ref=f10e515]: —
+                  - generic [ref=f10e516]: Draft
+                  - generic [ref=f10e517]:
+                    - button "Approve" [ref=f10e518] [cursor=pointer]:
+                      - img [ref=f10e519]
+                    - button "Edit" [ref=f10e521] [cursor=pointer]:
+                      - img [ref=f10e522]
+                    - button "Reject" [ref=f10e525] [cursor=pointer]:
+                      - img [ref=f10e526]
+              - generic [ref=f10e530]:
+                - checkbox [ref=f10e531]
+                - button [ref=f10e532] [cursor=pointer]:
+                  - img [ref=f10e533]
+                - generic [ref=f10e536]:
+                  - generic [ref=f10e537]: total_amount
+                  - generic [ref=f10e538]: DOUBLE
+                  - generic [ref=f10e539]: RAW
+                  - generic [ref=f10e540]: AI
+                - generic [ref=f10e541]:
+                  - generic [ref=f10e542]: —
+                  - generic [ref=f10e543]: Draft
+                  - generic [ref=f10e544]:
+                    - button "Approve" [ref=f10e545] [cursor=pointer]:
+                      - img [ref=f10e546]
+                    - button "Edit" [ref=f10e548] [cursor=pointer]:
+                      - img [ref=f10e549]
+                    - button "Reject" [ref=f10e552] [cursor=pointer]:
+                      - img [ref=f10e553]
+              - generic [ref=f10e557]:
+                - checkbox [ref=f10e558]
+                - button [ref=f10e559] [cursor=pointer]:
+                  - img [ref=f10e560]
+                - generic [ref=f10e563]:
+                  - generic [ref=f10e564]: unit_price
+                  - generic [ref=f10e565]: DOUBLE
+                  - generic [ref=f10e566]: RAW
+                  - generic [ref=f10e567]: AI
+                - generic [ref=f10e568]:
+                  - generic [ref=f10e569]: —
+                  - generic [ref=f10e570]: Draft
+                  - generic [ref=f10e571]:
+                    - button "Approve" [ref=f10e572] [cursor=pointer]:
+                      - img [ref=f10e573]
+                    - button "Edit" [ref=f10e575] [cursor=pointer]:
+                      - img [ref=f10e576]
+                    - button "Reject" [ref=f10e579] [cursor=pointer]:
+                      - img [ref=f10e580]
+            - generic [ref=f10e583]:
+              - generic [ref=f10e584]:
+                - generic [ref=f10e585]:
+                  - img [ref=f10e586]
+                  - generic [ref=f10e589]: Critical Data Element registry
+                - text: No CDEs registered. Promote columns with CDE score > 40 using the ↑ button.
+              - generic [ref=f10e590]:
+                - generic [ref=f10e591]:
+                  - img [ref=f10e592]
+                  - generic [ref=f10e596]: PII & sensitivity
+                - text: No PII columns detected.
+            - generic [ref=f10e597]:
+              - generic [ref=f10e598]:
+                - button "Add column manually" [ref=f10e599] [cursor=pointer]:
+                  - img [ref=f10e600]
+                  - text: Add column manually
+                - button "Export dictionary" [ref=f10e601] [cursor=pointer]:
+                  - img [ref=f10e602]
+                  - text: Export dictionary
+              - button "Proceed to Rule Studio" [ref=f10e605] [cursor=pointer]:
+                - text: Proceed to Rule Studio
+                - img [ref=f10e606]
