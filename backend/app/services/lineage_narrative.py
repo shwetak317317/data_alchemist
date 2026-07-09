@@ -118,18 +118,32 @@ def generate_impact_narrative(db: Session, connection_id: str, table_fqn: str) -
     downstream = _get_downstream_nodes(db, connection_id, node_id)
     health_status = health_status or "ok"
 
+    t0 = time.monotonic()
     try:
         # generate_impact_narrative is called from a sync FastAPI endpoint, which
         # Starlette runs in a worker thread — no event loop already running there,
         # so asyncio.run() is safe (unlike calling it from an async def endpoint).
         result = asyncio.run(_call_llm(table_fqn, health_status, downstream))
         result["node_found"] = True
+        usage_meta = result.pop("_usage_meta", None)
+        _log_usage(db, connection_id, usage_meta, int((time.monotonic() - t0) * 1000), "ai")
         return result
     except Exception as exc:
         logger.warning("Impact narrative LLM generation failed for %s: %s — using template fallback", table_fqn, exc)
         result = _fallback_narrative(table_fqn, health_status, downstream)
         result["node_found"] = True
+        _log_usage(db, connection_id, None, int((time.monotonic() - t0) * 1000), "fallback")
         return result
+
+
+def _log_usage(db: Session, connection_id: str, usage_meta: dict | None, latency_ms: int, status: str) -> None:
+    try:
+        from app.services.ai_usage_service import log_ai_usage
+        log_ai_usage(db, feature="lineage_narrative", connection_id=connection_id,
+                     model=(usage_meta or {}).get("model"), usage=usage_meta,
+                     latency_ms=latency_ms, status=status)
+    except Exception:
+        pass
 
 
 async def _call_llm(table_fqn: str, health_status: str, downstream: list[dict]) -> dict:
@@ -166,4 +180,5 @@ async def _call_llm(table_fqn: str, health_status: str, downstream: list[dict]) 
         "severity": severity,
         "generated_via": "llm",
         "downstream_count": len(downstream),
+        "_usage_meta": usage,
     }

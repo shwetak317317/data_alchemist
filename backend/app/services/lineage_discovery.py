@@ -66,6 +66,7 @@ class DiscoveryReport:
     query_log_statements_scanned: int = 0
     query_log_parse_failures: int = 0
     query_log_edges_found: int = 0
+    column_mappings_found: int = 0
 
     llm_fallback_enabled: bool = False
     llm_fallback_attempted: int = 0
@@ -405,6 +406,61 @@ def _strip_param_prefix(sql_text: str) -> str:
     return _PARAM_PREFIX_RE.sub("", sql_text, count=1)
 
 
+
+
+def _extract_column_mappings(tree, default_db: str | None) -> list[tuple[str, str, str]]:
+    """Column-level lineage from one INSERT INTO t (c1..cn) SELECT e1..en
+    statement: pair target columns with projections positionally, then
+    attribute each projection's column references to their source table via
+    the SELECT's FROM/JOIN alias map. Returns [(source_fqn, source_col,
+    target_col)]. Deliberately conservative — anything ambiguous (unqualified
+    column with multiple candidate tables, projection-count mismatch, CTE/
+    union bodies) yields nothing rather than a guess: a wrong column edge
+    misdirects incident triage exactly like a wrong table edge."""
+    from sqlglot import exp
+
+    if not isinstance(tree, exp.Insert):
+        return []
+    schema = tree.args.get("this")
+    if not isinstance(schema, exp.Schema):
+        return []
+    target_cols = [c.name for c in schema.expressions if getattr(c, "name", None)]
+    select = tree.args.get("expression")
+    if not isinstance(select, exp.Select):
+        return []
+    projections = select.expressions or []
+    if not target_cols or len(projections) != len(target_cols):
+        return []
+
+    alias_map: dict[str, str] = {}
+    fqns: set[str] = set()
+    for t in select.find_all(exp.Table):
+        fqn = _table_fqn_from_node(t, default_db)
+        if not fqn:
+            continue
+        fqns.add(fqn)
+        if t.alias:
+            alias_map[t.alias.lower()] = fqn
+        alias_map.setdefault(t.name.lower(), fqn)
+    if not fqns:
+        return []
+    sole_source = next(iter(fqns)) if len(fqns) == 1 else None
+
+    out: list[tuple[str, str, str]] = []
+    for tgt_col, proj in zip(target_cols, projections):
+        for col in proj.find_all(exp.Column):
+            src_col = col.name
+            if not src_col:
+                continue
+            qual = (col.table or "").lower()
+            if qual and qual in alias_map:
+                out.append((alias_map[qual], src_col, tgt_col))
+            elif not qual and sole_source:
+                out.append((sole_source, src_col, tgt_col))
+            # unqualified with multiple sources: ambiguous, skip
+    return out
+
+
 class _SqlParseFailure(Exception):
     """Raised specifically when sqlglot itself couldn't parse the SQL at all —
     distinct from 'parsed fine but isn't a lineage-producing statement type'
@@ -466,7 +522,8 @@ def _extract_from_statement(tree, default_db: str | None = None) -> tuple[str, l
     return target_fqn, list(dict.fromkeys(source_fqns))
 
 
-def _extract_target_sources(sql_text: str, dialect: str | None, default_db: str | None = None) -> tuple[str, list[str]] | None:
+def _extract_target_sources(sql_text: str, dialect: str | None, default_db: str | None = None,
+                            column_sink: list | None = None) -> tuple[str, list[str]] | None:
     """Parse one query-log entry (which may be a multi-statement T-SQL batch —
     e.g. a session SET followed by the actual INSERT) into (target_fqn,
     [source_fqns]). Tries every statement in the batch, not just the first
@@ -497,6 +554,8 @@ def _extract_target_sources(sql_text: str, dialect: str | None, default_db: str 
             continue
         result = _extract_from_statement(tree, default_db)
         if result is not None:
+            if column_sink is not None:
+                column_sink.extend(_extract_column_mappings(tree, default_db))
             return result
 
     if had_unparseable:
@@ -544,7 +603,9 @@ def _discover_query_log_edges(
     for entry in entries:
         report.query_log_statements_scanned += 1
         try:
-            parsed = _extract_target_sources(entry.query_text, dialect, getattr(entry, "database", None))
+            col_maps: list = []
+            parsed = _extract_target_sources(entry.query_text, dialect, getattr(entry, "database", None),
+                                             column_sink=col_maps)
         except _SqlParseFailure:
             report.query_log_parse_failures += 1
             normalized = entry.query_text.strip()
@@ -557,6 +618,20 @@ def _discover_query_log_edges(
         target_fqn, source_fqns = parsed
         if target_fqn not in known_tables:
             continue
+        for (src_fqn, src_col, tgt_col) in col_maps:
+            if src_fqn not in known_tables or src_fqn == target_fqn:
+                continue
+            db.execute(sqlt("""
+                INSERT INTO lineage_column_edges
+                    (connection_id, source_fqn, source_column, target_fqn, target_column,
+                     discovered_via, evidence)
+                VALUES (:conn, :sfqn, :scol, :tfqn, :tcol, 'query_log', :ev)
+                ON CONFLICT (connection_id, source_fqn, source_column, target_fqn, target_column)
+                DO NOTHING
+            """), {"conn": connection_id, "sfqn": src_fqn, "scol": src_col,
+                   "tfqn": target_fqn, "tcol": tgt_col,
+                   "ev": entry.query_text.strip()[:300]})
+            report.column_mappings_found += 1
         for source_fqn in source_fqns:
             if source_fqn not in known_tables or source_fqn == target_fqn:
                 continue

@@ -84,6 +84,8 @@ def _log_classify(
     model: str | None = None,
     input_tokens: int | None = None,
     output_tokens: int | None = None,
+    db=None,
+    connection_id: str | None = None,
 ) -> None:
     logger.info(json.dumps({
         "event": "llm.classify",
@@ -101,6 +103,17 @@ def _log_classify(
         "output_tokens": output_tokens,
         "raw_response": (raw_response or "")[:300],
     }))
+    # db is optional and defaults to None so the standalone eval script (which
+    # imports this module without a database) is unaffected.
+    if db is not None:
+        try:
+            from app.services.ai_usage_service import log_ai_usage
+            log_ai_usage(db, feature="sim_classify", connection_id=connection_id, model=model,
+                         usage={"input_tokens": input_tokens, "output_tokens": output_tokens},
+                         latency_ms=round(latency_s * 1000),
+                         status="ai" if method == "llm" else "fallback")
+        except Exception:
+            pass
 
 
 # ── Regex backstop ────────────────────────────────────────────────────────────
@@ -178,7 +191,7 @@ def classify_regex(text: str) -> ClassifyResult:
 
 # ── LLM classifier ────────────────────────────────────────────────────────────
 
-async def classify_with_llm(text: str, run_id: str | None = None) -> ClassifyResult:
+async def classify_with_llm(text: str, run_id: str | None = None, db=None, connection_id: str | None = None) -> ClassifyResult:
     """LLM-first classification with structured JSON output and regex fallback.
 
     Uses parse_llm_json (handles code fences + thinking blocks) and validates
@@ -189,12 +202,25 @@ async def classify_with_llm(text: str, run_id: str | None = None) -> ClassifyRes
     try:
         # Lazy imports — keep module-level deps minimal for the eval script.
         from app.core.llm import achat_with_usage, parse_llm_json
+        from app.core.config import settings
         from app.prompts.simulation import build_classify_prompt
 
         messages = build_classify_prompt(text)
+        # 15s, not 4s: this provider's first-token latency regularly exceeds 4s
+        # (measured 8-17s on sibling calls), so the old timeout meant the LLM
+        # classifier NEVER actually ran in production — every scenario silently
+        # fell back to the crude regex and most landed 'unknown' at 0.2
+        # confidence. Classification correctness is the product here; the
+        # simulation timeline takes ~20s to play out anyway.
+        #
+        # model=llm_fast_model: this is a closed 5-way classification task, not
+        # generation — the textbook case for a cheaper/faster model. Falls back
+        # to the main model when LLM_FAST_MODEL is unset (default), so this is
+        # a zero-risk opt-in, not a behavior change.
         raw, usage = await asyncio.wait_for(
-            achat_with_usage(messages, temperature=0, max_tokens=200, num_retries=0, request_timeout=4),
-            timeout=5.0,
+            achat_with_usage(messages, temperature=0, max_tokens=200, num_retries=0, request_timeout=15,
+                             model=settings.llm_fast_model),
+            timeout=18.0,
         )
 
         data = parse_llm_json(raw)
@@ -207,6 +233,7 @@ async def classify_with_llm(text: str, run_id: str | None = None) -> ClassifyRes
             model=usage.get("model") if usage else None,
             input_tokens=usage.get("input_tokens") if usage else None,
             output_tokens=usage.get("output_tokens") if usage else None,
+            db=db, connection_id=connection_id,
         )
         return result
 
@@ -216,5 +243,5 @@ async def classify_with_llm(text: str, run_id: str | None = None) -> ClassifyRes
 
     result = classify_regex(text)
     result = result.model_copy(update={"method": "regex"})
-    _log_classify(text, result, "regex", time.monotonic() - start, run_id=run_id)
+    _log_classify(text, result, "regex", time.monotonic() - start, run_id=run_id, db=db, connection_id=connection_id)
     return result

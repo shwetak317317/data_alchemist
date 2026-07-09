@@ -67,11 +67,20 @@ class DuckDBConnector(BaseConnector):
         """Declared FK constraints via duckdb_constraints(). Assumes the referenced
         table lives in the same schema — DuckDB's constraint metadata does not
         expose the referenced table's schema separately, and cross-schema FKs are
-        rare in typical single-file DuckDB usage."""
+        rare in typical single-file DuckDB usage.
+
+        Column names verified live against duckdb_constraints()'s actual output
+        (database_name, schema_name, table_name, constraint_type,
+        constraint_column_names, referenced_table, referenced_column_names, ...)
+        — a previous version of this query referenced
+        constraint_foreign_table/constraint_foreign_column_names, columns that
+        don't exist on this function. Every call silently hit the except below
+        and returned [], so this connector has never actually returned a
+        declared FK in production despite appearing implemented."""
         try:
             rows = self._connect().execute(
                 "SELECT table_name, constraint_column_names, "
-                "constraint_foreign_table, constraint_foreign_column_names "
+                "referenced_table, referenced_column_names "
                 "FROM duckdb_constraints() "
                 "WHERE schema_name = ? AND constraint_type = 'FOREIGN KEY'",
                 [schema],

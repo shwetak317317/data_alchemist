@@ -8,6 +8,7 @@ summary:
     Generate a 3–4 sentence business-readable summary for this profiling report.
 
     Table: {{ schema }}.{{ table }}
+    Scan scope: {{ scan_scope }}
     Row count: {{ row_count }}
     Quality score: {{ overall_score }}/100
     Completeness: {{ completeness }}%  Uniqueness: {{ uniqueness }}%  Consistency: {{ consistency }}%
@@ -17,3 +18,6 @@ summary:
 
     Focus on what a data engineer needs to know to take immediate action.
     Mention the quality score and the single most critical issue.
+    If the scan scope is a partial/windowed scan, be explicit that these numbers
+    only cover that window — never imply the table itself is empty or broken
+    just because this slice has few or no rows.

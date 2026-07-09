@@ -23,9 +23,10 @@ class ColumnStats(BaseModel):
 
 class ProfilingRisk(BaseModel):
     column: Optional[str] = None
-    risk_type: str                            # NULL_HIGH | FORMAT_MIXED | DUPLICATE | VOLUME_DROP | etc.
+    risk_type: str                            # NULL_HIGH | NULL_MODERATE | FORMAT_MIXED | DUPLICATE_KEY | REFERENTIAL_ORPHAN | etc.
     severity: str                             # CRITICAL | HIGH | MEDIUM | LOW
     description: str
+    sample_failed_records: list[dict] = []    # actual failing rows/values — the "show me the 12%" companion to the description
 
 
 class ProfilingReport(BaseModel):
@@ -43,12 +44,19 @@ class ProfilingReport(BaseModel):
     columns: list[ColumnStats]
     risks: list[ProfilingRisk]
     summary_text: Optional[str] = None
+    partition_column: Optional[str] = None
+    window_from: Optional[datetime] = None
+    window_to: Optional[datetime] = None
+    is_partial_scan: bool = False
 
 
 class ProfilingRunRequest(BaseModel):
     connection_id: str
     schema_name: Optional[str] = None
     table_name: str
+    partition_column: Optional[str] = None   # e.g. "order_date" — must be a real column, validated server-side
+    window_from: Optional[datetime] = None
+    window_to: Optional[datetime] = None
 
 
 class ProfilingProgressEvent(BaseModel):

@@ -495,7 +495,7 @@
       <div style={{ minHeight: "100vh", background: "var(--bg-app)", display: "flex", flexDirection: "column", alignItems: "center", padding: "40px 24px", fontFamily: "var(--font-ui)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 30 }}>
           <span style={{ width: 34, height: 34, borderRadius: 10, background: "var(--brand)", display: "inline-flex", alignItems: "center", justifyContent: "center", color: "#fff" }}><i data-lucide="shield-check" style={{ width: 19, height: 19 }}></i></span>
-          <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 18 }}>DataTrust</div>
+          <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 18 }}>Data Alchemist</div>
         </div>
         <div style={{ width: "100%", maxWidth: 640 }}>{children}</div>
       </div>
@@ -507,7 +507,7 @@
           <div style={{ marginBottom: 22 }}>
             <Eyebrow style={{ marginBottom: 6 }}>Onboarding · Step {step + 1} of 5</Eyebrow>
             <h2 style={{ fontSize: 22 }}>Connect your data platform</h2>
-            <p style={{ fontSize: 13.5, color: "var(--fg-2)", marginTop: 5 }}>DataTrust reads metadata and runs quality checks in-warehouse. It never copies your data out.</p>
+            <p style={{ fontSize: 13.5, color: "var(--fg-2)", marginTop: 5 }}>Data Alchemist reads metadata and runs quality checks in-warehouse. It never copies your data out.</p>
           </div>
         )}
         <Stepper />
@@ -844,7 +844,7 @@
                 <i data-lucide="layers" style={{ width: 28, height: 28, color: "var(--grey-300)", display: "block", margin: "0 auto 10px" }}></i>
                 <div style={{ fontSize: 13.5, fontWeight: 600, color: "var(--fg-2)", marginBottom: 6 }}>No schemas to assign</div>
                 <div style={{ fontSize: 12, color: "var(--fg-3)", lineHeight: 1.5 }}>
-                  The connection succeeded but no schemas were discovered. Specify a database name in your credentials so DataTrust can enumerate schemas.<br />
+                  The connection succeeded but no schemas were discovered. Specify a database name in your credentials so Data Alchemist can enumerate schemas.<br />
                   <button onClick={() => { setUseLayers(null); setSchemaAssign({}); setStep(1); }}
                     style={{ marginTop: 10, display: "inline-block", fontSize: 12, fontWeight: 600, color: "var(--brand)", background: "none", border: "none", cursor: "pointer" }}>
                     ← Go back and add a database name

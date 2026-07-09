@@ -12,11 +12,13 @@
     const today = new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
     const [summary, setSummary] = React.useState(null);
+    const [attention, setAttention] = React.useState(null);
     const [loading, setLoading] = React.useState(true);
 
     React.useEffect(() => {
       if (!window.DTApi) { setLoading(false); return; }
       setLoading(true);
+      setAttention(null);
       window.DTApi.getDashboardSummary(activeConnectionId)
         .then(s => {
           if (!s) return;
@@ -27,6 +29,11 @@
         })
         .catch(() => {})
         .finally(() => setLoading(false));
+      if (window.DTApi.getAttention) {
+        window.DTApi.getAttention(activeConnectionId)
+          .then(a => setAttention(a))
+          .catch(() => setAttention({ items: [], since: null, freshness: [] }));
+      }
     }, [activeConnectionId]);
 
     // Format last_run_at timestamp → "06:03 AM" (local time)
@@ -225,11 +232,67 @@
                       ? <>{l.failed} failing · {l.anomalies} anomal{l.anomalies !== 1 ? "ies" : "y"}</>
                       : <span style={{ color: "var(--fg-3)" }}>Not profiled</span>}
                   </div>
+                  {(() => {
+                    const f = (attention?.freshness || []).find(x => x.layer === l.layer);
+                    if (!f) return null;
+                    const label = f.state === "never" ? "never checked"
+                      : f.age_hours < 1 ? "checked just now"
+                      : f.age_hours < 24 ? `checked ${Math.round(f.age_hours)}h ago`
+                      : `checked ${Math.round(f.age_hours / 24)}d ago`;
+                    const color = f.state === "fresh" ? "var(--green-600)" : f.state === "aging" ? "var(--yellow-700)" : f.state === "stale" ? "var(--red-500)" : "var(--fg-3)";
+                    return <div style={{ fontSize: 10.5, marginTop: 4, fontWeight: 600, color }} title="Most recent profiling or DQ execution touching this layer">⏱ {label}</div>;
+                  })()}
                 </button>
               ))}
             </div>
           )}
         </Card>
+
+        {/* ── Since you left ─────────────────────────────────────────────── */}
+        {attention?.since && (attention.since.new_anomalies > 0 || attention.since.newly_failing_rules.length > 0) && (
+          <Card style={{ marginBottom: 16, padding: "10px 16px", background: "var(--yellow-50, #fefce8)", border: "1px solid var(--yellow-200, #fde68a)", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", fontSize: 12.5 }}>
+            <i data-lucide="history" style={{ width: 15, height: 15, color: "var(--yellow-700)" }}></i>
+            <strong>In the last 24h:</strong>
+            {attention.since.new_anomalies > 0 && <span>{attention.since.new_anomalies} new anomal{attention.since.new_anomalies === 1 ? "y" : "ies"}</span>}
+            {attention.since.newly_failing_rules.length > 0 && (
+              <span>· {attention.since.newly_failing_rules.length} rule{attention.since.newly_failing_rules.length === 1 ? "" : "s"} started failing ({attention.since.newly_failing_rules.slice(0, 2).join(", ")}{attention.since.newly_failing_rules.length > 2 ? "…" : ""})</span>
+            )}
+            <button onClick={() => go("anomalies")} style={{ marginLeft: "auto", fontSize: 12, fontWeight: 600, color: "var(--brand)", background: "none", border: "none", cursor: "pointer" }}>Review →</button>
+          </Card>
+        )}
+
+        {/* ── Needs your attention ───────────────────────────────────────── */}
+        {attention === null ? null : attention.items.length > 0 ? (
+          <Card style={{ marginBottom: 16, padding: 0, overflow: "hidden" }}>
+            <div style={{ padding: "14px 20px 10px", display: "flex", alignItems: "center", gap: 8 }}>
+              <SectionTitle icon="inbox" sub="Everything that needs a human right now — worst first. Click a row to act on it.">Needs your attention</SectionTitle>
+              <Chip intent={attention.items.some(i => i.severity === "CRITICAL") ? "danger" : "warning"} style={{ marginLeft: "auto" }}>{attention.items.length}</Chip>
+            </div>
+            {attention.items.slice(0, 6).map((it, i) => (
+              <div key={i} className="dt-row-hover" onClick={() => go(it.action)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 20px", borderTop: "1px solid var(--grey-100)", cursor: "pointer" }}>
+                <span style={{ width: 9, height: 9, borderRadius: "50%", flexShrink: 0, background: it.severity === "CRITICAL" ? "var(--red-500)" : it.severity === "HIGH" ? "var(--orange-500)" : "var(--yellow-500)" }}></span>
+                <Chip size="sm" intent="neutral">{it.kind}</Chip>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{it.title}</div>
+                  <div style={{ fontSize: 11.5, color: "var(--fg-3)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{it.detail}</div>
+                </div>
+                <span style={{ fontSize: 11.5, fontWeight: 600, color: "var(--brand)", flexShrink: 0 }}>
+                  {it.kind === "anomaly" ? "Open inbox →" : it.kind === "rule" ? "View run →" : "Open tasks →"}
+                </span>
+              </div>
+            ))}
+            {attention.items.length > 6 && (
+              <div style={{ padding: "8px 20px", borderTop: "1px solid var(--grey-100)", fontSize: 11.5, color: "var(--fg-3)" }}>
+                +{attention.items.length - 6} more in their respective screens
+              </div>
+            )}
+          </Card>
+        ) : !loading && (
+          <Card style={{ marginBottom: 16, padding: "12px 20px", display: "flex", alignItems: "center", gap: 10, fontSize: 13, color: "var(--green-700, var(--green-600))" }}>
+            <i data-lucide="check-circle-2" style={{ width: 16, height: 16, color: "var(--green-500)" }}></i>
+            Nothing needs your attention — no open critical issues, failing rules, or overdue tasks.
+          </Card>
+        )}
 
         {/* ── Bottom row ─────────────────────────────────────────────────── */}
         <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>

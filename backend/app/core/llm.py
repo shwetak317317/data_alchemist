@@ -37,13 +37,21 @@ _bootstrap_env()
 
 
 def _build_kwargs(**overrides) -> dict:
-    model = settings.llm_model
+    model = overrides.get("model", settings.llm_model)
     kwargs: dict = {
         "model": model,
         "max_tokens": settings.llm_max_tokens,
         "temperature": settings.llm_temperature,
         **overrides,
     }
+    # Centralized retry-with-backoff: LiteLLM retries transient errors (rate
+    # limits, 5xx, connection resets) internally when num_retries is set — this
+    # is the ONE place that default lives, so every call site gets it for free.
+    # Time-critical call sites (the live simulator's classify/narrative calls,
+    # lineage discovery's per-query extraction) explicitly pass num_retries=0 to
+    # opt out — a demo mid-stream can't afford a multi-second backoff, they're
+    # already built to fail fast into a deterministic fallback instead.
+    kwargs.setdefault("num_retries", 2)
 
     is_gemini = model.startswith("gemini/")
     is_ollama = model.startswith("openai/")   # openai/ prefix = LiteLLM proxy / Ollama
@@ -78,9 +86,9 @@ def chat(messages: list[dict], **overrides) -> str:
 def chat_with_usage(messages: list[dict], **overrides) -> tuple[str, dict | None]:
     """Synchronous completion — returns (content, usage_dict | None).
 
-    usage_dict keys: input_tokens, output_tokens. Returns None for usage when the
-    provider does not report it. Sync counterpart of achat_with_usage(), for the
-    (still-synchronous) rule_agent.py call sites.
+    usage_dict keys: model, input_tokens, output_tokens. Returns None for usage
+    when the provider does not report it. Sync counterpart of
+    achat_with_usage(), for the (still-synchronous) rule_agent.py call sites.
     """
     kwargs = _build_kwargs(**overrides)
     response = litellm.completion(messages=messages, **kwargs)
@@ -88,6 +96,7 @@ def chat_with_usage(messages: list[dict], **overrides) -> tuple[str, dict | None
     usage: dict | None = None
     if hasattr(response, "usage") and response.usage is not None:
         usage = {
+            "model": getattr(response, "model", kwargs.get("model")),
             "input_tokens": getattr(response.usage, "prompt_tokens", None),
             "output_tokens": getattr(response.usage, "completion_tokens", None),
         }

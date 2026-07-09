@@ -20,11 +20,13 @@ router = APIRouter(prefix="/api/execution", tags=["execution"])
 
 @router.post("/run", response_model=ExecutionRunResponse)
 def run_execution(connection_id: str, layer: str | None = None, rule_id: str | None = None,
+                  table_fqn: str | None = None,
                   db: Session = Depends(get_db),
                   current_user: CurrentUser = Depends(get_current_user)):
-    """Run approved/active rules for a connection — all of them, or scoped to one layer or one rule_id."""
-    logger.info("execution.run requested: connection=%s layer=%s rule_id=%s user=%s",
-                connection_id, layer, rule_id, current_user.email)
+    """Run approved/active rules for a connection — all of them, or scoped to one
+    layer, one table, or one rule_id."""
+    logger.info("execution.run requested: connection=%s layer=%s rule_id=%s table_fqn=%s user=%s",
+                connection_id, layer, rule_id, table_fqn, current_user.email)
     org_row = db.execute(text(
         "SELECT org_id FROM connections WHERE id=:conn AND deleted_at IS NULL"
     ), {"conn": connection_id}).fetchone()
@@ -39,9 +41,13 @@ def run_execution(connection_id: str, layer: str | None = None, rule_id: str | N
         if rule_id:
             filters.append("rule_id=:rule_id")
             params["rule_id"] = rule_id
-        elif layer and layer != "ALL":
-            filters.append("layer=:layer")
-            params["layer"] = layer
+        else:
+            if layer and layer != "ALL":
+                filters.append("layer=:layer")
+                params["layer"] = layer
+            if table_fqn:
+                filters.append("table_fqn=:table_fqn")
+                params["table_fqn"] = table_fqn
 
         rows = db.execute(text(
             f"SELECT rule_id, rule_name, table_fqn, layer, rule_expression, severity, is_cde_rule "
@@ -68,7 +74,7 @@ def run_execution(connection_id: str, layer: str | None = None, rule_id: str | N
             logger.warning("execution.run: connectivity check failed for connection=%s: %s", connection_id, exc)
             run_response = all_rules_connection_error(connection_id, rules, exc)
         else:
-            run_response = run_all_rules(connector, connection_id, rules)
+            run_response = run_all_rules(connector, connection_id, rules, db=db)
         run_response.duration_seconds = round(time.monotonic() - started, 1)
     finally:
         connector.close()

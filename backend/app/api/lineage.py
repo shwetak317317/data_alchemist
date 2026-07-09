@@ -121,6 +121,7 @@ class DiscoverResponse(BaseModel):
     query_log_statements_scanned: int
     query_log_parse_failures: int
     query_log_edges_found: int
+    column_mappings_found: int = 0
 
     llm_fallback_enabled: bool
     llm_fallback_attempted: int
@@ -602,6 +603,7 @@ def discover_lineage(
         query_log_statements_scanned=report.query_log_statements_scanned,
         query_log_parse_failures=report.query_log_parse_failures,
         query_log_edges_found=report.query_log_edges_found,
+        column_mappings_found=report.column_mappings_found,
         llm_fallback_enabled=report.llm_fallback_enabled,
         llm_fallback_attempted=report.llm_fallback_attempted,
         llm_fallback_skipped=report.llm_fallback_skipped,
@@ -773,6 +775,143 @@ def get_lineage_health(connection_id: str, db: Session = Depends(get_db),
         suggested_approved=suggested_counts.get("confirmed", 0),
         suggested_rejected=suggested_counts.get("rejected", 0),
     )
+
+
+class ImportNode(BaseModel):
+    external_id: str
+    label: Optional[str] = None
+    layer: Optional[str] = None
+    node_type: str = "table"
+
+
+class ImportEdge(BaseModel):
+    source: str
+    target: str
+    edge_type: str = "FEEDS"
+
+
+class ImportRequest(BaseModel):
+    nodes: list[ImportNode] = []
+    edges: list[ImportEdge] = []
+
+
+class ImportResponse(BaseModel):
+    nodes_created: int
+    edges_created: int
+    edges_skipped_existing: int
+    edges_rejected_cycle: int
+    errors: list[str] = []
+
+
+@router.post("/import/{connection_id}", response_model=ImportResponse)
+def import_lineage(connection_id: str, req: ImportRequest, db: Session = Depends(get_db),
+                   current_user: CurrentUser = Depends(get_current_user)):
+    """Apply a hand-edited lineage JSON (the counterpart of the UI's Export JSON).
+
+    Human-curated lineage is ground truth, same as manual edge creation: edges
+    land status='confirmed', discovered_via='import'. Every edge is still
+    cycle-checked — a typo'd reversed edge in a hand-edited file must not
+    corrupt the graph. Existing nodes/edges are left untouched (idempotent:
+    re-importing the same file is a no-op), so the workflow is
+    export → edit → import → repeat."""
+    _assert_connection_org(connection_id, db, current_user)
+    resp = ImportResponse(nodes_created=0, edges_created=0,
+                          edges_skipped_existing=0, edges_rejected_cycle=0)
+
+    # Nodes referenced only by edges are auto-created as bare tables.
+    wanted_nodes: dict[str, ImportNode] = {n.external_id: n for n in req.nodes}
+    for e in req.edges:
+        for ext in (e.source, e.target):
+            wanted_nodes.setdefault(ext, ImportNode(external_id=ext))
+
+    node_ids: dict[str, str] = {}
+    for ext, n in wanted_nodes.items():
+        row = db.execute(text(
+            "SELECT node_id FROM lineage_nodes WHERE connection_id=:conn AND external_id=:ext"
+        ), {"conn": connection_id, "ext": ext}).fetchone()
+        if row:
+            node_ids[ext] = row[0]
+            continue
+        created = db.execute(text("""
+            INSERT INTO lineage_nodes (connection_id, external_id, label, layer, node_type,
+                                       tier_label, health_status, position_order, is_source, discovered_via)
+            VALUES (:conn, :ext, :label, :layer, :ntype, :layer, 'ok', 0, TRUE, 'import')
+            RETURNING node_id
+        """), {"conn": connection_id, "ext": ext, "label": n.label or ext,
+               "layer": n.layer, "ntype": n.node_type}).fetchone()
+        node_ids[ext] = created[0]
+        resp.nodes_created += 1
+
+    for e in req.edges:
+        src_id, tgt_id = node_ids[e.source], node_ids[e.target]
+        exists = db.execute(text("""
+            SELECT 1 FROM lineage_edges
+            WHERE connection_id=:conn AND source_node_id=:src AND target_node_id=:tgt
+        """), {"conn": connection_id, "src": src_id, "tgt": tgt_id}).fetchone()
+        if exists:
+            resp.edges_skipped_existing += 1
+            continue
+        if would_create_cycle(db, src_id, tgt_id):
+            resp.edges_rejected_cycle += 1
+            resp.errors.append(f"cycle rejected: {e.source} -> {e.target}")
+            continue
+        db.execute(text("""
+            INSERT INTO lineage_edges (connection_id, source_node_id, target_node_id,
+                                       edge_type, discovered_via, status)
+            VALUES (:conn, :src, :tgt, :etype, 'import', 'confirmed')
+        """), {"conn": connection_id, "src": src_id, "tgt": tgt_id, "etype": e.edge_type})
+        resp.edges_created += 1
+
+    recompute_is_source(db, connection_id)
+    db.commit()
+    logger.info(json.dumps({"event": "lineage.import", "connection_id": connection_id,
+                            "user": current_user.email, "nodes_created": resp.nodes_created,
+                            "edges_created": resp.edges_created,
+                            "edges_rejected_cycle": resp.edges_rejected_cycle}))
+    return resp
+
+
+class ColumnMapping(BaseModel):
+    table_fqn: str
+    column_name: str
+
+
+class ColumnLineageEntry(BaseModel):
+    column_name: str
+    related: list[ColumnMapping]
+
+
+class ColumnLineageResponse(BaseModel):
+    table_fqn: str
+    fed_by: list[ColumnLineageEntry]      # this table's columns <- upstream source columns
+    feeds: list[ColumnLineageEntry]       # this table's columns -> downstream target columns
+
+
+@router.get("/columns/{connection_id}", response_model=ColumnLineageResponse)
+def get_column_lineage(connection_id: str, table_fqn: str, db: Session = Depends(get_db),
+                       current_user: CurrentUser = Depends(get_current_user)):
+    """Column-level lineage for one table, both directions — extracted from the
+    same ETL statements table discovery parses (see lineage_column_edges)."""
+    _assert_connection_org(connection_id, db, current_user)
+
+    fed_rows = db.execute(text("""
+        SELECT target_column, source_fqn, source_column FROM lineage_column_edges
+        WHERE connection_id = :conn AND target_fqn = :fqn
+        ORDER BY target_column, source_fqn, source_column
+    """), {"conn": connection_id, "fqn": table_fqn}).fetchall()
+    feeds_rows = db.execute(text("""
+        SELECT source_column, target_fqn, target_column FROM lineage_column_edges
+        WHERE connection_id = :conn AND source_fqn = :fqn
+        ORDER BY source_column, target_fqn, target_column
+    """), {"conn": connection_id, "fqn": table_fqn}).fetchall()
+
+    def group(rows):
+        acc: dict[str, list[ColumnMapping]] = {}
+        for own_col, other_fqn, other_col in rows:
+            acc.setdefault(own_col, []).append(ColumnMapping(table_fqn=other_fqn, column_name=other_col))
+        return [ColumnLineageEntry(column_name=k, related=v) for k, v in acc.items()]
+
+    return ColumnLineageResponse(table_fqn=table_fqn, fed_by=group(fed_rows), feeds=group(feeds_rows))
 
 
 @router.get("/{table_fqn:path}", response_model=LineageGraph)

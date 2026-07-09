@@ -21,6 +21,24 @@ class DatabricksConnector(BaseConnector):
         self._config = config
         self._conn = None
 
+    def table_ref(self, schema: str, table: str) -> str:
+        """Return backtick-quoted Databricks/Spark SQL table reference.
+
+        Databricks SQL and classic Spark clusters both accept backtick-quoted
+        identifiers universally; ANSI double-quote identifier support (the
+        BaseConnector default) is version/session-mode dependent (spark.sql.ansi
+        .enabled) and NOT guaranteed on every workspace configuration. Backtick
+        is the safe superset choice — this connector must not inherit the
+        double-quote default the way it silently did before this fix, since a
+        wrong quoting style breaks every single rule-execution query, the same
+        class of connection-wide failure already found and fixed on SQL Server.
+        """
+        esc = lambda s: s.replace("`", "``")
+        return f"`{esc(schema)}`.`{esc(table)}`"
+
+    def quote_ident(self, name: str) -> str:
+        return f"`{name.replace('`', '``')}`"
+
     def _connect(self):
         if self._conn:
             return self._conn

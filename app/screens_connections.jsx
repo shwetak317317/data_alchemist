@@ -343,7 +343,7 @@
     return (
       <div className="dt-fade-up">
         <Card style={{ marginBottom: 16 }}>
-          <SectionTitle icon="plug" sub="Data platforms DataTrust monitors. Checks run in-warehouse — your data is never copied out."
+          <SectionTitle icon="plug" sub="Data platforms Data Alchemist monitors. Checks run in-warehouse — your data is never copied out."
             right={<Button size="sm" variant="primary" icon="plus" onClick={() => setShowWizard(true)}>Add connection</Button>}>Connections</SectionTitle>
         </Card>
 
@@ -514,7 +514,7 @@
                       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
                         <i data-lucide="layers" style={{ width: 15, height: 15, color: "var(--brand)" }}></i>
                         <span style={{ fontSize: 13, fontWeight: 600, color: "var(--brand)" }}>Schema scope</span>
-                        <span style={{ fontSize: 11.5, color: "var(--fg-3)" }}>Select which schemas DataTrust monitors</span>
+                        <span style={{ fontSize: 11.5, color: "var(--fg-3)" }}>Select which schemas Data Alchemist monitors</span>
                       </div>
                       {editingSchemas.loading ? (
                         <div style={{ fontSize: 12.5, color: "var(--fg-3)", padding: "6px 0" }}>Loading schemas from connection…</div>

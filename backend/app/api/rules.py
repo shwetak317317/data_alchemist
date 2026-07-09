@@ -72,8 +72,10 @@ def _dry_run_validate(connection_id: str, db: Session, rules) -> None:
             return
         for rule in rules:
             # Same table_ref derivation as execution_agent.execute_rule — parity with
-            # execution is the whole point of this gate.
-            parts = rule.table_fqn.rsplit(".", 1)
+            # execution is the whole point of this gate. split(".", 1), not rsplit:
+            # see the matching comment in execute_rule for why (3-part FQNs need the
+            # database boundary at the FIRST dot, not the last).
+            parts = rule.table_fqn.split(".", 1)
             tref = connector.table_ref(parts[0], parts[1]) if len(parts) == 2 else f'"{rule.table_fqn}"'
             try:
                 connector.query_scalar(build_rule_check_sql(tref, rule.rule_expression, dry_run=True))

@@ -49,6 +49,11 @@ export const testSavedConnection       = (id, body) => _fetch(`/connections/${id
 export const listDatasets      = (connId, useCache = false) => _fetch(`/profiling/datasets?connection_id=${connId}${useCache ? '&use_cache=true' : ''}`);
 export const getReport         = (reportId)   => _fetch(`/profiling/report/${reportId}`);
 export const getReportByTable  = (tableFqn, connId) => _fetch(`/profiling/report/by-table/${encodeURIComponent(tableFqn)}${connId ? `?connection_id=${connId}` : ''}`);
+export const getReportHistory  = (tableFqn, connId, limit) => _fetch(`/profiling/report/by-table/${encodeURIComponent(tableFqn)}/history?limit=${limit || 10}${connId ? `&connection_id=${connId}` : ''}`);
+export const getReportContext  = (reportId)        => _fetch(`/profiling/report/${encodeURIComponent(reportId)}/context`);
+export const suppressRisk      = (riskId, reason)  => _fetch(`/profiling/risks/${encodeURIComponent(riskId)}/suppress`, { method: 'POST', body: JSON.stringify({ reason: reason || null }) });
+export const unsuppressRisk    = (riskId)          => _fetch(`/profiling/risks/${encodeURIComponent(riskId)}/unsuppress`, { method: 'POST' });
+export const noteRisk          = (riskId, note)    => _fetch(`/profiling/risks/${encodeURIComponent(riskId)}/note`, { method: 'POST', body: JSON.stringify({ note }) });
 
 /**
  * Stream profiling progress events via SSE.
@@ -56,8 +61,13 @@ export const getReportByTable  = (tableFqn, connId) => _fetch(`/profiling/report
  * onReport(report)   → called once with the final {type:'report'} payload
  * onError(msg)       → called on error
  */
-export function streamProfiling({ connectionId, schemaName, tableName, onProgress, onReport, onError }) {
-  const body = JSON.stringify({ connection_id: connectionId, schema_name: schemaName, table_name: tableName });
+export function streamProfiling({ connectionId, schemaName, tableName, partitionColumn, windowFrom, windowTo, onProgress, onReport, onError }) {
+  const body = JSON.stringify({
+    connection_id: connectionId, schema_name: schemaName, table_name: tableName,
+    partition_column: partitionColumn || null,
+    window_from: windowFrom || null,
+    window_to: windowTo || null,
+  });
   fetch(`${BASE}/profiling/run`, { method: 'POST', headers: { 'Content-Type': 'application/json', ..._authHeaders() }, body })
     .then(async res => {
       if (!res.ok) {
@@ -118,7 +128,7 @@ export const decideRule        = (ruleId, body)   => _fetch(`/rules/${ruleId}`, 
 export const createRule        = (body)           => _fetch('/rules', { method: 'POST', body: JSON.stringify(body) });
 
 // ── Execution ─────────────────────────────────────────────────────────────────
-export const runExecution      = (connId, layer, ruleId) => _fetch(`/execution/run?connection_id=${connId}${layer ? `&layer=${encodeURIComponent(layer)}` : ''}${ruleId ? `&rule_id=${encodeURIComponent(ruleId)}` : ''}`, { method: 'POST' });
+export const runExecution      = (connId, layer, ruleId, tableFqn) => _fetch(`/execution/run?connection_id=${connId}${layer ? `&layer=${encodeURIComponent(layer)}` : ''}${ruleId ? `&rule_id=${encodeURIComponent(ruleId)}` : ''}${tableFqn ? `&table_fqn=${encodeURIComponent(tableFqn)}` : ''}`, { method: 'POST' });
 export const getLatestRun      = (connId)         => _fetch(`/execution/latest?connection_id=${connId}`);
 export const getCurrentExecState = (connId)       => _fetch(`/execution/current?connection_id=${connId}`);
 export const getRunResults     = (runId)           => _fetch(`/execution/results/${runId}`);
@@ -136,6 +146,12 @@ export const shareAnomaly      = (id, body)       => _fetch(`/anomalies/${id}/sh
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 export const getDashboardSummary = (connId)       => _fetch(`/dashboard/summary${connId ? `?connection_id=${connId}` : ''}`);
+export const getAttention        = (connId)       => _fetch(`/dashboard/attention${connId ? `?connection_id=${connId}` : ''}`);
+export const getAiUsage          = (connId, days) => _fetch(`/dashboard/ai-usage?days=${days || 30}${connId ? `&connection_id=${connId}` : ''}`);
+export const generateAdvisory    = (connId)       => _fetch(`/intel/advisory/generate?connection_id=${connId}`, { method: 'POST' });
+export const getReceiptTables    = (connId)       => _fetch(`/intel/tables?connection_id=${connId}`);
+export const getDailyNarrative   = (connId, regen) => _fetch(`/intel/daily-narrative?connection_id=${connId}${regen ? '&regenerate=true' : ''}`);
+export const generateReceipt     = (connId, tableFqn) => _fetch('/intel/receipt/generate', { method: 'POST', body: JSON.stringify({ connection_id: connId, table_fqn: tableFqn }) });
 export const getDashboardTrends  = (connId, days) => _fetch(`/dashboard/trends?days=${days || 14}${connId ? `&connection_id=${connId}` : ''}`);
 export const getRuleFailTrend    = (connId, days) => _fetch(`/dashboard/rule-fail-trend?days=${days || 7}${connId ? `&connection_id=${connId}` : ''}`);
 export const getCDEStatus        = (connId)       => _fetch(`/dashboard/cdes${connId ? `?connection_id=${connId}` : ''}`);
@@ -168,10 +184,13 @@ export const rejectLineageEdge     = (edgeId)           => _fetch(`/lineage/edge
 export const getImpactNarrative    = (connId, tableFqn) => _fetch(`/lineage/narrative/${connId}?table_fqn=${encodeURIComponent(tableFqn)}`, { method: 'POST' });
 export const getLineageRootCauses  = (connId)           => _fetch(`/lineage/root-causes/${connId}`);
 export const getLineageHealth      = (connId)           => _fetch(`/lineage/health/${connId}`);
+export const importLineage         = (connId, body)     => _fetch(`/lineage/import/${connId}`, { method: 'POST', body: JSON.stringify(body) });
+export const getColumnLineage      = (connId, tableFqn) => _fetch(`/lineage/columns/${connId}?table_fqn=${encodeURIComponent(tableFqn)}`);
 
 // ── Simulation ────────────────────────────────────────────────────────────────
 export const listScenarios         = ()              => _fetch('/simulation/scenarios');
 export const getSimulationHistory  = (connId)        => _fetch(`/simulation/history${connId ? `?connection_id=${connId}` : ''}`);
+export const getSimulationAccuracy = (connId)        => _fetch(`/simulation/accuracy${connId ? `?connection_id=${connId}` : ''}`);
 export const remediateSimulation   = (runId, connId) => _fetch('/simulation/remediate', { method: 'POST', body: JSON.stringify({ run_id: runId, connection_id: connId || null }) });
 
 /**

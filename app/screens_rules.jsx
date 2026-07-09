@@ -477,14 +477,26 @@
         });
     };
 
-    const runLayer = (layer) => {
+    // Execution scope is intentionally computed from `allRules`, NOT `visibleRules`.
+    // `visibleRules` also narrows by search text / status / type filters — those
+    // are VIEW filters, and letting them silently shrink what "Run all" actually
+    // executes is exactly the "Run all didn't run all rules" bug: the backend
+    // would run every approved rule connection-wide, but the toast/badges only
+    // reflected whatever happened to be visible under the current filter, making
+    // it look like most rules were skipped. Scope here matches scope on the wire.
+    const runScope = ({ layer, tableFqn }) => {
       if (!activeConnectionId) return;
-      const rules = visibleRules.filter(r => (layer === "ALL" || r.layer === layer) && isRunnable(r));
+      const rules = allRules.filter(r =>
+        (!tableFqn || r.tableFqn === tableFqn) &&
+        (!layer || layer === "ALL" || r.layer === layer) &&
+        isRunnable(r)
+      );
       const ids = rules.map(r => r.id);
-      if (!ids.length) { toast("No runnable rules in this scope", { kind: "info" }); return; }
+      if (!ids.length) { toast("No approved/active rules in this scope — approve at least one rule first", { kind: "info" }); return; }
       ids.forEach(id => setRunState(s => ({ ...s, [id]: "running" })));
-      toast(`Running ${ids.length} rules${layer === "ALL" ? "" : " · " + layer + " layer"}…`, { kind: "info" });
-      window.DTApi.runExecution(activeConnectionId, layer === "ALL" ? null : layer)
+      const scopeLabel = tableFqn ? ` · ${tableFqn.includes(".") ? tableFqn.split(".").pop() : tableFqn}` : (layer && layer !== "ALL") ? ` · ${layer} layer` : "";
+      toast(`Running ${ids.length} rule${ids.length === 1 ? "" : "s"}${scopeLabel}…`, { kind: "info" });
+      window.DTApi.runExecution(activeConnectionId, layer && layer !== "ALL" ? layer : null, null, tableFqn || null)
         .then(resp => {
           const byId = {};
           (resp?.results || []).forEach(res => { byId[res.rule_id] = res; });
@@ -493,6 +505,10 @@
             ids.forEach(id => { next[id] = _applyResult(id, byId[id], resp.duration_seconds); });
             return next;
           });
+          const failedCount = ids.filter(id => byId[id] === undefined).length;
+          if (failedCount) {
+            toast(`${failedCount} rule${failedCount === 1 ? "" : "s"} in scope did not return a result — check backend logs`, { kind: "warning" });
+          }
         })
         .catch(err => {
           setRunState(s => { const n = { ...s }; ids.forEach(id => delete n[id]); return n; });
@@ -686,9 +702,14 @@
                       : "Generate all tables"}
                   </Button>
                 )}
-                <Button size="sm" variant="soft" icon="circle-play" onClick={() => runLayer(fLayer)}>
-                  Run {fLayer === "ALL" ? "all" : fLayer}
-                </Button>
+                <span title={selectedFqn
+                    ? `Run every approved/active rule on ${selectedName}`
+                    : fLayer !== "ALL" ? `Run every approved/active rule in the ${fLayer} layer` : "Run every approved/active rule on this connection"}>
+                  <Button size="sm" variant="soft" icon="circle-play"
+                    onClick={() => runScope(selectedFqn ? { tableFqn: selectedFqn } : { layer: fLayer })}>
+                    Run {selectedFqn ? selectedName : (fLayer === "ALL" ? "all" : fLayer)}
+                  </Button>
+                </span>
               </div>
             </div>
 

@@ -10,6 +10,8 @@ class LayerHealth(BaseModel):
     open_issues: int
     critical_count: int
     high_count: int
+    rule_count: int = 0                       # active rules executed against this layer (latest run)
+    trend_delta: Optional[float] = None       # score change vs the previous profiling of the same tables
 
 
 class TrustSummary(BaseModel):

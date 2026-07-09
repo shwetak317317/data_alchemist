@@ -10,7 +10,7 @@
   // an honest UNCLASSIFIED column instead. Actual report/model NODE TYPES still
   // belong in column 4 even without a layer value.
   const colForNode = (n) => LAYER_COL[n.layer] ?? ((n.node_type === "report" || n.node_type === "model") ? 4 : 5);
-  const NODE_W = 240, NODE_H = 84, COL_GAP = 180, ROW_GAP = 20, PAD_X = 20, PAD_Y = 48;
+  const NODE_W = 232, NODE_H = 32, COL_GAP = 110, ROW_GAP = 7, PAD_X = 12, PAD_Y = 34;
   const STALE_DAYS = 30;
 
   // last_profiled_at is None for report/model nodes (never profileable) as well
@@ -26,7 +26,7 @@
   }
 
   // ── Layout engine ─────────────────────────────────────────────────────────
-  const TIER_NODE_LIMIT = 8;
+  const TIER_NODE_LIMIT = 40;
 
   // expandedTiers: Set of column indices (ci) the user has chosen to fully
   // expand. Without a cap, a single tier with hundreds of tables (a real
@@ -70,7 +70,7 @@
       colNodes.forEach((n, rowRank) => {
         layoutNodes[n.external_id] = { ...n, x: PAD_X + colRank * (NODE_W + COL_GAP), y: startY + rowRank * (NODE_H + ROW_GAP), w: NODE_W, h: NODE_H, colRank };
       });
-      tierLabels[colRank] = LAYER_LABEL[ci] || colNodes[0]?.tier_label || `Tier ${ci}`;
+      tierLabels[colRank] = `${LAYER_LABEL[ci] || colNodes[0]?.tier_label || `Tier ${ci}`} (${colMap[ci].length})`;
       tierHidden[colRank] = hiddenCounts[ci] || 0;
       tierCi[colRank] = ci;
     });
@@ -163,6 +163,11 @@
   const DiscoverDrawer = ({ connectionId, onDone, onClose }) => {
     const [includeFk, setIncludeFk] = React.useState(true);
     const [includeQueryLog, setIncludeQueryLog] = React.useState(true);
+    // How far back to mine query history. The old hardcoded 7 days silently
+    // found NOTHING on a warehouse whose ETL last ran 18 days earlier (seen
+    // live — "discovery not working") — batch pipelines routinely run weekly
+    // or monthly, so default to 90 days and let the user widen to a year.
+    const [logDays, setLogDays] = React.useState(90);
     const [includeLlmFallback, setIncludeLlmFallback] = React.useState(false);
     const [manifestText, setManifestText] = React.useState("");
     const [running, setRunning] = React.useState(false);
@@ -182,6 +187,7 @@
         const res = await window.DTApi.discoverLineage(connectionId, {
           include_fk: includeFk,
           include_query_log: includeQueryLog,
+          query_log_hours: logDays * 24,
           include_llm_fallback: includeQueryLog && includeLlmFallback,
           dbt_manifest: dbtManifest,
         });
@@ -207,7 +213,16 @@
           </label>
           <label style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 13, cursor: "pointer" }}>
             <input type="checkbox" checked={includeQueryLog} onChange={e => setIncludeQueryLog(e.target.checked)} />
-            Recent query history (7 days) — suggestions only, needs review
+            Query history from the last
+            <select value={logDays} onChange={e => setLogDays(Number(e.target.value))}
+              disabled={!includeQueryLog}
+              style={{ padding: "2px 6px", borderRadius: 6, border: "1px solid var(--grey-200)", fontSize: 12.5, background: "#fff" }}>
+              <option value={7}>7 days</option>
+              <option value={30}>30 days</option>
+              <option value={90}>90 days</option>
+              <option value={365}>12 months</option>
+            </select>
+            — suggestions only, needs review
           </label>
         </div>
         {includeQueryLog && (
@@ -247,7 +262,11 @@
               result.query_log_unsupported_reason ? (
                 <div style={{ color: "var(--yellow-700)" }}>Query-log discovery unavailable: {result.query_log_unsupported_reason}</div>
               ) : (
-                <div><strong>{result.query_log_edges_found}</strong> edge(s) suggested from query history ({result.query_log_statements_scanned} statement(s) scanned, {result.query_log_parse_failures} not usable) — review below</div>
+                <div>
+                  <strong>{result.edges_suggested}</strong> new edge(s) suggested from query history
+                  ({result.query_log_statements_scanned} statement(s) scanned, {result.query_log_parse_failures} not usable)
+                  {result.edges_suggested > 0 ? " — review below" : result.query_log_edges_found > 0 ? " — every relationship found is already in the graph or queue" : ""}
+                </div>
               )
             )}
             {result.llm_fallback_enabled && (
@@ -258,6 +277,9 @@
               ) : (
                 <div style={{ color: "var(--fg-3)" }}>No unparseable statements needed the LLM fallback this run.</div>
               )
+            )}
+            {result.column_mappings_found > 0 && (
+              <div><strong>{result.column_mappings_found}</strong> column-level mapping(s) extracted (see a table's panel → Column-level lineage)</div>
             )}
             {result.edges_already_existed > 0 && <div style={{ color: "var(--fg-3)" }}>{result.edges_already_existed} already existed, skipped</div>}
             {result.nodes_created > 0 && <div>{result.nodes_created} new table(s) added to the graph</div>}
@@ -292,37 +314,21 @@
 
     if (!health || health.total_known_tables === 0) return null;
 
-    const pctColor = health.completeness_pct >= 60 ? "var(--green-500)" : health.completeness_pct >= 20 ? "var(--yellow-600)" : "var(--red-500)";
-    const viaEntries = Object.entries(health.edges_by_discovered_via || {});
+    // Inline stat strip, not a card of its own: coverage is context, not a
+    // destination — it belongs on the same line as blocked/degraded, leaving
+    // the vertical space to the graph (the actual hero of this screen).
+    const pctColor = health.completeness_pct >= 60 ? "var(--green-600)" : health.completeness_pct >= 20 ? "var(--yellow-700)" : "var(--red-600)";
 
     return (
-      <Card style={{ marginTop: 16 }}>
-        <SectionTitle icon="activity" sub="How much of this connection's schema actually has traced lineage — the clearest signal of whether discovery is working, not just what the last run found.">
-          Lineage coverage
-        </SectionTitle>
-        <div style={{ display: "flex", gap: 24, marginTop: 12, flexWrap: "wrap", alignItems: "center" }}>
-          <div style={{ textAlign: "center" }}>
-            <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 26, color: pctColor }}>{health.completeness_pct}%</div>
-            <div style={{ fontSize: 10.5, color: "var(--fg-3)" }}>complete</div>
-          </div>
-          <div style={{ fontSize: 12.5, color: "var(--fg-2)" }}>
-            <strong>{health.tables_with_edges}</strong> of <strong>{health.total_known_tables}</strong> known tables have at least one traced edge
-          </div>
-          {viaEntries.length > 0 && (
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              {viaEntries.map(([via, count]) => (
-                <Chip key={via} size="sm" intent="neutral">{DISCOVERED_VIA_LABEL[via] || via}: {count}</Chip>
-              ))}
-            </div>
-          )}
-          {(health.suggested_pending > 0 || health.suggested_approved > 0 || health.suggested_rejected > 0) && (
-            <div style={{ fontSize: 11.5, color: "var(--fg-3)", marginLeft: "auto" }}>
-              Query-log suggestions: <strong style={{ color: "var(--fg-1)" }}>{health.suggested_pending}</strong> pending,{" "}
-              {health.suggested_approved} approved, {health.suggested_rejected} rejected
-            </div>
-          )}
-        </div>
-      </Card>
+      <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--fg-2)" }}
+        title={Object.entries(health.edges_by_discovered_via || {}).map(([v, c]) => `${DISCOVERED_VIA_LABEL[v] || v}: ${c}`).join(" · ") || "no traced edges yet"}>
+        <span style={{ color: "var(--grey-300)" }}>|</span>
+        <strong style={{ color: pctColor }}>{health.completeness_pct}%</strong>
+        lineage traced ({health.tables_with_edges}/{health.total_known_tables} tables)
+        {health.suggested_pending > 0 && (
+          <span style={{ color: "var(--yellow-700)", fontWeight: 600 }}>· {health.suggested_pending} suggestion{health.suggested_pending !== 1 ? "s" : ""} awaiting review ↓</span>
+        )}
+      </span>
     );
   };
 
@@ -587,6 +593,16 @@
     const [narrative, setNarrative] = React.useState(null);
     const [narrativeLoading, setNarrativeLoading] = React.useState(false);
     const [narrativeErr, setNarrativeErr] = React.useState("");
+    // Column-level lineage — loaded lazily per node; cheap indexed lookup.
+    const [colLineage, setColLineage] = React.useState(null);
+    const [colOpen, setColOpen] = React.useState(false);
+    React.useEffect(() => {
+      setColLineage(null); setColOpen(false);
+      if (!connectionId || !node?.external_id || !window.DTApi?.getColumnLineage) return;
+      window.DTApi.getColumnLineage(connectionId, node.external_id)
+        .then(setColLineage)
+        .catch(() => setColLineage(null));
+    }, [connectionId, node?.external_id]);
     useIcons();
 
     const handleSave = async () => {
@@ -647,6 +663,60 @@
               : <div style={{ fontSize: 12, color: "var(--fg-3)" }}>No known downstream dependents recorded yet.</div>}
           </div>
         </div>
+        {colLineage && (colLineage.fed_by.length > 0 || colLineage.feeds.length > 0) && (
+          <div style={{ marginTop: 12 }}>
+            <button onClick={() => setColOpen(v => !v)}
+              style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11.5, fontWeight: 700,
+                color: "var(--brand)", background: "none", border: "none", cursor: "pointer", padding: 0,
+                letterSpacing: ".03em" }}>
+              <i data-lucide={colOpen ? "chevron-down" : "chevron-right"} style={{ width: 12, height: 12 }}></i>
+              COLUMN-LEVEL LINEAGE ({colLineage.fed_by.length} column{colLineage.fed_by.length !== 1 ? "s" : ""} traced in
+              · {colLineage.feeds.length} traced out)
+            </button>
+            {colOpen && (
+              <div style={{ marginTop: 8, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                <div>
+                  {colLineage.fed_by.length > 0 && (
+                    <div style={{ fontSize: 10.5, fontWeight: 700, color: "var(--fg-3)", marginBottom: 5 }}>
+                      THIS TABLE'S COLUMNS ← SOURCE COLUMNS
+                    </div>
+                  )}
+                  {colLineage.fed_by.map(entry => (
+                    <div key={entry.column_name} style={{ fontSize: 11.5, marginBottom: 4, lineHeight: 1.5 }}>
+                      <Mono style={{ fontWeight: 700 }}>{entry.column_name}</Mono>
+                      <span style={{ color: "var(--fg-3)" }}> ← </span>
+                      {entry.related.map((r, i) => (
+                        <span key={i}>
+                          {i > 0 && <span style={{ color: "var(--fg-3)" }}>, </span>}
+                          <Mono style={{ color: "var(--fg-2)" }} title={r.table_fqn}>{r.table_fqn.split(".").pop()}.{r.column_name}</Mono>
+                        </span>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+                <div>
+                  {colLineage.feeds.length > 0 && (
+                    <div style={{ fontSize: 10.5, fontWeight: 700, color: "var(--fg-3)", marginBottom: 5 }}>
+                      THIS TABLE'S COLUMNS → DOWNSTREAM COLUMNS
+                    </div>
+                  )}
+                  {colLineage.feeds.map(entry => (
+                    <div key={entry.column_name} style={{ fontSize: 11.5, marginBottom: 4, lineHeight: 1.5 }}>
+                      <Mono style={{ fontWeight: 700 }}>{entry.column_name}</Mono>
+                      <span style={{ color: "var(--fg-3)" }}> → </span>
+                      {entry.related.map((r, i) => (
+                        <span key={i}>
+                          {i > 0 && <span style={{ color: "var(--fg-3)" }}>, </span>}
+                          <Mono style={{ color: "var(--fg-2)" }} title={r.table_fqn}>{r.table_fqn.split(".").pop()}.{r.column_name}</Mono>
+                        </span>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
         {node.sub_label && <div style={{ marginTop: 8, fontSize: 12.5, color: "var(--fg-2)" }}>{node.sub_label}</div>}
         {node.note && !editing && <div style={{ marginTop: 6, fontSize: 12, color: STC[node.health_status] || "var(--fg-3)", fontWeight: 500 }}>{node.note}</div>}
         {editing ? (
@@ -715,6 +785,11 @@
     const [showAddNode, setShowAddNode] = React.useState(false);
     const [showAddEdge, setShowAddEdge] = React.useState(false);
     const [showDiscover, setShowDiscover] = React.useState(false);
+    // Diagram/JSON dual view: the JSON editor IS the graph, round-trippable.
+    const [viewMode, setViewMode] = React.useState("diagram");   // diagram | json
+    const [exportMenuOpen, setExportMenuOpen] = React.useState(false);
+    const [jsonDraft, setJsonDraft] = React.useState("");
+    const [jsonApplying, setJsonApplying] = React.useState(false);
     const [suggestedRefreshKey, setSuggestedRefreshKey] = React.useState(0);
     const timersRef = React.useRef([]);
     const svgContainerRef = React.useRef(null);
@@ -757,6 +832,92 @@
 
     React.useEffect(() => { loadGraph(); }, [loadGraph]);
 
+    const serializeGraph = React.useCallback(() => JSON.stringify({
+      format: "data-alchemist-lineage",
+      version: 1,
+      nodes: (graphData?.nodes || []).map(n => ({
+        external_id: n.external_id, label: n.label, layer: n.layer, node_type: n.node_type,
+      })),
+      edges: (graphData?.edges || []).map(e => ({
+        source: e.source_ext_id, target: e.target_ext_id, edge_type: e.edge_type,
+      })),
+    }, null, 2), [graphData]);
+
+    // Entering JSON view (or the graph changing underneath while in it and the
+    // draft untouched) refreshes the editor from the live graph.
+    const draftTouchedRef = React.useRef(false);
+    React.useEffect(() => {
+      if (viewMode === "json" && !draftTouchedRef.current) setJsonDraft(serializeGraph());
+    }, [viewMode, serializeGraph]);
+
+    const applyJsonDraft = async () => {
+      let parsed;
+      try { parsed = JSON.parse(jsonDraft); }
+      catch (e) { toast("Not valid JSON: " + e.message, { kind: "error" }); return; }
+      const desiredEdges = (parsed.edges || []).map(e => ({
+        source: e.source || e.source_ext_id, target: e.target || e.target_ext_id,
+        edge_type: e.edge_type || "FEEDS",
+      }));
+      const desiredNodes = parsed.nodes || null;   // null = user removed the array → don't manage nodes
+      const key = (e) => `${e.source}\u0000${e.target}`;
+      const currentEdges = (graphData?.edges || []).map(e => ({
+        edge_id: e.edge_id, source: e.source_ext_id, target: e.target_ext_id, edge_type: e.edge_type,
+      }));
+      const desiredKeys = new Set(desiredEdges.map(key));
+      const currentKeys = new Set(currentEdges.map(key));
+      const edgesToAdd = desiredEdges.filter(e => !currentKeys.has(key(e)));
+      const edgesToRemove = currentEdges.filter(e => e.edge_id && !desiredKeys.has(key(e)));
+
+      let nodesToAdd = [], nodesToRemove = [];
+      if (desiredNodes) {
+        const desiredNodeIds = new Set(desiredNodes.map(n => n.external_id));
+        // A node referenced by a desired edge is implicitly kept/created.
+        desiredEdges.forEach(e => { desiredNodeIds.add(e.source); desiredNodeIds.add(e.target); });
+        const currentNodeIds = new Set((graphData?.nodes || []).map(n => n.external_id));
+        nodesToAdd = desiredNodes.filter(n => !currentNodeIds.has(n.external_id));
+        nodesToRemove = (graphData?.nodes || []).filter(n => !desiredNodeIds.has(n.external_id));
+      }
+
+      if (!edgesToAdd.length && !edgesToRemove.length && !nodesToAdd.length && !nodesToRemove.length) {
+        toast("No changes — the JSON matches the current graph.", { kind: "info" });
+        return;
+      }
+      const summary = [
+        edgesToAdd.length && `add ${edgesToAdd.length} edge(s)`,
+        edgesToRemove.length && `remove ${edgesToRemove.length} edge(s)`,
+        nodesToAdd.length && `add ${nodesToAdd.length} node(s)`,
+        nodesToRemove.length && `DELETE ${nodesToRemove.length} node(s) (and their edges)`,
+      ].filter(Boolean).join(", ");
+      if (!confirm(`Apply these changes to the lineage graph?\n\n${summary}`)) return;
+
+      setJsonApplying(true);
+      let failures = [];
+      try {
+        if (nodesToAdd.length || edgesToAdd.length) {
+          const res = await window.DTApi.importLineage(activeConnectionId, {
+            nodes: nodesToAdd, edges: edgesToAdd,
+          });
+          (res.errors || []).forEach(e => failures.push(e));
+        }
+        for (const e of edgesToRemove) {
+          try { await window.DTApi.deleteLineageEdge(e.edge_id); }
+          catch (err) { failures.push(`remove edge ${e.source} -> ${e.target}: ${err.message}`); }
+        }
+        for (const n of nodesToRemove) {
+          try { await window.DTApi.deleteLineageNode(n.node_id); }
+          catch (err) { failures.push(`delete node ${n.external_id}: ${err.message}`); }
+        }
+      } finally {
+        setJsonApplying(false);
+      }
+      await loadGraph(true);
+      setSuggestedRefreshKey(k => k + 1);
+      draftTouchedRef.current = false;   // re-sync editor from the applied graph
+      toast(failures.length
+        ? `Applied with ${failures.length} issue(s): ${failures[0]}`
+        : `Lineage updated — ${summary}`, { kind: failures.length ? "warning" : "success" });
+    };
+
     React.useEffect(() => {
       if (graphData && graphData.nodes && graphData.nodes.length > 0) runAnimation();
     }, [graphData]);
@@ -774,26 +935,134 @@
       }
     };
 
-    const handleExportSVG = () => {
-      const svg = svgContainerRef.current?.querySelector("svg");
-      if (!svg) return;
-      const clone = svg.cloneNode(true);
-      clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-      const bg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-      bg.setAttribute("width", "100%"); bg.setAttribute("height", "100%"); bg.setAttribute("fill", "white");
-      clone.insertBefore(bg, clone.firstChild);
-      const url = URL.createObjectURL(new Blob([clone.outerHTML], { type: "image/svg+xml" }));
+    // ── Export suite ──────────────────────────────────────────────────────
+    // The old SVG export cloned the edge <svg> only — node pills are HTML
+    // overlays, so the downloaded file was arrows floating in空 space (user
+    // report: "only arrows no table"). buildExportSVG() draws the COMPLETE
+    // picture (tier headers, node pills, health dots, edges) as pure SVG.
+    const HEALTH_HEX = { ok: "#16a34a", warn: "#d97706", fail: "#dc2626" };
+
+    const buildExportSVG = () => {
+      if (!layout || !graphData) return null;
+      const W = layout.canvasW, H = layout.canvasH + 34;
+      const esc = (t) => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      const parts = [];
+      parts.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="Segoe UI, Arial, sans-serif">`);
+      parts.push(`<rect width="100%" height="100%" fill="white"/>`);
+      parts.push(`<defs><marker id="arw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 9 5 L 0 9 z" fill="#9ca3af"/></marker>`
+        + Object.entries(HEALTH_HEX).map(([k, c]) => `<marker id="arw-${k}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1 L 9 5 L 0 9 z" fill="${c}"/></marker>`).join("")
+        + `</defs>`);
+      layout.tierLabels.forEach((label, i) => {
+        parts.push(`<text x="${PAD_X + i * (NODE_W + COL_GAP)}" y="20" font-size="11" font-weight="700" fill="#6b7280" letter-spacing="1">${esc(label)}</text>`);
+      });
+      const OY = 34; // vertical offset for the header row
+      graphData.edges.forEach(e => {
+        const a = layout.layoutNodes[e.source_ext_id], b = layout.layoutNodes[e.target_ext_id];
+        if (!a || !b) return;
+        const tgtNode = graphData.nodes.find(n => n.external_id === e.target_ext_id);
+        const h = tgtNode?.health_status || "ok";
+        const bad = h === "fail" || h === "warn";
+        const x1 = a.x + a.w, y1 = a.y + a.h / 2 + OY, x2 = b.x - 3, y2 = b.y + b.h / 2 + OY, mx = (x1 + x2) / 2;
+        parts.push(`<path d="M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}" fill="none" stroke="${bad ? HEALTH_HEX[h] : "#d1d5db"}" stroke-width="${bad ? 1.75 : 1.1}" marker-end="url(#${bad ? "arw-" + h : "arw"})" opacity="${bad ? 0.95 : 0.6}"/>`);
+      });
+      Object.values(layout.layoutNodes).forEach(ln => {
+        const h = ln.health_status || "ok";
+        const bad = h === "fail" || h === "warn";
+        const y = ln.y + OY;
+        parts.push(`<rect x="${ln.x}" y="${y}" width="${ln.w}" height="${ln.h}" rx="7" fill="white" stroke="${bad ? HEALTH_HEX[h] : "#e5e7eb"}" stroke-width="1"/>`);
+        parts.push(`<circle cx="${ln.x + 14}" cy="${y + ln.h / 2}" r="4" fill="${HEALTH_HEX[h]}"/>`);
+        const label = ln.label.length > 30 ? ln.label.slice(0, 29) + "…" : ln.label;
+        parts.push(`<text x="${ln.x + 24}" y="${y + ln.h / 2 + 4}" font-size="11" font-family="Consolas, monospace" fill="#111827"${bad ? ' font-weight="700"' : ""}>${esc(label)}</text>`);
+      });
+      parts.push("</svg>");
+      return parts.join("\n");
+    };
+
+    const _download = (content, name, mime) => {
+      const url = URL.createObjectURL(new Blob([content], { type: mime }));
       const a = document.createElement("a");
-      a.href = url; a.download = "impact-graph.svg"; a.click();
+      a.href = url; a.download = name; a.click();
       URL.revokeObjectURL(url);
     };
 
+    const handleExportSVG = () => {
+      const svg = buildExportSVG();
+      if (!svg) { toast("Nothing to export yet — the graph is empty.", { kind: "info" }); return; }
+      _download(svg, "impact-graph.svg", "image/svg+xml");
+      toast("impact-graph.svg downloaded — full picture: tables, health, edges (check Downloads)", { kind: "success" });
+    };
+
+    // Interactive artifact: PDFs cannot do hover/click-to-trace, so the
+    // shareable interactive export is a self-contained HTML file (opens in any
+    // browser, no server needed) — click any table to trace its dependencies,
+    // exactly like the in-app canvas.
+    const handleExportHTML = () => {
+      if (!graphData?.nodes?.length) { toast("Nothing to export yet — the graph is empty.", { kind: "info" }); return; }
+      const data = {
+        exported_at: new Date().toISOString(),
+        nodes: graphData.nodes.map(n => ({ id: n.external_id, label: n.label, layer: n.layer, type: n.node_type, health: n.health_status })),
+        edges: graphData.edges.map(e => ({ s: e.source_ext_id, t: e.target_ext_id })),
+      };
+      const html = [
+        "<!DOCTYPE html><html><head><meta charset='utf-8'><title>Impact Graph — lineage</title><style>",
+        "body{font-family:Segoe UI,Arial,sans-serif;margin:24px;color:#111827}",
+        ".legend{display:flex;gap:16px;font-size:12px;color:#4b5563;margin-bottom:14px;align-items:center;flex-wrap:wrap}",
+        ".sw{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}",
+        ".cols{display:flex;gap:100px;align-items:flex-start;position:relative}",
+        ".col h3{font-size:11px;letter-spacing:1px;color:#6b7280;margin:0 0 10px}",
+        ".node{display:flex;align-items:center;gap:7px;padding:6px 10px;border:1px solid #e5e7eb;border-radius:7px;background:#fff;font:11.5px Consolas,monospace;margin-bottom:6px;cursor:pointer;position:relative;z-index:2;white-space:nowrap;width:210px;overflow:hidden;text-overflow:ellipsis}",
+        ".node:hover{border-color:#9ca3af}",
+        "svg.edges{position:absolute;top:0;left:0;pointer-events:none;overflow:visible}",
+        "</style></head><body>",
+        "<h2 style='margin:0 0 4px'>Impact Graph — data lineage</h2>",
+        "<div style='font-size:12px;color:#6b7280;margin-bottom:14px'>Exported " + new Date().toLocaleString() + " · click any table to trace its direct dependencies · click again to clear</div>",
+        "<div class='legend'><span><span class='sw' style='background:#16a34a'></span>healthy</span><span><span class='sw' style='background:#d97706'></span>warning</span><span><span class='sw' style='background:#dc2626'></span>failing</span><span>data flows left \u2192 right</span></div>",
+        "<div id='wrap' style='position:relative'><svg class='edges' id='edges'></svg><div class='cols' id='cols'></div></div>",
+        "<script>var DATA=", JSON.stringify(data), ";",
+        "var HC={ok:'#16a34a',warn:'#d97706',fail:'#dc2626'};",
+        "var ORDER={RAW:0,BRONZE:1,SILVER:2,GOLD:3,REPORT:4,MODEL:4};",
+        "var cols={};DATA.nodes.forEach(function(n){var c=ORDER[n.layer]!==undefined?ORDER[n.layer]:(n.type==='report'||n.type==='model'?4:5);(cols[c]=cols[c]||[]).push(n);});",
+        "var NAMES={0:'RAW',1:'BRONZE',2:'SILVER',3:'GOLD',4:'REPORTS / MODELS',5:'UNCLASSIFIED'};",
+        "var colsEl=document.getElementById('cols');",
+        "Object.keys(cols).sort().forEach(function(c){var d=document.createElement('div');d.className='col';d.innerHTML='<h3>'+NAMES[c]+' ('+cols[c].length+')</h3>';cols[c].forEach(function(n){var el=document.createElement('div');el.className='node';el.dataset.id=n.id;el.title=n.id;el.innerHTML='<span class=sw style=background:'+(HC[n.health]||'#9ca3af')+'></span>'+n.label;d.appendChild(el);});colsEl.appendChild(d);});",
+        "var wrap=document.getElementById('wrap'),svg=document.getElementById('edges');",
+        "function draw(){svg.setAttribute('width',wrap.scrollWidth);svg.setAttribute('height',wrap.scrollHeight);svg.innerHTML='<defs><marker id=m viewBox=\"0 0 10 10\" refX=9 refY=5 markerWidth=6 markerHeight=6 orient=auto-start-reverse><path d=\"M 0 1 L 9 5 L 0 9 z\" fill=#9ca3af></path></marker></defs>';",
+        "DATA.edges.forEach(function(e){var a=wrap.querySelector('[data-id=\"'+e.s+'\"]'),b=wrap.querySelector('[data-id=\"'+e.t+'\"]');if(!a||!b)return;",
+        "var w=wrap.getBoundingClientRect(),ra=a.getBoundingClientRect(),rb=b.getBoundingClientRect();",
+        "var x1=ra.right-w.left,y1=ra.top-w.top+ra.height/2,x2=rb.left-w.left-3,y2=rb.top-w.top+rb.height/2,mx=(x1+x2)/2;",
+        "var p=document.createElementNS('http://www.w3.org/2000/svg','path');p.setAttribute('d','M'+x1+' '+y1+' C '+mx+' '+y1+', '+mx+' '+y2+', '+x2+' '+y2);p.setAttribute('fill','none');p.setAttribute('stroke','#d1d5db');p.setAttribute('stroke-width','1.1');p.setAttribute('marker-end','url(#m)');p.dataset.s=e.s;p.dataset.t=e.t;p.classList.add('e');svg.appendChild(p);});}",
+        "setTimeout(draw,60);window.addEventListener('resize',draw);",
+        "var sel=null;",
+        "wrap.addEventListener('click',function(ev){var n=ev.target.closest('.node');if(!n)return;var id=n.dataset.id;",
+        "if(sel===id){sel=null;}else{sel=id;}",
+        "var conn=new Set([sel]);if(sel){DATA.edges.forEach(function(e){if(e.s===sel)conn.add(e.t);if(e.t===sel)conn.add(e.s);});}",
+        "wrap.querySelectorAll('.node').forEach(function(x){x.style.opacity=(!sel||conn.has(x.dataset.id))?'1':'0.22';});",
+        "svg.querySelectorAll('.e').forEach(function(e){var hit=sel&&(e.dataset.s===sel||e.dataset.t===sel);e.style.opacity=!sel?'1':(hit?'1':'0.08');e.setAttribute('stroke',hit?'#2563eb':'#d1d5db');e.setAttribute('stroke-width',hit?'2':'1.1');});});",
+        "</" + "script></body></html>",
+      ].join("");
+      _download(html, "impact-graph-interactive.html", "text/html");
+      toast("impact-graph-interactive.html downloaded — open it in any browser; click tables to trace (check Downloads)", { kind: "success" });
+    };
+
+    // PDF: print pipeline — a PDF is a paper format, so it gets the complete
+    // STATIC picture; the browser's print dialog saves it as PDF.
+    const handleExportPDF = () => {
+      const svg = buildExportSVG();
+      if (!svg) { toast("Nothing to export yet — the graph is empty.", { kind: "info" }); return; }
+      const w = window.open("", "_blank");
+      if (!w) { toast("Popup blocked — allow popups for this site to export PDF.", { kind: "warning" }); return; }
+      w.document.write("<html><head><title>Impact Graph — lineage</title><style>@page{size:landscape;margin:10mm}body{margin:0}svg{max-width:100%;height:auto}</style></head><body>" + svg + "</body></html>");
+      w.document.close();
+      setTimeout(() => { w.focus(); w.print(); }, 400);
+      toast("Print dialog opened — choose 'Save as PDF' as the destination.", { kind: "info" });
+    };
+
     const [expandedTiers, setExpandedTiers] = React.useState(() => new Set());
+    const [hoveredEdge, setHoveredEdge] = React.useState(null);   // edge index under the pointer
     const layout = React.useMemo(
       () => graphData?.nodes?.length ? computeLayout(graphData.nodes, expandedTiers) : null,
       [graphData, expandedTiers]
     );
-    const paths  = React.useMemo(() => graphData?.nodes?.length ? computePaths(graphData.nodes, graphData.edges) : [], [graphData]);
 
     const filteredIds = React.useMemo(() => {
       if (!graphData?.nodes) return new Set();
@@ -886,8 +1155,40 @@
             sub="Trace a data quality failure from its source through every dependent table, dashboard, report, and ML model — downstream impact in real time."
             right={hasNodes ? (
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <div style={{ display: "inline-flex", borderRadius: 8, overflow: "hidden", border: "1px solid var(--grey-200)" }}>
+                  {[["diagram", "Diagram"], ["json", "JSON"]].map(([m, label]) => (
+                    <button key={m} onClick={() => { if (m === "json") draftTouchedRef.current = false; setViewMode(m); }}
+                      style={{ padding: "5px 12px", fontSize: 12, fontWeight: 600, border: "none", cursor: "pointer",
+                        background: viewMode === m ? "var(--brand)" : "#fff",
+                        color: viewMode === m ? "#fff" : "var(--fg-2)" }}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
                 <Button size="sm" variant="outline" icon="search" onClick={() => setShowDiscover(v => !v)}>Discover lineage</Button>
-                <Button size="sm" variant="outline" icon="download" onClick={handleExportSVG}>Export SVG</Button>
+                <div style={{ position: "relative" }}>
+                  <Button size="sm" variant="outline" icon="download" onClick={() => setExportMenuOpen(v => !v)}>Export ▾</Button>
+                  {exportMenuOpen && (
+                    <div style={{ position: "absolute", top: "calc(100% + 4px)", right: 0, zIndex: 30,
+                      background: "#fff", border: "1px solid var(--grey-200)", borderRadius: 10,
+                      boxShadow: "var(--shadow-hover, 0 8px 24px rgba(0,0,0,.12))", padding: 6, minWidth: 230 }}>
+                      {[
+                        ["Interactive HTML", "click-to-trace, opens in any browser", handleExportHTML],
+                        ["SVG image", "full static picture of the graph", handleExportSVG],
+                        ["PDF (print)", "static, via your browser's Save as PDF", handleExportPDF],
+                      ].map(([label, hint, fn]) => (
+                        <button key={label} onClick={() => { setExportMenuOpen(false); fn(); }}
+                          style={{ display: "block", width: "100%", textAlign: "left", padding: "8px 10px",
+                            background: "none", border: "none", borderRadius: 7, cursor: "pointer", fontSize: 12.5 }}
+                          onMouseEnter={e => e.currentTarget.style.background = "var(--grey-50)"}
+                          onMouseLeave={e => e.currentTarget.style.background = "none"}>
+                          <div style={{ fontWeight: 600, color: "var(--fg-1)" }}>{label}</div>
+                          <div style={{ fontSize: 11, color: "var(--fg-3)" }}>{hint}</div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <Button size="sm" variant="outline" icon="play" onClick={runAnimation}>Replay</Button>
               </div>
             ) : null}>
@@ -898,6 +1199,7 @@
             <div style={{ display: "flex", gap: 10, marginTop: 12, flexWrap: "wrap", alignItems: "center" }}>
               <Chip intent={counts.fail > 0 ? "danger" : "success"} dot>{counts.fail} blocked</Chip>
               <Chip intent={counts.warn > 0 ? "warning" : "success"} dot>{counts.warn} degraded</Chip>
+              {activeConnectionId && <LineageHealthCard connectionId={activeConnectionId} refreshKey={suggestedRefreshKey} />}
               {impactNotes.map(n => <Chip key={n.node_id} intent="neutral" icon="dollar-sign">{n.note}</Chip>)}
             </div>
           )}
@@ -905,7 +1207,17 @@
           {rootCauses.length > 0 && (
             <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 6 }}>
               {rootCauses.map(rc => (
-                <div key={rc.node_id} style={{ padding: "8px 14px", background: "var(--red-50)", borderRadius: 8, border: "1px solid var(--red-200)", fontSize: 12.5, display: "flex", alignItems: "center", gap: 8 }}>
+                <button key={rc.node_id}
+                  title="Click to spotlight this table and its blast radius in the graph"
+                  onClick={() => {
+                    const n = graphData?.nodes?.find(x => x.external_id === rc.external_id);
+                    if (n) {
+                      setSelectedNode(n);
+                      setTimeout(() => document.getElementById("impact-node-panel")?.scrollIntoView({ behavior: "smooth", block: "center" }), 350);
+                    }
+                  }}
+                  style={{ padding: "8px 14px", background: "var(--red-50)", borderRadius: 8, border: "1px solid var(--red-200)",
+                    fontSize: 12.5, display: "flex", alignItems: "center", gap: 8, cursor: "pointer", textAlign: "left", width: "100%" }}>
                   <i data-lucide="alert-triangle" style={{ width: 14, height: 14, color: "var(--red-500)", flexShrink: 0 }} />
                   <span>
                     <strong>Root cause:</strong> {rc.label}
@@ -913,7 +1225,8 @@
                       ? ` → ${rc.downstream_impact_count} downstream table${rc.downstream_impact_count !== 1 ? "s" : ""} affected`
                       : " → no downstream dependents recorded (isolated failure)"}
                   </span>
-                </div>
+                  <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--red-500)", whiteSpace: "nowrap" }}>View blast radius →</span>
+                </button>
               ))}
               {rootCauses.length > 1 && (
                 <div style={{ fontSize: 11.5, color: "var(--fg-3)", paddingLeft: 4 }}>
@@ -923,10 +1236,6 @@
             </div>
           )}
         </Card>
-
-        {activeConnectionId && (
-          <LineageHealthCard connectionId={activeConnectionId} refreshKey={suggestedRefreshKey} />
-        )}
 
         {/* ── No data → empty state ── */}
         {!hasNodes && (
@@ -987,23 +1296,106 @@
         {/* ── Filter bar + graph (shown only when there are nodes) ── */}
         {hasNodes && (
           <>
-            <div style={{ display: "flex", gap: 8, marginBottom: 16, alignItems: "center", flexWrap: "wrap" }}>
-              {[["all", "All"], ["fail", "FAIL"], ["warn", "WARN"], ["ok", "OK"]].map(([f, label]) => (
-                <Button key={f} size="sm" variant={filter === f ? "primary" : "outline"} onClick={() => setFilter(f)}>{label}</Button>
-              ))}
-              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search nodes..."
-                style={{ marginLeft: 4, padding: "5px 12px", borderRadius: 6, border: "1px solid var(--grey-200)", fontSize: 12.5, outline: "none", minWidth: 160, color: "var(--fg-1)" }} />
-              <Button size="sm" icon="git-commit" variant="outline" onClick={() => setShowAddEdge(v => !v)} style={{ marginLeft: "auto" }}>
-                Add Edge
-              </Button>
-              <Button size="sm" icon="plus" variant="outline" onClick={() => setShowAddNode(v => !v)}>
-                Add Node
-              </Button>
-            </div>
+            {/* ── JSON view — the same graph as editable text; Apply syncs
+                 additions AND removals through the org-checked, cycle-checked
+                 endpoints, then the diagram reflects it immediately. ── */}
+            {viewMode === "json" && (
+              <Card style={{ padding: 16 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, flexWrap: "wrap" }}>
+                  <Eyebrow>Lineage as JSON — edit and apply</Eyebrow>
+                  <span style={{ fontSize: 11.5, color: "var(--fg-3)" }}>
+                    {(graphData?.nodes || []).length} nodes · {(graphData?.edges || []).length} edges ·
+                    edges are identified by source+target; removing one here removes it from the graph
+                  </span>
+                  <div style={{ marginLeft: "auto", display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    {/* File round-trip lives right where the editing happens:
+                        load a lineage.json into the editor to review before
+                        applying; download saves the DRAFT (including
+                        unapplied edits), not just the live graph. */}
+                    <Button size="sm" variant="outline" icon="file-up" onClick={() => document.getElementById("dt-lineage-file")?.click()}>
+                      Load file
+                    </Button>
+                    <input id="dt-lineage-file" type="file" accept=".json,application/json" style={{ display: "none" }}
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (!f) return;
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                          draftTouchedRef.current = true;
+                          setJsonDraft(String(reader.result));
+                          toast(`${f.name} loaded into the editor — review, then Apply changes`, { kind: "info" });
+                        };
+                        reader.readAsText(f);
+                        e.target.value = "";
+                      }} />
+                    <Button size="sm" variant="outline" icon="download" onClick={() => {
+                      const url = URL.createObjectURL(new Blob([jsonDraft], { type: "application/json" }));
+                      const a = document.createElement("a");
+                      a.href = url; a.download = "lineage.json"; a.click();
+                      URL.revokeObjectURL(url);
+                      toast("lineage.json downloaded (current editor contents, including unapplied edits)", { kind: "success" });
+                    }}>
+                      Download draft
+                    </Button>
+                    <Button size="sm" variant="outline" icon="rotate-ccw"
+                      onClick={() => { draftTouchedRef.current = false; setJsonDraft(serializeGraph()); }}>
+                      Reset to current
+                    </Button>
+                    <Button size="sm" variant="primary" icon="check" disabled={jsonApplying} onClick={applyJsonDraft}>
+                      {jsonApplying ? "Applying..." : "Apply changes"}
+                    </Button>
+                  </div>
+                </div>
+                <textarea value={jsonDraft}
+                  onChange={e => { draftTouchedRef.current = true; setJsonDraft(e.target.value); }}
+                  spellCheck={false}
+                  style={{ width: "100%", minHeight: 480, fontFamily: '"JetBrains Mono", monospace', fontSize: 12,
+                    padding: 12, borderRadius: 8, border: "1px solid var(--grey-200)", resize: "vertical",
+                    lineHeight: 1.55, color: "var(--fg-1)", background: "var(--grey-50)" }} />
+              </Card>
+            )}
 
             {/* ── Graph canvas ── */}
-            {layout && (
-              <Card style={{ overflowX: "auto", padding: "20px 24px 28px" }}>
+            {viewMode === "diagram" && layout && (
+              <Card style={{ overflowX: "auto", padding: "16px 24px 24px" }}>
+                {/* Canvas toolbar — filters and node/edge tools act on this
+                    canvas, so they live on it, not floating between cards. */}
+                <div style={{ display: "flex", gap: 6, marginBottom: 12, alignItems: "center", flexWrap: "wrap" }}>
+                  {[["all", "All"], ["fail", "FAIL"], ["warn", "WARN"], ["ok", "OK"]].map(([f, label]) => (
+                    <Button key={f} size="sm" variant={filter === f ? "primary" : "ghost"} onClick={() => setFilter(f)}>{label}</Button>
+                  ))}
+                  <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search tables..."
+                    style={{ marginLeft: 6, padding: "5px 12px", borderRadius: 6, border: "1px solid var(--grey-200)", fontSize: 12.5, outline: "none", minWidth: 170, color: "var(--fg-1)" }} />
+                  <Button size="sm" icon="git-commit" variant="outline" onClick={() => setShowAddEdge(v => !v)} style={{ marginLeft: "auto" }}>
+                    Add Edge
+                  </Button>
+                  <Button size="sm" icon="plus" variant="outline" onClick={() => setShowAddNode(v => !v)}>
+                    Add Node
+                  </Button>
+                </div>
+                {/* How-to-read legend — a first-time viewer must be able to decode
+                    the diagram in seconds without asking anyone: arrows are data
+                    flow, colors are health, clock means the health may be stale. */}
+                <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap",
+                  marginBottom: 12, fontSize: 11, color: "var(--fg-2)" }}>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: STC.ok }}></span>healthy
+                  </span>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: STC.warn }}></span>warning
+                  </span>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: STC.fail }}></span>failing
+                  </span>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                    <i data-lucide="clock" style={{ width: 10, height: 10, color: "var(--yellow-600)" }}></i>stale health
+                  </span>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                    <svg width="26" height="8" viewBox="0 0 26 8"><line x1="0" y1="4" x2="19" y2="4" stroke="var(--grey-400)" strokeWidth="1.5"/><path d="M18 1 L25 4 L18 7 z" fill="var(--grey-400)"/></svg>
+                    data flows left → right
+                  </span>
+                  <span style={{ marginLeft: "auto", color: "var(--fg-3)" }}>click a table to trace it · hover an arrow to read it</span>
+                </div>
                 <div style={{ display: "flex", marginBottom: 12 }}>
                   {layout.tierLabels.map((label, i) => (
                     <div key={i} style={{ width: NODE_W + COL_GAP, flexShrink: 0 }}>
@@ -1021,27 +1413,57 @@
                 <div ref={svgContainerRef} style={{ position: "relative", width: layout.canvasW, height: layout.canvasH, margin: "0 auto" }}>
                   <svg width={layout.canvasW} height={layout.canvasH}
                     style={{ position: "absolute", inset: 0, pointerEvents: "none", overflow: "visible" }}>
+                    {/* Arrowheads — without a direction marker an edge is just a
+                        decorative curve; the arrow is what lets a first-time viewer
+                        read "data flows from THIS table into THAT one" unaided. */}
+                    <defs>
+                      {Object.entries({ ok: STC.ok, warn: STC.warn, fail: STC.fail, quiet: "var(--grey-400)", brand: "var(--blue-500)" }).map(([k, color]) => (
+                        <marker key={k} id={`dt-arrow-${k}`} viewBox="0 0 10 10" refX="9" refY="5"
+                          markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                          <path d="M 0 1 L 9 5 L 0 9 z" fill={color} />
+                        </marker>
+                      ))}
+                    </defs>
                     {graphData.edges.map((e, i) => {
                       const src = layout.layoutNodes[e.source_ext_id];
                       const tgt = layout.layoutNodes[e.target_ext_id];
                       if (!src || !tgt) return null;
                       const isActive = step > src.colRank;
                       const tgtNode = graphData.nodes.find(n => n.external_id === e.target_ext_id);
+                      const health = tgtNode?.health_status || "ok";
                       const dimmed = ((search || filter !== "all") && !filteredIds.has(e.source_ext_id) && !filteredIds.has(e.target_ext_id))
                         || (reach && !(inSpotlight(e.source_ext_id) && inSpotlight(e.target_ext_id)));
+                      const touchesSelected = selectedNode &&
+                        (e.source_ext_id === selectedNode.external_id || e.target_ext_id === selectedNode.external_id);
+                      const hovered = hoveredEdge === i;
+                      // dbt-docs discipline: a healthy pipeline reads as a quiet
+                      // neutral mesh; color appears only where it carries signal —
+                      // an unhealthy target, the hovered edge, or the selection.
+                      const unhealthyEdge = health === "fail" || health === "warn";
+                      const strokeColor = hovered || touchesSelected ? "var(--blue-500)"
+                        : unhealthyEdge ? STC[health] : "var(--grey-300)";
+                      const markerKey = hovered || touchesSelected ? "brand" : unhealthyEdge ? health : "quiet";
+                      // End the curve just before the node border so the arrowhead is visible.
                       const x1 = src.x + src.w, y1 = src.y + src.h / 2;
-                      const x2 = tgt.x,          y2 = tgt.y + tgt.h / 2;
+                      const x2 = tgt.x - 3,      y2 = tgt.y + tgt.h / 2;
                       const mx = (x1 + x2) / 2;
                       return (
                         <path key={i}
                           d={`M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`}
                           fill="none"
-                          stroke={isActive ? STC[tgtNode?.health_status || "ok"] : "var(--grey-200)"}
-                          strokeWidth={isActive ? 2.5 : 1.5}
-                          strokeDasharray={isActive ? "6 4" : "0"}
-                          opacity={dimmed ? 0.08 : isActive ? 1 : 0.4}
-                          style={{ transition: "stroke 350ms, opacity 350ms", animation: isActive ? "dtFlow 700ms linear infinite" : "none" }}
-                        />
+                          stroke={strokeColor}
+                          strokeWidth={hovered ? 2.5 : touchesSelected ? 2 : unhealthyEdge ? 1.75 : 1.1}
+                          strokeDasharray={isActive && unhealthyEdge ? "6 4" : "0"}
+                          markerEnd={`url(#dt-arrow-${markerKey})`}
+                          opacity={dimmed ? 0.05 : hovered || touchesSelected ? 1 : unhealthyEdge ? 0.95 : 0.55}
+                          onMouseEnter={() => setHoveredEdge(i)}
+                          onMouseLeave={() => setHoveredEdge(prev => prev === i ? null : prev)}
+                          style={{ transition: "stroke 350ms, opacity 350ms, stroke-width 120ms",
+                            pointerEvents: "stroke", cursor: "pointer",
+                            animation: isActive && unhealthyEdge ? "dtFlow 700ms linear infinite" : "none" }}>
+                          {/* Native tooltip: hover any edge to read the relationship in words. */}
+                          <title>{`${src.label}  →  ${tgt.label}   (${e.edge_type || "FEEDS"}: ${src.label} loads data into ${tgt.label})`}</title>
+                        </path>
                       );
                     })}
                   </svg>
@@ -1053,32 +1475,30 @@
                     const dimmed = ((filter !== "all" || search) && !filteredIds.has(n.external_id))
                       || (reach && !inSpotlight(n.external_id));
                     const isSelected = selectedNode?.external_id === n.external_id;
+                    const unhealthy = n.health_status === "fail" || n.health_status === "warn";
                     return (
                       <div key={n.node_id}
                         onClick={() => setSelectedNode(isSelected ? null : n)}
+                        title={[n.label, n.sub_label, n.note, stalenessInfo(n).stale ? stalenessInfo(n).label : null].filter(Boolean).join(" · ")}
                         style={{
                           position: "absolute", left: ln.x, top: ln.y, width: ln.w, height: ln.h,
-                          background: active ? STBG[n.health_status] : "#fff", borderRadius: 12,
-                          border: isSelected ? "2px solid var(--blue-500)" : `1.5px solid ${active ? STC[n.health_status] : "var(--grey-200)"}`,
-                          boxShadow: active && n.health_status === "fail" ? `0 0 0 4px ${STC.fail}22, var(--shadow-card)` : isSelected ? "0 0 0 3px var(--blue-100), var(--shadow-card)" : "var(--shadow-card)",
-                          padding: "10px 14px", transition: "all 350ms cubic-bezier(0.2,0,0,1)",
-                          opacity: dimmed ? 0.15 : active ? 1 : 0.5,
-                          cursor: "pointer", display: "flex", flexDirection: "column", justifyContent: "center",
+                          background: isSelected ? "var(--blue-50)" : unhealthy && active ? STBG[n.health_status] : "#fff",
+                          borderRadius: 7,
+                          border: isSelected ? "1.5px solid var(--blue-500)" : `1px solid ${unhealthy && active ? STC[n.health_status] : "var(--grey-200)"}`,
+                          boxShadow: isSelected ? "0 0 0 3px var(--blue-100)" : "none",
+                          padding: "0 10px", transition: "opacity 300ms, border-color 300ms, background 300ms",
+                          opacity: dimmed ? 0.18 : 1,
+                          cursor: "pointer", display: "flex", alignItems: "center", gap: 7,
                           animation: active && n.health_status === "fail" ? "dtFlash 600ms ease" : "none",
                           overflow: "hidden",
                         }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 4 }}>
-                          <Health status={active ? (n.health_status === "fail" ? "FAIL" : n.health_status === "warn" ? "WARN" : "PASS") : "OK"} />
-                          <Mono style={{ fontSize: 11.5, fontWeight: 700, color: "var(--fg-1)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{n.label}</Mono>
-                          {n.node_type === "table" && stalenessInfo(n).stale && (
-                            <i data-lucide="clock" title={`${stalenessInfo(n).label} — health status shown may be out of date`}
-                              style={{ width: 12, height: 12, color: "var(--yellow-600)", flexShrink: 0 }}></i>
-                          )}
-                        </div>
-                        {(n.sub_label || n.note) && (
-                          <div style={{ fontSize: 11, color: active ? STC[n.health_status] : "var(--fg-3)", fontWeight: active && n.health_status !== "ok" ? 600 : 500, lineHeight: 1.35, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            {n.sub_label || n.note}
-                          </div>
+                        <span style={{ width: 8, height: 8, borderRadius: n.node_type === "table" ? "50%" : 2, flexShrink: 0,
+                          background: active ? STC[n.health_status] : "var(--grey-300)",
+                          transition: "background 300ms" }}></span>
+                        <Mono style={{ fontSize: 11.5, fontWeight: unhealthy ? 700 : 500, color: "var(--fg-1)",
+                          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{n.label}</Mono>
+                        {n.node_type === "table" && stalenessInfo(n).stale && (
+                          <i data-lucide="clock" style={{ width: 11, height: 11, color: "var(--yellow-600)", flexShrink: 0 }}></i>
                         )}
                       </div>
                     );
@@ -1106,7 +1526,14 @@
                   await loadGraph();
                 }}
                 onDelete={async (nodeId) => {
-                  if (!confirm(`Delete node "${selectedNode.label}"?`)) return;
+                  // State the blast radius of the DELETE itself: this destroys the
+                  // node's edges too (seen live: a real table deleted mid-testing
+                  // took 6 pipeline edges with it and had to be re-discovered).
+                  const edgeCount = graphData.edges.filter(e =>
+                    e.source_ext_id === selectedNode.external_id || e.target_ext_id === selectedNode.external_id).length;
+                  if (!confirm(`Delete "${selectedNode.label}" from the lineage graph?
+
+This also removes its ${edgeCount} edge(s). If it's a real table, re-running Discover lineage can restore them as suggestions.`)) return;
                   await window.DTApi.deleteLineageNode(nodeId);
                   setSelectedNode(null);
                   setSuggestedRefreshKey(k => k + 1);
@@ -1116,35 +1543,6 @@
               </div>
             )}
 
-            {/* ── Lineage paths ── */}
-            <Card style={{ marginTop: 16 }}>
-              <SectionTitle icon="git-fork">Lineage paths</SectionTitle>
-              {!paths.length ? (
-                <div style={{ color: "var(--fg-3)", fontSize: 13 }}>Add edges between nodes to see lineage paths.</div>
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 10, fontSize: 12.5 }}>
-                  {[...paths].sort((a, b) => {
-                    const s = { fail: 0, warn: 1, ok: 2 };
-                    return (s[a[a.length - 1]?.health_status] ?? 3) - (s[b[b.length - 1]?.health_status] ?? 3);
-                  }).map((path, pi) => {
-                    const leaf = path[path.length - 1];
-                    return (
-                      <div key={pi} style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--fg-2)", flexWrap: "wrap" }}>
-                        {path.map((node, ni) => (
-                          <React.Fragment key={node.node_id}>
-                            <Mono style={{ fontSize: 12, color: ni === path.length - 1 ? STC[node.health_status] : "var(--fg-2)", fontWeight: ni === path.length - 1 ? 700 : 500 }}>
-                              {node.label}
-                            </Mono>
-                            {ni < path.length - 1 && <i data-lucide="chevron-right" style={{ width: 13, height: 13, color: "var(--fg-3)", flexShrink: 0 }} />}
-                          </React.Fragment>
-                        ))}
-                        {leaf.note && <Chip intent={leaf.health_status === "fail" ? "danger" : "warning"} size="sm">{leaf.note}</Chip>}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </Card>
           </>
         )}
       </div>

@@ -192,6 +192,7 @@
     const { ackedAnomalies, setAckedAnomalies, activeConnectionId, refreshAnomalyCount, go, setActiveTableFqn } = useApp();
     const [expanded, setExpanded] = React.useState(null); // id
     const [escalatedIds, setEscalatedIds] = React.useState({}); // id -> true once a task exists
+    const [taskedIds, setTaskedIds] = React.useState({});       // id -> true once a follow-up task exists
     const [tab, setTab] = React.useState({}); // id -> 'explain' | 'fingerprint'
     const [anomalies, setAnomalies] = React.useState([]);
     const [explanations, setExplanations] = React.useState({}); // id -> explanation object
@@ -350,6 +351,25 @@
                         })
                         .catch(() => toast("Escalation failed — check backend", { kind: "error" }));
                     }}>{escalatedIds[a.id] ? "Escalated" : "Escalate"}</Button>
+                    <Button size="sm" variant="ghost" icon="clipboard-list" disabled={!!taskedIds[a.id]}
+                      title="Create a follow-up task on the Task Board, linked back to this anomaly"
+                      onClick={() => {
+                        const me = (() => { try { return JSON.parse(sessionStorage.getItem('dt_user') || '{}').name || 'User'; } catch(_) { return 'User'; } })();
+                        window.DTApi?.createTask?.({
+                          title: `Investigate: ${a.type} on ${a.table || "table"}`,
+                          description: a.desc || null,
+                          priority: a.sev === "CRITICAL" ? "CRITICAL" : a.sev === "HIGH" ? "HIGH" : "MEDIUM",
+                          owner: me,
+                          related_entity_type: "anomaly",
+                          related_entity_id: a.id,
+                          connection_id: activeConnectionId || null,
+                        })
+                          .then(() => {
+                            setTaskedIds(prev => ({ ...prev, [a.id]: true }));
+                            toast("Task created — find it on the Task Board", { kind: "success" });
+                          })
+                          .catch(() => toast("Task creation failed — check backend", { kind: "error" }));
+                      }}>{taskedIds[a.id] ? "Task created" : "Create task"}</Button>
                     {a.table && (
                       <Button size="sm" variant="ghost" icon="network" title="Open the Impact Graph with this table selected — see what feeds it and what it feeds"
                         onClick={() => { setActiveTableFqn?.(a.table); go("impact"); }}>

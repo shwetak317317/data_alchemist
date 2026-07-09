@@ -47,3 +47,10 @@ Thumbs.db
 test/screenshots/
 backend/test_gemini.py
 test/config.js
+/screenshots/
+/docs/
+dbscripts/
+test-results/
+/test
+/.playwright-mcp
+/*.pptx

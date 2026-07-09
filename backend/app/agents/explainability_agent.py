@@ -109,10 +109,29 @@ def explain_anomaly(anomaly: AnomalyRecord, db=None) -> AnomalyExplanationRespon
         )
 
 
-def explain_rule_failure(result: RuleResult) -> str:
+def explain_rule_failure(result: RuleResult, db=None, connection_id: str | None = None) -> str:
+    # NOTE: this previously called a bare `chat(...)` that was never imported in
+    # this module (only chat_with_usage was) — every call raised NameError, was
+    # swallowed by the except below, and silently returned the generic fallback
+    # string for every failing rule, forever. remediation_suggestion in DQ
+    # Execution results was never actually LLM-generated despite the UI/data
+    # model implying it was. Fixed to call the real client and to persist the
+    # call like every other AI call site in this codebase (rule_ai_calls).
+    from app.agents.rule_agent import _log_ai_call
     prompt = build_rule_failure_prompt(result)
+    t0 = time.monotonic()
     try:
-        return chat(prompt, max_tokens=150)
+        text, usage = chat_with_usage(prompt, max_tokens=150)
+        if db is not None:
+            _log_ai_call(db, connection_id=connection_id or "", call_type="REMEDIATION",
+                         table_fqn=result.table_fqn, prompt=prompt, raw_response=text, status="success",
+                         usage=usage, latency_ms=int((time.monotonic() - t0) * 1000))
+        return text
     except Exception as e:
         logger.warning("Rule failure explanation failed: %s", e)
+        if db is not None:
+            _log_ai_call(db, connection_id=connection_id or "", call_type="REMEDIATION",
+                         table_fqn=result.table_fqn, prompt=prompt, raw_response=None,
+                         status="error", error_message=str(e), usage=None,
+                         latency_ms=int((time.monotonic() - t0) * 1000))
         return f"{result.rule_name} failed on {result.fail_pct:.1f}% of records. Review the affected data."

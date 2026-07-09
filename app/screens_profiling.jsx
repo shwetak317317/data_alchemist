@@ -331,16 +331,63 @@
     ];
     const [steps, setSteps] = React.useState(_defaultSteps.map(s => ({ ...s, state: "wait" })));
     const [pct, setPct]     = React.useState(0);
+    const [configured, setConfigured]       = React.useState(false);
+    const [windowMode, setWindowMode]       = React.useState("full");
+    const [partitionColumn, setPartitionColumn] = React.useState("");
+    const [customFrom, setCustomFrom]       = React.useState("");
+    const [customTo, setCustomTo]           = React.useState("");
+    const [lastRunAt, setLastRunAt]         = React.useState(null);
     useIcons();
 
+    // Best-effort lookup of the last run's timestamp, to anchor "Since last run"
     React.useEffect(() => {
+      if (window.DTApi?.getReportByTable && connectionId && table) {
+        window.DTApi.getReportByTable(table, connectionId)
+          .then(r => setLastRunAt(r?.run_at || null))
+          .catch(() => setLastRunAt(null));
+      }
+    }, []);
+
+    const WINDOW_PRESETS = [
+      { id: "full",       label: "Full table",      hint: "Scan every row (default)" },
+      { id: "24h",        label: "Last 24 hours",   hint: "Recent inserts/updates only" },
+      { id: "7d",         label: "Last 7 days" },
+      { id: "30d",        label: "Last 30 days" },
+      { id: "since_last", label: "Since last run",
+        hint: lastRunAt ? `From ${_fmtWhen(lastRunAt)}` : "No prior run for this table yet",
+        disabled: !lastRunAt },
+      { id: "custom",     label: "Custom range" },
+    ];
+
+    const computeWindow = () => {
+      const now = new Date();
+      const daysAgo = (n) => new Date(now.getTime() - n * 24 * 3600 * 1000).toISOString();
+      if (windowMode === "24h")        return { windowFrom: daysAgo(1),  windowTo: now.toISOString() };
+      if (windowMode === "7d")         return { windowFrom: daysAgo(7),  windowTo: now.toISOString() };
+      if (windowMode === "30d")        return { windowFrom: daysAgo(30), windowTo: now.toISOString() };
+      if (windowMode === "since_last") return { windowFrom: lastRunAt,  windowTo: now.toISOString() };
+      if (windowMode === "custom")     return {
+        windowFrom: customFrom ? new Date(customFrom).toISOString() : null,
+        windowTo:   customTo   ? new Date(customTo).toISOString()   : null,
+      };
+      return { windowFrom: null, windowTo: null };   // full table
+    };
+
+    const needsColumn = windowMode !== "full";
+    const canStart = !needsColumn || partitionColumn.trim().length > 0;
+
+    React.useEffect(() => {
+      if (!configured) return;
       if (window.DTApi && connectionId) {
         const parts      = table.split(".");
         const schemaName = parts.length > 1 ? parts[0] : null;
         const tableName  = parts.length > 1 ? parts.slice(1).join(".") : parts[0];
+        const { windowFrom, windowTo } = computeWindow();
 
         window.DTApi.streamProfiling({
           connectionId, schemaName, tableName,
+          partitionColumn: needsColumn ? partitionColumn.trim() : null,
+          windowFrom, windowTo,
           onProgress: (evt) => {
             const p = evt.progress_pct || 0;
             setPct(p);
@@ -368,7 +415,61 @@
         setTimeout(tick, i === 1 ? 500 : 360);
       };
       tick();
-    }, []);
+    }, [configured]);
+
+    if (!configured) {
+      return (
+        <Card>
+          <SectionTitle icon="calendar-range"
+            sub="Windowed runs scan only recent data — faster and cheaper on large, frequently-updated tables. Full table is always safe as a baseline.">
+            Configure this run
+          </SectionTitle>
+          <Mono style={{ display: "block", margin: "6px 0 16px", color: "var(--fg-2)" }}>{table}</Mono>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))", gap: 8, marginBottom: 16 }}>
+            {WINDOW_PRESETS.map(p => (
+              <button key={p.id} disabled={p.disabled} onClick={() => !p.disabled && setWindowMode(p.id)}
+                style={{
+                  textAlign: "left", padding: "10px 12px", borderRadius: 10,
+                  cursor: p.disabled ? "not-allowed" : "pointer",
+                  border: `1.5px solid ${windowMode === p.id ? "var(--brand)" : "var(--grey-200)"}`,
+                  background: windowMode === p.id ? "var(--blue-50)" : "#fff",
+                  opacity: p.disabled ? 0.45 : 1,
+                }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--fg-1)" }}>{p.label}</div>
+                {p.hint && <div style={{ fontSize: 11, color: "var(--fg-3)", marginTop: 2 }}>{p.hint}</div>}
+              </button>
+            ))}
+          </div>
+          {needsColumn && (
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 8, alignItems: "flex-end" }}>
+              <Input label="Date/timestamp column" placeholder="e.g. order_date, updated_at, created_at"
+                value={partitionColumn} onChange={setPartitionColumn} style={{ flex: 1, minWidth: 240 }} />
+              {windowMode === "custom" && (
+                <>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <label style={{ fontSize: 13, fontWeight: 600, color: "var(--fg-1)" }}>From</label>
+                    <input type="datetime-local" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)}
+                      style={{ padding: "10px 12px", borderRadius: 8, border: "1px solid var(--grey-400)", fontSize: 14, fontFamily: "var(--font-ui)" }} />
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <label style={{ fontSize: 13, fontWeight: 600, color: "var(--fg-1)" }}>To</label>
+                    <input type="datetime-local" value={customTo} onChange={(e) => setCustomTo(e.target.value)}
+                      style={{ padding: "10px 12px", borderRadius: 8, border: "1px solid var(--grey-400)", fontSize: 14, fontFamily: "var(--font-ui)" }} />
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+          {needsColumn && !canStart && (
+            <div style={{ fontSize: 12, color: "var(--amber-600, #d97706)", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
+              <i data-lucide="alert-triangle" style={{ width: 13, height: 13 }}></i>
+              Enter the date/timestamp column to window on — an unknown or missing column falls back to a full-table scan.
+            </div>
+          )}
+          <Button variant="primary" icon="play" disabled={!canStart} onClick={() => setConfigured(true)}>Start profiling</Button>
+        </Card>
+      );
+    }
 
     return (
       <Card>
@@ -401,99 +502,366 @@
     );
   };
 
-  // ── Report ────────────────────────────────────────────────────────────────
+  // ── Report — Agentic Data Quality Workspace ─────────────────────────────────
+  // Small, focused derivation of "why is this column flagged" from fields the
+  // backend actually persists today (null_pct / distinct vs row_count / format).
+  // The profiling agent computes a richer health_reasons list in-memory but it
+  // isn't persisted yet (see backend/app/models/profiling.py ColumnStats) — this
+  // is the honest client-side approximation until that lands.
+  function _columnWhy(c, rowCount) {
+    const reasons = [];
+    if (c.nullPct >= 30) reasons.push(`${c.nullPct}% of rows are missing this value — too high to trust joins or aggregates on it.`);
+    else if (c.nullPct >= 10) reasons.push(`${c.nullPct}% null — above the typical 5% comfort threshold.`);
+    else if (c.nullPct >= 5) reasons.push(`${c.nullPct}% null — worth watching, not yet critical.`);
+    if (rowCount > 0 && c.distinctRaw != null) {
+      const ratio = c.distinctRaw / rowCount;
+      if (ratio >= 0.98 && rowCount > 5) reasons.push("Every value is nearly unique — looks like a candidate key or identifier.");
+      else if (ratio <= 0.02 && rowCount > 20) reasons.push("Very few distinct values relative to row count — likely a flag, status, or category column.");
+    }
+    if (c.format === "MIXED") reasons.push("Inconsistent value formats detected — some rows won't parse the same way as others.");
+    return reasons;
+  }
+
+  const _fmtWhen = (iso) => {
+    if (!iso) return "—";
+    const d = new Date(iso), diffH = (Date.now() - d.getTime()) / 3600000;
+    if (diffH < 1) return "just now";
+    if (diffH < 24) return `${Math.round(diffH)}h ago`;
+    return `${Math.round(diffH / 24)}d ago`;
+  };
+
+  // Icon + label per risk_type — keeps DUPLICATE_KEY / REFERENTIAL_ORPHAN visually
+  // distinct from generic null/format risks in the Risk & Action Center.
+  const RISK_TYPE_META = {
+    DUPLICATE_KEY:       { icon: "copy-x",         label: "Duplicate key" },
+    REFERENTIAL_ORPHAN:  { icon: "unlink",         label: "Referential orphan" },
+    NULL_HIGH:            { icon: "circle-off",     label: "High nulls" },
+    NULL_MODERATE:        { icon: "circle-dashed",  label: "Moderate nulls" },
+    FORMAT_MIXED:         { icon: "shuffle",        label: "Mixed format" },
+  };
+
+  // Renders sample_failed_records (list of {col: value} row dicts) as a compact table
+  const SampleRecordsTable = ({ samples }) => {
+    if (!samples || samples.length === 0) return null;
+    const cols = Object.keys(samples[0]);
+    return (
+      <div style={{ marginTop: 8, overflowX: "auto", border: "1px solid var(--grey-200)", borderRadius: 8 }}>
+        <table style={{ width: "100%", fontSize: 11.5, borderCollapse: "collapse" }}>
+          <thead>
+            <tr style={{ background: "var(--grey-50)" }}>
+              {cols.map(c => (
+                <th key={c} style={{ textAlign: "left", padding: "5px 8px", fontWeight: 700, color: "var(--fg-2)", borderBottom: "1px solid var(--grey-200)" }}>{c}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {samples.map((row, i) => (
+              <tr key={i} style={{ borderTop: i > 0 ? "1px solid var(--grey-100)" : "none" }}>
+                {cols.map(c => (
+                  <td key={c} style={{ padding: "5px 8px", fontFamily: "var(--font-mono, monospace)", color: "var(--fg-1)" }}>
+                    {row[c] === null || row[c] === undefined ? <span style={{ color: "var(--fg-3)" }}>null</span> : String(row[c])}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
+  const MiniSpinner = () => (
+    <span className="dt-spin" style={{ width: 13, height: 13, border: "2px solid var(--grey-200)",
+      borderTopColor: "var(--fg-3)", borderRadius: "50%", display: "inline-block" }}></span>
+  );
+
+  // Tiny inline trend arrow for score/dimension tiles
+  const TrendArrow = ({ delta, invert }) => {
+    if (delta == null || delta === 0) return <span style={{ fontSize: 11, color: "var(--fg-3)" }}>· steady</span>;
+    const good = invert ? delta < 0 : delta > 0;
+    return (
+      <span style={{ fontSize: 11, fontWeight: 700, color: good ? "var(--green-600)" : "var(--red-500)" }}>
+        {delta > 0 ? "↑" : "↓"} {Math.abs(delta)}
+      </span>
+    );
+  };
+
   const Report = ({ onReprofile, onBack, report, tableName }) => {
-    const { go, setProfilingDone } = useApp();
-    const [notes,    setNotes]    = React.useState({});
-    const [flagged,  setFlagged]  = React.useState({});
-    const [openNote, setOpenNote] = React.useState(null);
+    const { go, setProfilingDone, activeConnectionId, activeConnectionName, setActiveTableFqn } = useApp();
+    const [risks, setRisks] = React.useState([]);
+    const [history, setHistory] = React.useState(null);   // {runs:[...], delta:{...}} | null while loading
+    const [context, setContext] = React.useState(null);   // cross-module signals | null while loading
+    const [expandedCol, setExpandedCol] = React.useState(null);
+    const [showSuppressed, setShowSuppressed] = React.useState(false);
+    const [riskBusy, setRiskBusy] = React.useState({});
+    const [openRiskNote, setOpenRiskNote] = React.useState(null);
+    const [openRiskSamples, setOpenRiskSamples] = React.useState({});
+    const [riskNoteDraft, setRiskNoteDraft] = React.useState({});
+    const [colSort, setColSort] = React.useState({ key: "health", dir: 1 });
     useIcons();
 
     const currentUser = React.useMemo(() => {
-      try { return JSON.parse(sessionStorage.getItem("dt_user") || "{}").name || "User"; } catch (_) { return "User"; }
+      try { return JSON.parse(sessionStorage.getItem("dt_user") || "{}").email || JSON.parse(sessionStorage.getItem("dt_user") || "{}").name || "User"; } catch (_) { return "User"; }
     }, []);
 
     const score    = report?.quality_score ?? 0;
     const table    = report?.table_fqn    || tableName || "selected table";
+    const rowCountRaw = report?.row_count || 0;
     const rowCount = report?.row_count    ? Number(report.row_count).toLocaleString() : "—";
     const runAt    = report?.run_at       ? new Date(report.run_at).toLocaleString() : "—";
     const layer    = report?.layer        || table.split(".")[0]?.toUpperCase() || "UNKNOWN";
+    const reportId = report?.report_id;
 
-    // Summary dimension tiles
+    // Fetch trend history + cross-module context once we have a real report to anchor them to
+    React.useEffect(() => {
+      setHistory(null); setContext(null);
+      if (!table || table === "selected table" || !window.DTApi) return;
+      if (window.DTApi.getReportHistory) {
+        window.DTApi.getReportHistory(table, activeConnectionId, 14)
+          .then(setHistory).catch(() => setHistory({ runs: [], delta: null }));
+      }
+      if (reportId && window.DTApi.getReportContext) {
+        window.DTApi.getReportContext(reportId)
+          .then(setContext).catch(() => setContext(null));
+      }
+    }, [reportId, table]);
+
+    // Risks — now carrying real risk_id + persisted suppress/note state from the backend
+    React.useEffect(() => {
+      setRisks((report?.risks_flagged || []).map((r, i) => ({
+        id: `R${i + 1}`, riskId: r.risk_id || null,
+        sev: r.severity || "MEDIUM",
+        type: r.risk_type || null,
+        title: r.title || (r.risk_type || "").replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()) || "Data Quality Risk",
+        body: r.description || "", col: r.column_name || "—",
+        suppressed: !!r.is_suppressed, suppressedBy: r.suppressed_by || null,
+        suppressionReason: r.suppression_reason || null, note: r.note || null,
+        samples: Array.isArray(r.sample_failed_records) ? r.sample_failed_records : [],
+      })));
+    }, [report]);
+
+    // Summary dimension tiles — now trend-aware via history.delta
+    const dimDeltas = history?.delta || {};
     const summaryTiles = report?.summary_stats
-      ? Object.entries(report.summary_stats).map(([k, v]) => ({ k: k.replace(/_/g, " "), v: String(v) }))
+      ? Object.entries(report.summary_stats)
+          .filter(([k]) => k !== "quality_score" && k !== "row_count" && k !== "total_columns")
+          .map(([k, v]) => ({ k: k.replace(/_/g, " "), v: String(v) }))
       : [];
 
-    // Column health — includes ALL stored fields from backend (min/max/mean/pii/note)
-    const columns = (report?.column_stats || []).map(c => ({
-      name:     c.column_name,
-      dataType: c.data_type     || "TEXT",
-      nullPct:  c.null_pct      || 0,
-      distinct: c.distinct_count != null ? Number(c.distinct_count).toLocaleString() : "—",
-      format:   c.detected_format || "—",
-      cde:      c.is_cde  || false,
-      pii:      c.is_pii  || false,
-      piiType:  c.pii_type || null,
-      health:   c.health   || (c.null_pct > 10 ? "CRIT" : c.null_pct > 5 ? "WARN" : "HEALTHY"),
-      score:    c.quality_score || 0,
-      note:     c.note     || null,
-      minVal:   c.min_value  != null ? String(c.min_value)              : null,
-      maxVal:   c.max_value  != null ? String(c.max_value)              : null,
-      meanVal:  c.mean_value != null ? Number(c.mean_value).toFixed(2)  : null,
-    }));
+    // Column health — includes ALL stored fields from backend (min/max/mean/pii/note/sample_values)
+    const columns = (report?.column_stats || []).map(c => {
+      const nullPct = c.null_pct || 0;
+      const cObj = {
+        name:     c.column_name,
+        dataType: c.data_type     || "TEXT",
+        nullPct,
+        distinctRaw: c.distinct_count,
+        distinct: c.distinct_count != null ? Number(c.distinct_count).toLocaleString() : "—",
+        format:   c.detected_format || "—",
+        cde:      c.is_cde  || false,
+        pii:      c.is_pii  || false,
+        piiType:  c.pii_type || null,
+        health:   c.health   || (nullPct > 10 ? "CRIT" : nullPct > 5 ? "WARN" : "HEALTHY"),
+        score:    c.quality_score || 0,
+        note:     c.note     || null,
+        minVal:   c.min_value  != null ? String(c.min_value)              : null,
+        maxVal:   c.max_value  != null ? String(c.max_value)              : null,
+        meanVal:  c.mean_value != null ? Number(c.mean_value).toFixed(2)  : null,
+        stdDev:   c.std_dev    != null ? Number(c.std_dev).toFixed(2)     : null,
+        topValues: Array.isArray(c.sample_values) ? c.sample_values.slice(0, 8) : [],
+      };
+      cObj.why = _columnWhy(cObj, rowCountRaw);
+      const rc = context?.rules?.by_column?.[c.column_name];
+      cObj.ruleTotal = rc?.total || 0;
+      cObj.ruleActive = rc?.active || 0;
+      cObj.hasDictEntry = !!context?.dictionary_by_column?.[c.column_name];
+      return cObj;
+    });
 
-    // Risks
-    const risks = (report?.risks_flagged || []).map((r, i) => ({
-      id:  `R${i + 1}`,
-      sev: r.severity || "MEDIUM",
-      title: r.title || (r.risk_type || "").replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()) || "Data Quality Risk",
-      body: r.description || "",
-      col:  r.column_name  || "—",
-    }));
+    const HEALTH_RANK = { CRIT: 0, WARN: 1, HEALTHY: 2 };
+    const sortedColumns = [...columns].sort((a, b) => {
+      const { key, dir } = colSort;
+      let av, bv;
+      if (key === "health") { av = HEALTH_RANK[a.health] ?? 3; bv = HEALTH_RANK[b.health] ?? 3; }
+      else if (key === "nullPct") { av = a.nullPct; bv = b.nullPct; }
+      else if (key === "rules") { av = a.ruleActive; bv = b.ruleActive; }
+      else { av = (a.name || "").toLowerCase(); bv = (b.name || "").toLowerCase(); }
+      if (av < bv) return -1 * dir; if (av > bv) return 1 * dir; return 0;
+    });
+    const toggleSort = (key) => setColSort(s => s.key === key ? { key, dir: -s.dir } : { key, dir: 1 });
+
+    const visibleRisks = risks.filter(r => showSuppressed || !r.suppressed);
+    const suppressedCount = risks.filter(r => r.suppressed).length;
+    const critCount = columns.filter(c => c.health === "CRIT").length;
+    const warnCount = columns.filter(c => c.health === "WARN").length;
+    const noRuleCount = columns.filter(c => c.ruleTotal === 0).length;
+
+    // ── Risk actions — real persistence, not local-state theater ─────────────
+    const doSuppress = async (r) => {
+      if (!r.riskId) { toast("This risk predates risk-level tracking — re-profile to enable actions on it", { kind: "info" }); return; }
+      setRiskBusy(b => ({ ...b, [r.id]: true }));
+      try {
+        await window.DTApi.suppressRisk(r.riskId, r.suppressionReason);
+        setRisks(rs => rs.map(x => x.id === r.id ? { ...x, suppressed: true, suppressedBy: currentUser } : x));
+        toast(`${r.id} suppressed — logged to audit trail`, { kind: "info" });
+      } catch (e) { toast(e?.message || "Suppress failed", { kind: "error" }); }
+      setRiskBusy(b => ({ ...b, [r.id]: false }));
+    };
+    const doUnsuppress = async (r) => {
+      if (!r.riskId) return;
+      setRiskBusy(b => ({ ...b, [r.id]: true }));
+      try {
+        await window.DTApi.unsuppressRisk(r.riskId);
+        setRisks(rs => rs.map(x => x.id === r.id ? { ...x, suppressed: false, suppressedBy: null } : x));
+        toast(`${r.id} restored to active risks`, { kind: "success" });
+      } catch (e) { toast(e?.message || "Restore failed", { kind: "error" }); }
+      setRiskBusy(b => ({ ...b, [r.id]: false }));
+    };
+    const saveRiskNote = async (r) => {
+      const note = (riskNoteDraft[r.id] || "").trim();
+      if (!note || !r.riskId) { setOpenRiskNote(null); return; }
+      setRiskBusy(b => ({ ...b, [r.id]: true }));
+      try {
+        await window.DTApi.noteRisk(r.riskId, note);
+        setRisks(rs => rs.map(x => x.id === r.id ? { ...x, note } : x));
+        toast("Note saved to audit trail", { kind: "success" });
+      } catch (e) { toast(e?.message || "Note failed", { kind: "error" }); }
+      setOpenRiskNote(null);
+      setRiskBusy(b => ({ ...b, [r.id]: false }));
+    };
+    const createTaskFromRisk = async (r) => {
+      if (!window.DTApi?.createTask) return;
+      setRiskBusy(b => ({ ...b, [r.id]: true }));
+      try {
+        await window.DTApi.createTask({
+          title: `Investigate: ${r.title} (${table})`,
+          description: r.body || null,
+          priority: r.sev === "CRITICAL" ? "CRITICAL" : r.sev === "HIGH" ? "HIGH" : "MEDIUM",
+          owner: currentUser,
+          related_entity_type: "profiling_risk",
+          related_entity_id: r.riskId || `${table}:${r.col}`,
+          connection_id: activeConnectionId || null,
+        });
+        toast("Task created — find it on the Task Board", { kind: "success" });
+      } catch (e) { toast(e?.message || "Task creation failed", { kind: "error" }); }
+      setRiskBusy(b => ({ ...b, [r.id]: false }));
+    };
+
+    const goToRules = () => { setActiveTableFqn?.(table); setProfilingDone(true); go("rules"); };
+    const goToAnomalies = () => { setActiveTableFqn?.(table); go("anomalies"); };
+    const goToImpact = () => { setActiveTableFqn?.(table); go("impact"); };
+    const goToDictionary = () => { setActiveTableFqn?.(table); setProfilingDone(true); go("metadata"); };
+
+    const promoteToCde = async (colName) => {
+      const colId = context?.dictionary_by_column?.[colName];
+      if (!colId) {
+        toast(`${colName} isn't in the data dictionary yet — enrich metadata first, then promote it to a CDE`, { kind: "info" });
+        goToDictionary();
+        return;
+      }
+      try {
+        await window.DTApi.cdePromote(colId, "promote", { promoted_by: currentUser });
+        toast(`${colName} promoted to Critical Data Element`, { kind: "success" });
+      } catch (e) { toast(e?.message || "Promote failed", { kind: "error" }); }
+    };
+
+    // History chart data (score over time) — LineChart divides by (n-1), needs 2+ points
+    const scoreSeries = (history?.runs || []).map(r => ({ value: Math.round(r.quality_score) }));
+    const rowSeries = (history?.runs || []).map(r => r.row_count);
 
     return (
       <div className="dt-fade-up">
-        {/* Header */}
+        {/* ── Header: identity, live trend, primary actions ─────────────────── */}
         <Card style={{ marginBottom: 16, background: "linear-gradient(180deg,#fff,var(--grey-50))" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap" }}>
-            <ScoreRing score={score} size={100} stroke={9} sublabel="of 100" />
+            <div style={{ position: "relative" }}>
+              <ScoreRing score={score} size={100} stroke={9} sublabel="of 100" />
+            </div>
             <div style={{ flex: 1, minWidth: 220 }}>
-              <Eyebrow>Profiling report</Eyebrow>
+              <Eyebrow>Data quality workspace{activeConnectionName ? ` · ${activeConnectionName}` : ""}</Eyebrow>
               <Mono style={{ fontSize: 16, fontWeight: 700, display: "block", margin: "4px 0 6px" }}>{table}</Mono>
-              <div style={{ display: "flex", gap: 14, fontSize: 12.5, color: "var(--fg-2)", flexWrap: "wrap" }}>
-                <span>Run <strong style={{ color: "var(--fg-1)" }}>{runAt}</strong></span>
+              <div style={{ display: "flex", gap: 14, fontSize: 12.5, color: "var(--fg-2)", flexWrap: "wrap", alignItems: "center" }}>
+                <span>Run <strong style={{ color: "var(--fg-1)" }}>{_fmtWhen(report?.run_at)}</strong></span>
                 <span>·</span>
-                <span><strong style={{ color: "var(--fg-1)" }}>{rowCount}</strong> rows</span>
+                <span><strong style={{ color: "var(--fg-1)" }}>{rowCount}</strong> rows
+                  {dimDeltas.row_count_delta_pct != null && dimDeltas.row_count_delta_pct !== 0 && (
+                    <span style={{ marginLeft: 5, fontWeight: 700, color: Math.abs(dimDeltas.row_count_delta_pct) >= 20 ? "var(--red-500)" : "var(--fg-3)" }}>
+                      ({dimDeltas.row_count_delta_pct > 0 ? "+" : ""}{dimDeltas.row_count_delta_pct}%)
+                    </span>
+                  )}
+                </span>
                 <span>·</span>
                 <LayerPill layer={layer} size="sm" />
-                {columns.length > 0 && (
-                  <><span>·</span>
-                  <span><strong style={{ color: "var(--fg-1)" }}>{columns.length}</strong> columns</span></>
+                {columns.length > 0 && (<><span>·</span><span><strong style={{ color: "var(--fg-1)" }}>{columns.length}</strong> columns</span></>)}
+                {report?.is_partial_scan && (
+                  <>
+                    <span>·</span>
+                    <Chip size="sm" intent="warning" icon="scan-line"
+                      title={`Windowed on ${report.partition_column}: ${report.window_from ? new Date(report.window_from).toLocaleString() : "—"} → ${report.window_to ? new Date(report.window_to).toLocaleString() : "now"}`}>
+                      Partial scan
+                    </Chip>
+                  </>
+                )}
+                {dimDeltas.score_delta != null && (
+                  <>
+                    <span>·</span>
+                    <span style={{ fontWeight: 700, color: dimDeltas.score_delta > 0 ? "var(--green-600)" : dimDeltas.score_delta < 0 ? "var(--red-500)" : "var(--fg-3)" }}>
+                      {dimDeltas.score_delta > 0 ? "↑" : dimDeltas.score_delta < 0 ? "↓" : "→"} {Math.abs(dimDeltas.score_delta)} vs last run
+                    </span>
+                  </>
                 )}
               </div>
             </div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {onBack && (
-                <Button variant="ghost" icon="arrow-left" size="sm" onClick={onBack}>Back to list</Button>
-              )}
+              {onBack && <Button variant="ghost" icon="arrow-left" size="sm" onClick={onBack}>Back to list</Button>}
               <Button variant="outline" icon="refresh-cw" size="sm" onClick={onReprofile}>Re-profile</Button>
+              <Button variant="primary" icon="sparkles" size="sm" onClick={goToRules}>Generate rules</Button>
             </div>
           </div>
         </Card>
 
-        {/* Dimension score tiles */}
-        {summaryTiles.length > 0 && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12, marginBottom: 16 }}>
-            {summaryTiles.map((m) => (
-              <Card key={m.k} pad={14}>
-                <div style={{ fontSize: 11.5, color: "var(--fg-2)", fontWeight: 600, marginBottom: 6, textTransform: "capitalize" }}>{m.k}</div>
-                <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 19, color: "var(--fg-1)" }}>{m.v}</div>
-              </Card>
-            ))}
-          </div>
+        {/* ── Since-last-run drift banner ────────────────────────────────────── */}
+        {history?.runs?.length === 1 && (
+          <Card style={{ marginBottom: 16, padding: "10px 16px", background: "var(--blue-50)", border: "1px solid var(--blue-100)", display: "flex", gap: 10, alignItems: "center", fontSize: 12.5 }}>
+            <i data-lucide="flag" style={{ width: 15, height: 15, color: "var(--brand)" }}></i>
+            <span><strong>Baseline established.</strong> This is the first profiling run for this table — future runs will show trend and drift against this one.</span>
+          </Card>
+        )}
+        {history?.delta && (Math.abs(history.delta.score_delta) >= 3 || (history.delta.row_count_delta_pct != null && Math.abs(history.delta.row_count_delta_pct) >= 15)) && (
+          <Card style={{ marginBottom: 16, padding: "10px 16px", background: history.delta.score_delta < 0 || (history.delta.row_count_delta_pct||0) < -15 ? "var(--red-50)" : "var(--green-50, #f0fdf4)",
+            border: `1px solid ${history.delta.score_delta < 0 ? "var(--red-200)" : "var(--green-200, #bbf7d0)"}`, display: "flex", gap: 10, alignItems: "center", fontSize: 12.5, flexWrap: "wrap" }}>
+            <i data-lucide={history.delta.score_delta < 0 ? "trending-down" : "trending-up"} style={{ width: 15, height: 15, color: history.delta.score_delta < 0 ? "var(--red-500)" : "var(--green-600)" }}></i>
+            <span>
+              <strong>Since the last run ({_fmtWhen(history.delta.prev_run_at)}):</strong>{" "}
+              score {history.delta.score_delta > 0 ? "improved" : "declined"} by {Math.abs(history.delta.score_delta)} points
+              {history.delta.row_count_delta_pct != null && Math.abs(history.delta.row_count_delta_pct) >= 15 && (
+                <> · row count {history.delta.row_count_delta > 0 ? "grew" : "dropped"} {Math.abs(history.delta.row_count_delta_pct)}%
+                {history.delta.row_count_delta_pct <= -15 ? " — check for a silent ingestion failure" : ""}</>
+              )}
+            </span>
+          </Card>
+        )}
+        {report?.schema_drift?.has_drift && (
+          <Card style={{ marginBottom: 16, padding: "10px 16px", background: "var(--amber-50, #fffbeb)",
+            border: "1px solid var(--amber-200, #fde68a)", display: "flex", gap: 10, alignItems: "flex-start", fontSize: 12.5, flexWrap: "wrap" }}>
+            <i data-lucide="git-compare" style={{ width: 15, height: 15, color: "var(--amber-600, #d97706)", marginTop: 1, flexShrink: 0 }}></i>
+            <span>
+              <strong>Schema drift detected</strong> since the last run ({_fmtWhen(history?.delta?.prev_run_at)}).
+              {report.schema_drift.added.length > 0 && (
+                <> · <strong>{report.schema_drift.added.length}</strong> column{report.schema_drift.added.length !== 1 ? "s" : ""} added: <Mono style={{ fontSize: 11.5 }}>{report.schema_drift.added.join(", ")}</Mono></>
+              )}
+              {report.schema_drift.dropped.length > 0 && (
+                <> · <strong>{report.schema_drift.dropped.length}</strong> column{report.schema_drift.dropped.length !== 1 ? "s" : ""} dropped: <Mono style={{ fontSize: 11.5 }}>{report.schema_drift.dropped.join(", ")}</Mono></>
+              )}
+              {report.schema_drift.type_changed.length > 0 && (
+                <> · <strong>{report.schema_drift.type_changed.length}</strong> type change{report.schema_drift.type_changed.length !== 1 ? "s" : ""}: {report.schema_drift.type_changed.map(t => `${t.column} (${t.old_type}→${t.new_type})`).join(", ")}</>
+              )}
+              {" "}Downstream rules and pipelines referencing changed columns may break — review before promoting this table.
+            </span>
+          </Card>
         )}
 
-        {/* AI narrative summary */}
+        {/* ── AI narrative summary ───────────────────────────────────────────── */}
         {report?.summary_text && (
           <Card style={{ marginBottom: 16, background: "var(--blue-50)", border: "1px solid var(--blue-100)" }}>
             <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
@@ -503,159 +871,311 @@
                   <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
                 </svg>
               </div>
-              <div>
+              <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: "var(--blue-700)", textTransform: "uppercase",
-                  letterSpacing: 0.5, marginBottom: 4 }}>AI summary</div>
+                  letterSpacing: 0.5, marginBottom: 4 }}>Steward briefing — AI-generated</div>
                 <div style={{ fontSize: 13.5, color: "var(--fg-1)", lineHeight: 1.65 }}>{report.summary_text}</div>
               </div>
             </div>
           </Card>
         )}
 
-        {/* Column health table */}
+        {/* ── Cross-module signal bar — the "workspace" part ─────────────────── */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 12, marginBottom: 16 }}>
+          <button onClick={goToRules} style={{ textAlign: "left", cursor: "pointer", border: "1px solid var(--grey-100)", borderRadius: 12, padding: 14, background: "#fff" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 6 }}>
+              <i data-lucide="shield-check" style={{ width: 14, height: 14, color: "var(--brand)" }}></i>
+              <span style={{ fontSize: 11, fontWeight: 700, color: "var(--fg-3)", textTransform: "uppercase" }}>Rule coverage</span>
+            </div>
+            {context ? (
+              <>
+                <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20 }}>{context.rules.active}<span style={{ fontSize: 13, color: "var(--fg-3)", fontWeight: 500 }}>/{context.rules.total} active</span></div>
+                <div style={{ fontSize: 11.5, color: noRuleCount > 0 ? "var(--yellow-700)" : "var(--fg-3)", marginTop: 2 }}>{noRuleCount > 0 ? `${noRuleCount} column${noRuleCount === 1 ? "" : "s"} with no rules →` : "Every column covered →"}</div>
+              </>
+            ) : <MiniSpinner />}
+          </button>
+          <button onClick={goToAnomalies} style={{ textAlign: "left", cursor: "pointer", border: "1px solid var(--grey-100)", borderRadius: 12, padding: 14, background: "#fff" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 6 }}>
+              <i data-lucide="radar" style={{ width: 14, height: 14, color: "var(--orange-500)" }}></i>
+              <span style={{ fontSize: 11, fontWeight: 700, color: "var(--fg-3)", textTransform: "uppercase" }}>Open anomalies</span>
+            </div>
+            {context ? (
+              <>
+                <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, color: context.anomalies.open_total > 0 ? "var(--red-500)" : "var(--fg-1)" }}>{context.anomalies.open_total}</div>
+                <div style={{ fontSize: 11.5, color: "var(--fg-3)", marginTop: 2 }}>{context.anomalies.top[0] ? `${context.anomalies.top[0].type} · ${context.anomalies.top[0].severity} →` : "None on this table →"}</div>
+              </>
+            ) : <MiniSpinner />}
+          </button>
+          <button onClick={goToDictionary} style={{ textAlign: "left", cursor: "pointer", border: "1px solid var(--grey-100)", borderRadius: 12, padding: 14, background: "#fff" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 6 }}>
+              <i data-lucide="book-open" style={{ width: 14, height: 14, color: "var(--purple-600, #7c3aed)" }}></i>
+              <span style={{ fontSize: 11, fontWeight: 700, color: "var(--fg-3)", textTransform: "uppercase" }}>CDEs &amp; dictionary</span>
+            </div>
+            {context ? (
+              <>
+                <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20 }}>{context.cdes.length}</div>
+                <div style={{ fontSize: 11.5, color: "var(--fg-3)", marginTop: 2 }}>{Object.keys(context.dictionary_by_column).length}/{columns.length} columns catalogued →</div>
+              </>
+            ) : <MiniSpinner />}
+          </button>
+          <button onClick={goToImpact} style={{ textAlign: "left", cursor: "pointer", border: "1px solid var(--grey-100)", borderRadius: 12, padding: 14, background: "#fff" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 6 }}>
+              <i data-lucide="network" style={{ width: 14, height: 14, color: "var(--navy-500)" }}></i>
+              <span style={{ fontSize: 11, fontWeight: 700, color: "var(--fg-3)", textTransform: "uppercase" }}>Downstream impact</span>
+            </div>
+            <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20 }}>—</div>
+            <div style={{ fontSize: 11.5, color: "var(--fg-3)", marginTop: 2 }}>Open Impact Graph →</div>
+          </button>
+          {context && context.open_tasks > 0 && (
+            <button onClick={() => go("tasks")} style={{ textAlign: "left", cursor: "pointer", border: "1px solid var(--grey-100)", borderRadius: 12, padding: 14, background: "#fff" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 6 }}>
+                <i data-lucide="list-checks" style={{ width: 14, height: 14, color: "var(--yellow-600)" }}></i>
+                <span style={{ fontSize: 11, fontWeight: 700, color: "var(--fg-3)", textTransform: "uppercase" }}>Open tasks</span>
+              </div>
+              <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20 }}>{context.open_tasks}</div>
+              <div style={{ fontSize: 11.5, color: "var(--fg-3)", marginTop: 2 }}>View task board →</div>
+            </button>
+          )}
+        </div>
+
+        {/* ── Dimension score tiles with trend sparklines ────────────────────── */}
+        {summaryTiles.length > 0 && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, marginBottom: 16 }}>
+            {summaryTiles.map((m) => (
+              <Card key={m.k} pad={14}>
+                <div style={{ fontSize: 11.5, color: "var(--fg-2)", fontWeight: 600, marginBottom: 6, textTransform: "capitalize" }}>{m.k}</div>
+                <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 19, color: "var(--fg-1)" }}>{m.v}</div>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {/* ── Score trend chart ───────────────────────────────────────────────── */}
+        {scoreSeries.length >= 2 && (
+          <Card style={{ marginBottom: 16 }}>
+            <SectionTitle icon="trending-up" sub={`Quality score across the last ${scoreSeries.length} profiling runs`}>Trend</SectionTitle>
+            <LineChart data={scoreSeries} height={110} color="var(--brand)" yMin={Math.max(0, Math.min(...scoreSeries.map(d => d.value)) - 10)} yMax={100} />
+          </Card>
+        )}
+
+        {/* ── Column Intelligence Grid ────────────────────────────────────────── */}
         <Card style={{ marginBottom: 16, padding: 0, overflow: "hidden" }}>
-          <div style={{ padding: "16px 20px" }}>
-            <SectionTitle icon="columns-3">
-              Column health
-              <span style={{ fontSize: 12, color: "var(--fg-3)", fontWeight: 400, marginLeft: 8 }}>
-                ({columns.length} column{columns.length !== 1 ? "s" : ""})
-              </span>
+          <div style={{ padding: "16px 20px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            <SectionTitle icon="columns-3" sub={`${critCount} critical · ${warnCount} warning · ${noRuleCount} with no rules`}>
+              Column intelligence
+              <span style={{ fontSize: 12, color: "var(--fg-3)", fontWeight: 400, marginLeft: 8 }}>({columns.length} columns)</span>
             </SectionTitle>
           </div>
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
               <thead>
                 <tr style={{ background: "var(--grey-50)", textAlign: "left" }}>
-                  {["Column", "Type", "Null %", "Distinct", "Min", "Max", "Mean", "Format", "Tags", "Health"].map((h, i) => (
-                    <th key={h} style={{ padding: "9px 16px", fontSize: 11, fontWeight: 700, color: "var(--fg-2)",
-                      textTransform: "uppercase", letterSpacing: ".04em",
-                      textAlign: i === 2 ? "right" : "left", whiteSpace: "nowrap" }}>{h}</th>
+                  {[["Column", "name"], ["Type", null], ["Null %", "nullPct"], ["Distinct", null], ["Format", null], ["Tags", null], ["Rules", "rules"], ["Health", "health"], ["", null]].map(([h, sortKey]) => (
+                    <th key={h || "actions"} onClick={sortKey ? () => toggleSort(sortKey) : undefined}
+                      style={{ padding: "9px 16px", fontSize: 11, fontWeight: 700, color: "var(--fg-2)",
+                        textTransform: "uppercase", letterSpacing: ".04em", whiteSpace: "nowrap",
+                        cursor: sortKey ? "pointer" : "default", userSelect: "none" }}>
+                      {h}{sortKey && colSort.key === sortKey ? (colSort.dir === 1 ? " ↑" : " ↓") : ""}
+                    </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {columns.map((c) => (
-                  <tr key={c.name} style={{ borderTop: "1px solid var(--grey-100)",
-                    background: c.health === "CRIT" ? "var(--red-50)" : "transparent" }}>
-                    <td style={{ padding: "9px 16px" }}>
-                      <Mono style={{ fontWeight: (c.cde || c.pii) ? 700 : 500 }}>{c.name}</Mono>
-                      {c.note && (
-                        <i data-lucide="info" title={c.note}
-                          style={{ width: 12, height: 12, color: "var(--brand)", marginLeft: 6, verticalAlign: "middle" }}></i>
-                      )}
-                    </td>
-                    <td style={{ padding: "9px 16px", color: "var(--fg-3)", fontSize: 11.5 }}>{c.dataType}</td>
-                    <td style={{ padding: "9px 16px", textAlign: "right",
-                      fontWeight: c.nullPct > 10 ? 700 : 500,
-                      color: c.nullPct > 10 ? "var(--red-500)" : c.nullPct > 5 ? "var(--yellow-700)" : "var(--fg-1)" }}>
-                      {c.nullPct}%
-                    </td>
-                    <td style={{ padding: "9px 16px", color: "var(--fg-2)" }}>{c.distinct}</td>
-                    <td style={{ padding: "9px 16px", color: "var(--fg-2)", fontSize: 12,
-                      maxWidth: 110, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-                      title={c.minVal || ""}>{c.minVal ?? "—"}</td>
-                    <td style={{ padding: "9px 16px", color: "var(--fg-2)", fontSize: 12,
-                      maxWidth: 110, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-                      title={c.maxVal || ""}>{c.maxVal ?? "—"}</td>
-                    <td style={{ padding: "9px 16px", color: "var(--fg-2)", fontSize: 12 }}>{c.meanVal ?? "—"}</td>
-                    <td style={{ padding: "9px 16px", color: "var(--fg-2)", fontSize: 12 }}>{c.format}</td>
-                    <td style={{ padding: "9px 16px" }}>
-                      <div style={{ display: "flex", gap: 4, alignItems: "center", flexWrap: "nowrap" }}>
-                        {c.cde && <Chip intent="brand" size="sm" dot>CDE</Chip>}
-                        {c.pii && <Chip intent="error" size="sm" dot title={c.piiType || "PII"}>PII</Chip>}
-                        {!c.cde && !c.pii && <span style={{ color: "var(--fg-3)" }}>—</span>}
-                      </div>
-                    </td>
-                    <td style={{ padding: "9px 16px" }}>
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                        <Health status={c.health} />
-                        <span style={{ fontSize: 11.5, color: "var(--fg-2)" }}>{c.health}</span>
-                      </span>
-                    </td>
-                  </tr>
+                {sortedColumns.map((c) => (
+                  <React.Fragment key={c.name}>
+                    <tr onClick={() => setExpandedCol(x => x === c.name ? null : c.name)}
+                      style={{ borderTop: "1px solid var(--grey-100)", cursor: "pointer",
+                        background: c.health === "CRIT" ? "var(--red-50)" : expandedCol === c.name ? "var(--grey-50)" : "transparent" }}>
+                      <td style={{ padding: "9px 16px" }}>
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--fg-3)" strokeWidth="3" style={{ transform: expandedCol === c.name ? "rotate(90deg)" : "none", transition: "transform 120ms", flexShrink: 0 }}><polyline points="9 18 15 12 9 6"/></svg>
+                          <Mono style={{ fontWeight: (c.cde || c.pii) ? 700 : 500 }}>{c.name}</Mono>
+                          {c.note && <i data-lucide="info" title={c.note} style={{ width: 12, height: 12, color: "var(--brand)" }}></i>}
+                        </span>
+                      </td>
+                      <td style={{ padding: "9px 16px", color: "var(--fg-3)", fontSize: 11.5 }}>{c.dataType}</td>
+                      <td style={{ padding: "9px 16px",
+                        fontWeight: c.nullPct > 10 ? 700 : 500,
+                        color: c.nullPct > 10 ? "var(--red-500)" : c.nullPct > 5 ? "var(--yellow-700)" : "var(--fg-1)" }}>
+                        {c.nullPct}%
+                      </td>
+                      <td style={{ padding: "9px 16px", color: "var(--fg-2)" }}>{c.distinct}</td>
+                      <td style={{ padding: "9px 16px", color: "var(--fg-2)", fontSize: 12 }}>{c.format}</td>
+                      <td style={{ padding: "9px 16px" }}>
+                        <div style={{ display: "flex", gap: 4, alignItems: "center", flexWrap: "nowrap" }}>
+                          {c.cde && <Chip intent="brand" size="sm" dot>CDE</Chip>}
+                          {c.pii && <Chip intent="error" size="sm" dot title={c.piiType || "PII"}>PII</Chip>}
+                          {!c.cde && !c.pii && <span style={{ color: "var(--fg-3)" }}>—</span>}
+                        </div>
+                      </td>
+                      <td style={{ padding: "9px 16px" }}>
+                        {c.ruleTotal === 0
+                          ? <Chip intent="warning" size="sm">No rules</Chip>
+                          : <span style={{ fontSize: 12, color: "var(--fg-2)" }}>{c.ruleActive}/{c.ruleTotal} active</span>}
+                      </td>
+                      <td style={{ padding: "9px 16px" }}>
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                          <Health status={c.health} /><span style={{ fontSize: 11.5, color: "var(--fg-2)" }}>{c.health}</span>
+                        </span>
+                      </td>
+                      <td style={{ padding: "9px 16px" }} onClick={e => e.stopPropagation()}>
+                        <div style={{ display: "flex", gap: 4 }}>
+                          {c.ruleTotal === 0 && (
+                            <button onClick={goToRules} title="Generate a rule for this column"
+                              style={{ background: "none", border: "1px solid var(--brand-ring)", borderRadius: 6, padding: "3px 7px", cursor: "pointer", color: "var(--brand)", fontSize: 11 }}>+ Rule</button>
+                          )}
+                          {!c.cde && (
+                            <button onClick={() => promoteToCde(c.name)} title="Promote to Critical Data Element"
+                              style={{ background: "none", border: "1px solid var(--grey-200)", borderRadius: 6, padding: "3px 7px", cursor: "pointer", color: "var(--fg-2)", fontSize: 11 }}>+ CDE</button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                    {expandedCol === c.name && (
+                      <tr>
+                        <td colSpan={9} style={{ padding: "14px 20px 18px 42px", background: "var(--grey-25, #fafafa)", borderTop: "1px dashed var(--grey-200)" }}>
+                          <div style={{ display: "flex", gap: 28, flexWrap: "wrap" }}>
+                            <div style={{ display: "flex", gap: 20 }}>
+                              {[["Min", c.minVal], ["Max", c.maxVal], ["Mean", c.meanVal], ["Std dev", c.stdDev]].filter(([, v]) => v != null).map(([k, v]) => (
+                                <div key={k}>
+                                  <div style={{ fontSize: 10.5, color: "var(--fg-3)", textTransform: "uppercase" }}>{k}</div>
+                                  <div style={{ fontSize: 13, fontWeight: 700, fontFamily: "var(--font-display)" }}>{v}</div>
+                                </div>
+                              ))}
+                            </div>
+                            {c.topValues.length > 0 && (
+                              <div style={{ flex: 1, minWidth: 220 }}>
+                                <div style={{ fontSize: 10.5, color: "var(--fg-3)", textTransform: "uppercase", marginBottom: 6 }}>Most frequent values</div>
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                                  {c.topValues.map((v, i) => <Mono key={i} style={{ fontSize: 11, background: "#fff", border: "1px solid var(--grey-200)", borderRadius: 6, padding: "3px 8px" }}>{String(v)}</Mono>)}
+                                </div>
+                              </div>
+                            )}
+                            {c.why.length > 0 && (
+                              <div style={{ flex: 1, minWidth: 260 }}>
+                                <div style={{ fontSize: 10.5, color: "var(--fg-3)", textTransform: "uppercase", marginBottom: 6 }}>Why this matters</div>
+                                {c.why.map((w, i) => <div key={i} style={{ fontSize: 12.5, color: "var(--fg-1)", marginBottom: 3 }}>• {w}</div>)}
+                              </div>
+                            )}
+                          </div>
+                          {!c.hasDictEntry && (
+                            <div style={{ marginTop: 10, fontSize: 11.5, color: "var(--fg-3)" }}>
+                              Not yet in the data dictionary — <button onClick={goToDictionary} style={{ color: "var(--brand)", background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: 11.5, fontWeight: 600 }}>enrich metadata →</button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>
           </div>
           {columns.length === 0 && (
-            <div style={{ padding: "14px 20px", fontSize: 12, color: "var(--fg-3)", fontStyle: "italic" }}>
-              No column data available.
-            </div>
+            <div style={{ padding: "14px 20px", fontSize: 12, color: "var(--fg-3)", fontStyle: "italic" }}>No column data available.</div>
           )}
         </Card>
 
-        {/* Risks */}
+        {/* ── Prioritized Risk & Action Center ────────────────────────────────── */}
         <Card style={{ marginBottom: 16 }}>
           <SectionTitle icon="alert-triangle"
+            right={suppressedCount > 0 && (
+              <Button size="sm" variant="ghost" onClick={() => setShowSuppressed(s => !s)}>
+                {showSuppressed ? "Hide" : "Show"} {suppressedCount} suppressed
+              </Button>
+            )}
             sub={risks.length > 0
-              ? `The profiling agent surfaced ${risks.length} risk${risks.length !== 1 ? "s" : ""}. Flag, annotate, or suppress each — every action is logged to the audit trail.`
+              ? `The profiling agent surfaced ${risks.length} risk${risks.length !== 1 ? "s" : ""}. Every flag, note, and suppression here is persisted and logged to the audit trail.`
               : "No risks identified by the profiling agent for this table."}>
             Risks flagged by agent
           </SectionTitle>
           <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 6 }}>
-            {risks.map((r) => (
-              <div key={r.id} style={{ border: `1px solid ${SEV[r.sev].c}30`, background: SEV[r.sev].bg,
-                borderRadius: 12, padding: 14 }}>
+            {visibleRisks.map((r) => (
+              <div key={r.id} style={{ border: `1px solid ${SEV[r.sev].c}30`, background: r.suppressed ? "var(--grey-50)" : SEV[r.sev].bg,
+                borderRadius: 12, padding: 14, opacity: r.suppressed ? 0.7 : 1 }}>
                 <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
                   <Chip intent={sevIntent[r.sev]} variant="fill" size="sm">{r.id}</Chip>
                   <div style={{ flex: 1 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 3 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 3, flexWrap: "wrap" }}>
                       <Severity level={r.sev} size="sm" />
+                      {RISK_TYPE_META[r.type] && (
+                        <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 600, color: "var(--fg-2)" }}>
+                          <i data-lucide={RISK_TYPE_META[r.type].icon} style={{ width: 12, height: 12 }}></i>
+                          {RISK_TYPE_META[r.type].label}
+                        </span>
+                      )}
                       {r.col !== "—" && <Mono style={{ fontSize: 11.5, color: "var(--fg-2)" }}>{r.col}</Mono>}
+                      {r.type === "REFERENTIAL_ORPHAN" && r.body.includes("inferred from naming") && (
+                        <Chip size="sm" intent="warning" title="No declared foreign key found — this relationship was inferred from column naming, not confirmed by a schema constraint.">
+                          Unverified relationship
+                        </Chip>
+                      )}
+                      {r.suppressed && <Chip size="sm" intent="neutral" title={r.suppressionReason || undefined}>Suppressed by {r.suppressedBy}</Chip>}
                     </div>
                     <div style={{ fontSize: 13.5, fontWeight: 600, color: "var(--fg-1)" }}>{r.title}</div>
                     <div style={{ fontSize: 12.5, color: "var(--fg-2)", marginTop: 3 }}>{r.body}</div>
-                    {notes[r.id] && (
-                      <div style={{ marginTop: 8, padding: "8px 10px", background: "#fff", borderRadius: 8,
-                        fontSize: 12, color: "var(--fg-2)", borderLeft: "2px solid var(--brand)" }}>
-                        <strong style={{ color: "var(--fg-1)" }}>Note · {currentUser}:</strong> {notes[r.id]}
+                    {r.col !== "—" && context?.rules?.by_column?.[r.col] && (
+                      <div style={{ fontSize: 11.5, color: "var(--fg-3)", marginTop: 4 }}>
+                        {context.rules.by_column[r.col].active > 0
+                          ? `${context.rules.by_column[r.col].active} rule(s) already cover this column`
+                          : "No rules currently cover this column"}
                       </div>
                     )}
-                    <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-                      <Button size="sm" variant={flagged[r.id] ? "primary" : "soft"} icon={flagged[r.id] ? "check" : "flag"}
-                        onClick={() => {
-                          setFlagged(f => ({ ...f, [r.id]: !f[r.id] }));
-                          toast(flagged[r.id] ? `${r.id} unflagged` : `${r.id} flagged for review · assigned to ${currentUser}`,
-                            { kind: flagged[r.id] ? "info" : "success" });
-                        }}>
-                        {flagged[r.id] ? "Flagged" : "Flag for review"}
-                      </Button>
-                      <Button size="sm" variant="soft" icon="message-square-plus"
-                        onClick={() => setOpenNote(openNote === r.id ? null : r.id)}>Add note</Button>
-                      <Button size="sm" variant="ghost" icon="eye-off"
-                        onClick={() => toast(`${r.id} suppressed for run ${runAt} · logged to audit trail`, { kind: "info" })}>
-                        Suppress
-                      </Button>
-                    </div>
-                    {openNote === r.id && (
+                    {r.samples.length > 0 && (
+                      <div style={{ marginTop: 8 }}>
+                        <button
+                          onClick={() => setOpenRiskSamples(s => ({ ...s, [r.id]: !s[r.id] }))}
+                          style={{ background: "none", border: "none", padding: 0, cursor: "pointer",
+                            fontSize: 11.5, fontWeight: 600, color: "var(--brand)", display: "flex", alignItems: "center", gap: 4 }}>
+                          <i data-lucide={openRiskSamples[r.id] ? "chevron-down" : "chevron-right"} style={{ width: 12, height: 12 }}></i>
+                          {openRiskSamples[r.id] ? "Hide" : "Show"} {r.samples.length} failing record{r.samples.length !== 1 ? "s" : ""}
+                        </button>
+                        {openRiskSamples[r.id] && <SampleRecordsTable samples={r.samples} />}
+                      </div>
+                    )}
+                    {r.note && (
+                      <div style={{ marginTop: 8, padding: "8px 10px", background: "#fff", borderRadius: 8,
+                        fontSize: 12, color: "var(--fg-2)", borderLeft: "2px solid var(--brand)" }}>
+                        <strong style={{ color: "var(--fg-1)" }}>Note:</strong> {r.note}
+                      </div>
+                    )}
+                    {!r.suppressed && (
+                      <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+                        <Button size="sm" variant="soft" icon="sparkles" disabled={riskBusy[r.id]} onClick={goToRules}>Generate rule</Button>
+                        <Button size="sm" variant="soft" icon="clipboard-list" disabled={riskBusy[r.id]} onClick={() => createTaskFromRisk(r)}>Create task</Button>
+                        <Button size="sm" variant="soft" icon="message-square-plus" disabled={riskBusy[r.id]}
+                          onClick={() => setOpenRiskNote(openRiskNote === r.id ? null : r.id)}>Add note</Button>
+                        <Button size="sm" variant="ghost" icon="eye-off" disabled={riskBusy[r.id]} onClick={() => doSuppress(r)}>Suppress</Button>
+                      </div>
+                    )}
+                    {r.suppressed && (
+                      <div style={{ marginTop: 10 }}>
+                        <Button size="sm" variant="ghost" icon="rotate-ccw" disabled={riskBusy[r.id]} onClick={() => doUnsuppress(r)}>Restore</Button>
+                      </div>
+                    )}
+                    {openRiskNote === r.id && (
                       <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
-                        <Input placeholder="Add an observation…" value={notes["_draft" + r.id] || ""}
-                          onChange={(v) => setNotes(n => ({ ...n, ["_draft" + r.id]: v }))} style={{ flex: 1 }} />
-                        <Button size="sm" variant="primary" onClick={() => {
-                          setNotes(n => ({ ...n, [r.id]: n["_draft" + r.id] }));
-                          setOpenNote(null);
-                          toast("Note saved to audit trail", { kind: "success" });
-                        }}>Save</Button>
+                        <Input placeholder="Add an observation…" value={riskNoteDraft[r.id] || ""}
+                          onChange={(v) => setRiskNoteDraft(n => ({ ...n, [r.id]: v }))} style={{ flex: 1 }} />
+                        <Button size="sm" variant="primary" disabled={riskBusy[r.id]} onClick={() => saveRiskNote(r)}>Save</Button>
                       </div>
                     )}
                   </div>
                 </div>
               </div>
             ))}
+            {visibleRisks.length === 0 && risks.length > 0 && (
+              <div style={{ fontSize: 12.5, color: "var(--fg-3)", padding: "8px 0" }}>All risks are suppressed. Click "Show suppressed" above to review them.</div>
+            )}
           </div>
         </Card>
 
         {/* Footer */}
         <div style={{ display: "flex", gap: 10, justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" }}>
-          <div>
-            {onBack && <Button variant="ghost" icon="arrow-left" onClick={onBack}>Back to list</Button>}
-          </div>
+          <div>{onBack && <Button variant="ghost" icon="arrow-left" onClick={onBack}>Back to list</Button>}</div>
           <div style={{ display: "flex", gap: 10 }}>
             <Button variant="soft" icon="share-2">Share to Slack</Button>
-            <Button variant="primary" iconRight="arrow-right"
-              onClick={() => { setProfilingDone(true); go("metadata"); }}>
-              Proceed to metadata enrichment
-            </Button>
+            <Button variant="primary" iconRight="arrow-right" onClick={goToDictionary}>Proceed to metadata enrichment</Button>
           </div>
         </div>
       </div>

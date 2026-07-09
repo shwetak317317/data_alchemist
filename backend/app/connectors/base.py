@@ -162,5 +162,14 @@ class BaseConnector(ABC):
         Override in connectors that use non-ANSI quoting or cross-database naming."""
         return f'"{schema}"."{table}"'
 
+    def quote_ident(self, name: str) -> str:
+        """Quote a single identifier (column name) for this platform's dialect.
+        Default: ANSI double-quote (Snowflake, Postgres, DuckDB). Override in
+        connectors with different identifier quoting (SQL Server → brackets,
+        Databricks/Spark SQL → backticks) — profiling_service.py calls this
+        instead of hardcoding one dialect's quoting and hoping a fallback
+        catches the rest."""
+        return f'"{name}"'
+
     def close(self) -> None:
         """Release connection resources. Override if needed."""

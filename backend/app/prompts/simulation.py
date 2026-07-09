@@ -68,6 +68,18 @@ def build_narrative_prompt(
             tag = f"{layer} {ntype}".strip()
             lines.append(f"- {node['label']} ({tag})")
 
+    # Column-level lineage (from parsed ETL statements) — when the scenario names
+    # a column, this is the difference between 'downstream logic may break' and
+    # the exact downstream columns that WILL break. Only real extracted mappings
+    # are listed; the model is told to reference these and nothing else.
+    col_downstream = lineage_ctx.get("column_downstream", [])
+    if col_downstream:
+        src_col = lineage_ctx.get("column_name", "this column")
+        lines.append(chr(10) + f"Exact downstream columns derived from {src_col} (column-level lineage, verified from ETL statements):")
+        for m in col_downstream[:10]:
+            lines.append(f"- {m['target_fqn']}.{m['target_column']}")
+        lines.append("When describing impact, name these specific downstream columns — they are the verified blast radius at column precision.")
+
     lines.append("\nWrite a 3–5 bullet JSON impact summary.")
 
     msgs.append({"role": "user", "content": "\n".join(lines)})

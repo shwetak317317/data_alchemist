@@ -31,6 +31,13 @@ class Settings(BaseSettings):
     llm_max_tokens: int = 4096
     llm_temperature: float = 0.1
 
+    # Optional cheaper/faster model for classification-only calls (currently:
+    # the simulator's scenario classifier — a closed 5-way label task, not
+    # generation, the textbook case for a smaller model). Must be from the SAME
+    # provider as LLM_PROVIDER since it shares that provider's API key. Falls
+    # back to llm_model when unset — zero config means zero behavior change.
+    llm_fast_model: str = ""
+
     # ── Per-provider model names (set in .env alongside API key) ─────────────
     anthropic_model_name: str = "claude-sonnet-4-6"
     openai_model_name: str = "gpt-4o"
@@ -107,6 +114,8 @@ def get_settings() -> Settings:
             if key:
                 object.__setattr__(s, "llm_api_key", key)
                 break
+    if not s.llm_fast_model:
+        object.__setattr__(s, "llm_fast_model", s.llm_model)
     return s
 
 

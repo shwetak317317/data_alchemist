@@ -249,6 +249,40 @@ def acknowledge(anomaly_id: str, req: AnomalyAcknowledgeRequest, db: Session = D
     ), {"by": current_user.email, "note": req.note, "id": anomaly_id})
     db.commit()
 
+    # Institutional memory: an acknowledgment WITH a note is a resolved incident
+    # pattern worth remembering. Write it to the fingerprint library so the next
+    # similar anomaly (and the pre-run advisory) can say "seen before — here is
+    # what fixed it". Note-less acks are just noise suppression; skip those.
+    if req.note and req.note.strip():
+        try:
+            detail = db.execute(text(
+                "SELECT table_fqn, anomaly_type, description, detected_at FROM anomaly_log WHERE anomaly_id=:id"
+            ), {"id": anomaly_id}).fetchone()
+            if detail:
+                dup = db.execute(text(
+                    "SELECT 1 FROM anomaly_fingerprints WHERE connection_id=:conn "
+                    "AND related_table=:tbl AND resolution=:note LIMIT 1"
+                ), {"conn": row[1], "tbl": detail[0], "note": req.note.strip()}).fetchone()
+                if not dup:
+                    db.execute(text("""
+                        INSERT INTO anomaly_fingerprints
+                            (connection_id, similarity_pct, incident_date, incident_day,
+                             root_cause, resolution, resolution_time, resolved_by, related_table)
+                        VALUES
+                            (:conn, 100, CURRENT_DATE, TRIM(TO_CHAR(CURRENT_DATE, 'Day')),
+                             :cause, :note, NULL, :by, :tbl)
+                    """), {
+                        "conn": row[1],
+                        "cause": f"{detail[1]}: {detail[2]}"[:500] if detail[2] else detail[1],
+                        "note": req.note.strip(),
+                        "by": current_user.email,
+                        "tbl": detail[0],
+                    })
+                    db.commit()
+        except Exception as fp_exc:
+            logger.warning("fingerprint write skipped for %s: %s", anomaly_id, fp_exc)
+            db.rollback()
+
     log_event(db, user_email=current_user.email, event_type="ACK",
               entity_type="ANOMALY", entity_id=anomaly_id,
               new_value={"note": req.note}, connection_id=row[1])

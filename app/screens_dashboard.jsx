@@ -32,7 +32,9 @@
             setLayerScores(s.layers.map(l => ({
               layer: l.layer, score: Math.round(l.score || 0),
               rules: l.rule_count || 0, passed: (l.rule_count || 0) - (l.open_issues || 0),
-              failed: l.open_issues || 0, trend: 0, anomalies: 0,
+              failed: l.open_issues || 0,
+              trend: l.trend_delta ?? null,
+              anomalies: s.layer_anomaly_counts?.[l.layer] || 0,
             })));
           }
           if (s.recent_activity && s.recent_activity.length) {
@@ -245,8 +247,14 @@
                 <td style={{ padding: "11px 20px" }}><span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}><span style={{ fontWeight: 800, fontFamily: "var(--font-display)", color: scoreColor(l.score) }}>{l.score}</span><div style={{ width: 60 }}><Bar pct={l.score} color={scoreColor(l.score)} height={5} /></div></span></td>
                 <td style={{ padding: "11px 20px", color: "var(--fg-2)" }}>{l.rules}</td>
                 <td style={{ padding: "11px 20px", fontWeight: 600, color: l.failed ? "var(--red-500)" : "var(--fg-3)" }}>{l.failed}</td>
-                <td style={{ padding: "11px 20px", color: "var(--fg-2)" }}>{l.anomalies}</td>
-                <td style={{ padding: "11px 20px", color: "var(--fg-3)" }}>—</td>
+                <td style={{ padding: "11px 20px", fontWeight: l.anomalies ? 600 : 400, color: l.anomalies ? "var(--yellow-700)" : "var(--fg-3)" }}>{l.anomalies}</td>
+                <td style={{ padding: "11px 20px" }}>
+                  {l.trend == null || l.trend === 0
+                    ? <span style={{ color: "var(--fg-3)" }} title={l.trend === 0 ? "No change since previous profiling" : "Needs at least two profilings of the same tables to compare"}>{l.trend === 0 ? "→ 0" : "—"}</span>
+                    : <span style={{ fontWeight: 700, color: l.trend > 0 ? "var(--green-600)" : "var(--red-500)" }} title="Average score change vs the previous profiling of the same tables">
+                        {l.trend > 0 ? "↑ +" : "↓ "}{l.trend}
+                      </span>}
+                </td>
               </tr>
             ))}
             {layerScores.length === 0 && (
@@ -260,12 +268,16 @@
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 16 }}>
         <Card style={{ flex: 1, minWidth: 300 }}>
           <SectionTitle icon="columns-3">CDE column health{connName ? ` — ${connName}` : ""}</SectionTitle>
-          {cdesProps === null ? <Spinner /> : cdes.length ? cdes.map(c => (
-            <div key={c.name || c.column_name} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 0", borderBottom: "1px solid var(--grey-100)" }}>
+          {cdesProps === null ? <Spinner /> : cdes.length ? cdes.map((c, i) => (
+            <div key={`${c.table || ""}::${c.name || c.column_name}::${i}`} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 0", borderBottom: "1px solid var(--grey-100)" }}>
               <Mono style={{ flex: 1, fontWeight: 700 }}>{c.name || c.column_name}</Mono>
               <Chip intent="brand" size="sm">CDE</Chip>
               <span style={{ fontWeight: 700, fontSize: 13, color: scoreColor(c.score || c.cde_score || 0), width: 30, textAlign: "right" }}>{c.score || c.cde_score || "—"}</span>
-              <Health status={c.health || (c.status === "PASS" ? "HEALTHY" : c.status === "WARN" ? "WARN" : "CRIT")} />
+              {/* c.status is already one of HEALTHY|WARN|CRIT (from the backend's
+                  health field) — Health's map takes that directly. The previous
+                  ternary compared against "PASS", a value this field never has,
+                  so every truly-HEALTHY CDE fell through to CRIT (red) here. */}
+              <Health status={c.status || "HEALTHY"} />
             </div>
           )) : <div style={{ fontSize: 12.5, color: "var(--fg-3)", padding: "6px 0" }}>No CDEs registered yet.</div>}
         </Card>
@@ -291,7 +303,119 @@
     );
   };
 
-  const Steward = ({ cdes: cdesProps, auditTrail: auditProp, layerCoverage }) => {
+  // AI Usage & Cost — governance transparency: every AI call this app makes is
+  // logged at its call site (rule_ai_calls / ai_usage_log); this is the single
+  // place that turns those rows into a judge-legible cost/latency/fallback-rate
+  // answer instead of leaving it as backend-only log lines.
+  const FEATURE_LABEL = {
+    RECOMMEND: "Rule recommendation", NL_CONVERT: "NL → DQ rule", ANOMALY_EXPLAIN: "Anomaly explanation",
+    REMEDIATION: "Rule remediation", CROSS_TABLE: "Cross-table rule check",
+    sim_classify: "Simulator classification", sim_narrative: "Simulator narrative",
+    lineage_narrative: "Impact graph narrative", advisory: "Pre-run advisory", receipt: "Trust receipt",
+    daily_summary: "Daily summary",
+  };
+  const AiUsagePanel = ({ connectionId }) => {
+    const [usage, setUsage] = React.useState(null);
+    const [days, setDays] = React.useState(30);
+    React.useEffect(() => {
+      if (!window.DTApi?.getAiUsage) return;
+      setUsage(null);
+      window.DTApi.getAiUsage(connectionId, days).then(setUsage).catch(() => setUsage({ error: true }));
+    }, [connectionId, days]);
+
+    return (
+      <Card style={{ marginBottom: 16 }}>
+        <SectionTitle icon="cpu"
+          sub="Every AI call this platform makes — token spend, latency, and how often the LLM actually answered vs. fell back to a deterministic path. Not a claim; a ledger."
+          right={
+            <select value={days} onChange={e => setDays(Number(e.target.value))}
+              style={{ fontSize: 12, padding: "4px 8px", borderRadius: 6, border: "1px solid var(--grey-200)", color: "var(--fg-1)", background: "var(--bg-1, #fff)" }}>
+              <option value={7}>Last 7 days</option>
+              <option value={30}>Last 30 days</option>
+              <option value={90}>Last 90 days</option>
+            </select>
+          }>AI usage &amp; cost transparency</SectionTitle>
+
+        {usage === null ? <Spinner label="Loading AI usage…" /> : usage.error ? (
+          <div style={{ fontSize: 12.5, color: "var(--fg-3)", padding: "8px 0" }}>Could not load AI usage data.</div>
+        ) : usage.total_calls === 0 ? (
+          <div style={{ fontSize: 12.5, color: "var(--fg-3)", padding: "8px 0" }}>No AI calls recorded in this window yet — run profiling, rule recommendation, or the simulator to populate this ledger.</div>
+        ) : (
+          <>
+            <div style={{ display: "flex", gap: 24, flexWrap: "wrap", marginBottom: 18 }}>
+              {[
+                ["Total AI calls", usage.total_calls.toLocaleString(), null],
+                ["Tokens (in / out)", `${usage.total_input_tokens.toLocaleString()} / ${usage.total_output_tokens.toLocaleString()}`, null],
+                ["Est. cost", `${usage.cost_fully_known ? "" : "≥"}$${usage.estimated_cost_usd.toFixed(2)}`, "List-price estimate from token counts — not a billing statement. ≥ means at least one call used a model not in the price table and was estimated conservatively."],
+                ["Avg latency", `${(usage.avg_latency_ms / 1000).toFixed(1)}s`, null],
+                ["LLM answered", usage.ai_success_rate != null ? `${usage.ai_success_rate}%` : "—", "Calls the LLM actually answered vs. fell back to a deterministic path (timeout, malformed output, or provider error)."],
+              ].map(([label, value, tip]) => (
+                <div key={label} title={tip || undefined}>
+                  <div style={{ fontSize: 10.5, color: "var(--fg-3)", textTransform: "uppercase", letterSpacing: ".04em" }}>{label}</div>
+                  <div style={{ fontSize: 20, fontWeight: 800, fontFamily: "var(--font-display)", color: "var(--fg-1)" }}>{value}</div>
+                </div>
+              ))}
+              {(usage.fallback_rate > 0 || usage.error_rate > 0) && (
+                <div>
+                  <div style={{ fontSize: 10.5, color: "var(--fg-3)", textTransform: "uppercase", letterSpacing: ".04em" }}>Fallback / error rate</div>
+                  <div style={{ fontSize: 20, fontWeight: 800, fontFamily: "var(--font-display)", color: "var(--yellow-700)" }}>
+                    {usage.fallback_rate || 0}% / {usage.error_rate || 0}%
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5 }}>
+              <thead><tr style={{ textAlign: "left", borderBottom: "1px solid var(--grey-100)" }}>
+                {["Feature", "Calls", "Tokens", "Avg latency", "LLM / fallback / error", "Est. cost"].map(h => (
+                  <th key={h} style={{ padding: "6px 10px", fontSize: 10.5, fontWeight: 700, color: "var(--fg-3)", textTransform: "uppercase", letterSpacing: ".03em" }}>{h}</th>
+                ))}
+              </tr></thead>
+              <tbody>
+                {usage.by_feature.map(f => (
+                  <tr key={f.feature} style={{ borderBottom: "1px solid var(--grey-50)" }}>
+                    <td style={{ padding: "8px 10px", fontWeight: 600 }}>{FEATURE_LABEL[f.feature] || f.feature}</td>
+                    <td style={{ padding: "8px 10px" }}>{f.calls}</td>
+                    <td style={{ padding: "8px 10px", color: "var(--fg-2)" }}>{(f.input_tokens + f.output_tokens).toLocaleString()}</td>
+                    <td style={{ padding: "8px 10px", color: "var(--fg-2)" }}>{(f.avg_latency_ms / 1000).toFixed(1)}s</td>
+                    <td style={{ padding: "8px 10px", color: "var(--fg-2)" }}>
+                      <span style={{ color: "var(--green-600)" }}>{f.ai_calls}</span>
+                      {" / "}<span style={{ color: f.fallback_calls ? "var(--yellow-700)" : "var(--fg-3)" }}>{f.fallback_calls}</span>
+                      {" / "}<span style={{ color: f.error_calls ? "var(--red-500)" : "var(--fg-3)" }}>{f.error_calls}</span>
+                    </td>
+                    <td style={{ padding: "8px 10px", color: "var(--fg-2)" }}>${f.estimated_cost_usd.toFixed(4)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
+        )}
+      </Card>
+    );
+  };
+
+  const Steward = ({ cdes: cdesProps, auditTrail: auditProp, layerCoverage, connectionId, connName }) => {
+    // Compliance export pulls a deep audit history (not just the on-screen rows)
+    // and downloads it as CSV — auditors want the full trail, not the last 20.
+    const [exporting, setExporting] = React.useState(false);
+    const exportAudit = async () => {
+      setExporting(true);
+      try {
+        const rows = await window.DTApi.getAuditTrail(connectionId, 500);
+        const esc = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
+        const csv = ["time,user,action,entity",
+          ...(rows || []).map(r => [r.time, r.user_name || r.user, r.action, r.entity].map(esc).join(","))].join("\n");
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+        a.download = `audit-trail-${(connName || "all").replace(/\W+/g, "-")}-${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+        toast(`Exported ${(rows || []).length} audit entries`, { kind: "success" });
+      } catch (_) {
+        toast("Audit export failed — backend unreachable", { kind: "error" });
+      }
+      setExporting(false);
+    };
     const cdes = cdesProps || [];
     const auditTrail = auditProp || [];
     return (
@@ -307,7 +431,10 @@
               <tr key={i} style={{ borderTop: "1px solid var(--grey-100)" }}>
                 <td style={{ padding: "11px 20px" }}><Mono style={{ fontWeight: 600 }}>{c.name}</Mono></td>
                 <td style={{ padding: "11px 20px" }}><Mono style={{ fontSize: 11.5, color: "var(--fg-2)" }}>{c.table}</Mono></td>
-                <td style={{ padding: "11px 20px" }}><Chip intent={c.status === "PASS" ? "success" : c.status === "WARN" ? "warning" : "danger"} size="sm" dot>{c.status}</Chip></td>
+                {/* c.status is HEALTHY|WARN|CRIT (the backend's health field) —
+                    comparing against "PASS" (a value it never has) meant every
+                    truly-healthy CDE rendered as a red "danger" chip here. */}
+                <td style={{ padding: "11px 20px" }}><Chip intent={c.status === "HEALTHY" ? "success" : c.status === "WARN" ? "warning" : "danger"} size="sm" dot>{c.status}</Chip></td>
                 <td style={{ padding: "11px 20px", color: "var(--fg-2)" }}>{c.validated}</td>
               </tr>
             ))}
@@ -317,6 +444,8 @@
           </tbody>
         </table>
       </Card>
+
+      <AiUsagePanel connectionId={connectionId} />
 
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 16 }}>
         <Card style={{ flex: 1, minWidth: 300 }}>
@@ -342,7 +471,7 @@
       </div>
 
       <Card>
-        <SectionTitle icon="scroll-text" right={<Button size="sm" variant="soft" icon="download">Export for compliance</Button>}>Recent audit trail</SectionTitle>
+        <SectionTitle icon="scroll-text" right={<Button size="sm" variant="soft" icon="download" onClick={exportAudit} disabled={exporting}>{exporting ? "Exporting…" : "Export for compliance"}</Button>}>Recent audit trail</SectionTitle>
         {auditProp === null ? <Spinner label="Loading audit trail…" /> : auditTrail.length ? auditTrail.map((a, i) => (
           <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: i < auditTrail.length - 1 ? "1px solid var(--grey-100)" : "none" }}>
             <Mono style={{ fontSize: 11.5, color: "var(--fg-3)", width: 64 }}>{a.time}</Mono>
@@ -371,7 +500,7 @@
               yesterdayScore={summary?.yesterday_score} topAnomalies={topAnomalies} layerScores={layerScores} />
           : tab === "tech"
           ? <Tech layerScores={layerScores} cdes={cdeStatus} connName={activeConnectionName} ruleFailTrend={ruleFailTrend} openTasks={openTasks} />
-          : <Steward cdes={cdeStatus} auditTrail={auditTrail} layerCoverage={layerCoverage} />}
+          : <Steward cdes={cdeStatus} auditTrail={auditTrail} layerCoverage={layerCoverage} connectionId={activeConnectionId} connName={activeConnectionName} />}
       </div>
     );
   };

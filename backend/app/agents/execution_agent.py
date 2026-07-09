@@ -90,6 +90,8 @@ def execute_rule(
     severity: str,
     is_cde_rule: bool,
     run_id: str,
+    db=None,
+    connection_id: str | None = None,
 ) -> RuleResult:
     """
     Execute a single rule expression and return a RuleResult.
@@ -98,7 +100,19 @@ def execute_rule(
     """
     try:
         # Build a platform-safe table reference (handles cross-DB SQL Server, Snowflake quoting, etc.)
-        parts = table_fqn.rsplit(".", 1)
+        #
+        # split(", 1) — NOT rsplit — is required for 3-part FQNs. table_ref()'s
+        # cross-DB contract is table_ref(database, "schema.table"): the first
+        # part is the database, everything after the FIRST dot is schema.table.
+        # rsplit(".", 1) instead cut at the LAST dot, so "RawDB.logiship.Reviews"
+        # produced table_ref("RawDB.logiship", "Reviews") — "RawDB.logiship" was
+        # then treated as one literal (invalid) database name, and every rule
+        # against a 3-part (Database.Schema.Table) FQN failed with SQL Server
+        # error 208 "Invalid object name 'RawDB.logiship.dbo.Reviews'". 2-part
+        # FQNs (Database.Table, e.g. BronzeDB.br_categories) were unaffected —
+        # split and rsplit agree when there's only one dot — which is why this
+        # was invisible until a 3-part raw-layer table was actually run.
+        parts = table_fqn.split(".", 1)
         tref = connector.table_ref(parts[0], parts[1]) if len(parts) == 2 else f'"{table_fqn}"'
 
         fail_sql  = build_rule_check_sql(tref, rule_expression)
@@ -146,7 +160,7 @@ def execute_rule(
         )
 
         if status == "FAIL":
-            result.remediation_suggestion = explain_rule_failure(result)
+            result.remediation_suggestion = explain_rule_failure(result, db=db, connection_id=connection_id)
 
         return result
 
@@ -233,6 +247,7 @@ def run_all_rules(
     connection_id: str,
     rules: list[dict],        # dicts with keys: rule_id, rule_name, table_fqn, layer, rule_expression, severity, is_cde_rule
     run_id: str | None = None,
+    db=None,
 ) -> ExecutionRunResponse:
     """
     Execute all provided rules and return a consolidated run response.
@@ -257,6 +272,8 @@ def run_all_rules(
             severity=rule.get("severity", "MEDIUM"),
             is_cde_rule=rule.get("is_cde_rule", False),
             run_id=run_id,
+            db=db,
+            connection_id=connection_id,
         )
         results.append(result)
 

@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel as _BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
@@ -16,6 +17,7 @@ from app.core.auth_deps import get_current_user, CurrentUser
 from app.api.connections import get_active_connector
 from app.agents.profiling_agent import run_profiling
 from app.models.profiling import ProfilingRunRequest, ProfilingReport, ProfilingProgressEvent
+from app.services.audit_service import log_event
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/profiling", tags=["profiling"])
@@ -282,6 +284,57 @@ def list_datasets(connection_id: str, use_cache: bool = False,
     return list(grouped.values())
 
 
+@router.get("/report/by-table/{table_fqn:path}/history")
+def get_report_history(table_fqn: str, connection_id: str | None = None, limit: int = 10,
+                       db: Session = Depends(get_db),
+                       current_user: CurrentUser = Depends(get_current_user)):
+    """Score/row-count trend across the last N profiling runs for this table —
+    powers the workspace's trend sparklines and the 'since last run' drift banner.
+    Oldest first, so callers can plot left-to-right without re-sorting.
+
+    Registered BEFORE the plain /report/by-table/{table_fqn:path} route below:
+    a :path converter is greedy and matches slashes, so if the bare route were
+    registered first it would swallow "/history" as part of table_fqn and this
+    endpoint would never be reached."""
+    params: dict = {"table": table_fqn, "limit": limit}
+    conn_filter = "AND connection_id=:conn" if connection_id else ""
+    if connection_id:
+        params["conn"] = connection_id
+
+    rows = db.execute(text(f"""
+        SELECT run_at, row_count, quality_score, completeness_score,
+               uniqueness_score, consistency_score, freshness_score
+        FROM profiling_reports
+        WHERE table_fqn=:table {conn_filter}
+        ORDER BY run_at DESC LIMIT :limit
+    """), params).fetchall()
+
+    runs = [
+        {
+            "run_at": r[0].isoformat() if r[0] else None,
+            "row_count": r[1] or 0,
+            "quality_score": float(r[2] or 0),
+            "completeness_score": float(r[3] or 0),
+            "uniqueness_score": float(r[4] or 0),
+            "consistency_score": float(r[5] or 0),
+            "freshness_score": float(r[6] or 0),
+        }
+        for r in reversed(rows)   # oldest first
+    ]
+
+    delta = None
+    if len(runs) >= 2:
+        prev, cur = runs[-2], runs[-1]
+        delta = {
+            "score_delta": round(cur["quality_score"] - prev["quality_score"], 1),
+            "row_count_delta": cur["row_count"] - prev["row_count"],
+            "row_count_delta_pct": round((cur["row_count"] - prev["row_count"]) / prev["row_count"] * 100, 1) if prev["row_count"] else None,
+            "prev_run_at": prev["run_at"],
+        }
+
+    return {"runs": runs, "delta": delta}
+
+
 @router.get("/report/by-table/{table_fqn:path}")
 def get_report_by_table(table_fqn: str, connection_id: str | None = None,
                         db: Session = Depends(get_db),
@@ -295,7 +348,8 @@ def get_report_by_table(table_fqn: str, connection_id: str | None = None,
     row = db.execute(text(f"""
         SELECT report_id, connection_id, table_fqn, layer, run_at, row_count,
                quality_score, completeness_score, uniqueness_score, consistency_score,
-               freshness_score, summary_text
+               freshness_score, summary_text, schema_drift, partition_column,
+               window_from, window_to, is_partial_scan
         FROM profiling_reports
         WHERE table_fqn=:table {conn_filter}
         ORDER BY run_at DESC LIMIT 1
@@ -310,6 +364,7 @@ def get_report_by_table(table_fqn: str, connection_id: str | None = None,
     uniqueness = float(row[8] or 0)
     consistency = float(row[9] or 0)
     freshness = float(row[10] or 100)
+    schema_drift = row[12]
 
     # Prefer the normalized column_stats table; fall back to the JSONB blob for
     # older/seeded reports that were never normalized (e.g. demo seed data).
@@ -353,13 +408,16 @@ def get_report_by_table(table_fqn: str, connection_id: str | None = None,
             ]
 
     risk_rows = db.execute(text("""
-        SELECT risk_code, severity, title, description, column_name, risk_type
+        SELECT risk_code, severity, title, description, column_name, risk_type,
+               risk_id, is_suppressed, suppressed_by, suppression_reason, note, sample_failed_records
         FROM profiling_risks WHERE report_id=:rid
         ORDER BY CASE severity WHEN 'CRITICAL' THEN 1 WHEN 'HIGH' THEN 2 WHEN 'MEDIUM' THEN 3 ELSE 4 END
     """), {"rid": rid}).fetchall()
     risks_flagged = [
         {"risk_code": r[0], "severity": r[1], "title": r[2] or r[5] or "Risk",
-         "description": r[3] or "", "column_name": r[4] or "—", "risk_type": r[5] or ""}
+         "description": r[3] or "", "column_name": r[4] or "—", "risk_type": r[5] or "",
+         "risk_id": r[6], "is_suppressed": bool(r[7]), "suppressed_by": r[8],
+         "suppression_reason": r[9], "note": r[10], "sample_failed_records": r[11] or []}
         for r in risk_rows
     ]
 
@@ -382,7 +440,142 @@ def get_report_by_table(table_fqn: str, connection_id: str | None = None,
         "consistency_score": consistency, "freshness_score": freshness,
         "summary_text": row[11], "summary_stats": summary_stats,
         "column_stats": column_stats, "risks_flagged": risks_flagged,
+        "schema_drift": schema_drift,
+        "partition_column": row[13], "window_from": row[14].isoformat() if row[14] else None,
+        "window_to": row[15].isoformat() if row[15] else None, "is_partial_scan": bool(row[16]),
     }
+
+
+@router.get("/report/{report_id}/context")
+def get_report_context(report_id: str, db: Session = Depends(get_db),
+                       current_user: CurrentUser = Depends(get_current_user)):
+    """Cross-module signals for this table — rule coverage, open anomalies, CDE
+    linkage — assembled in one call so the workspace doesn't fire five separate
+    requests just to answer 'what else does the platform already know about
+    this table'. This is the piece that makes the page a workspace and not a
+    standalone report: every signal here already exists elsewhere in the app,
+    this just brings them to where a steward is actually looking."""
+    rep = db.execute(text(
+        "SELECT connection_id, table_fqn FROM profiling_reports WHERE report_id=:id"
+    ), {"id": report_id}).fetchone()
+    if not rep:
+        raise HTTPException(404, "Report not found")
+    connection_id, table_fqn = rep[0], rep[1]
+    p = {"conn": connection_id, "table": table_fqn}
+
+    rule_rows = db.execute(text("""
+        SELECT column_name, status, COUNT(*) FROM dq_rules
+        WHERE connection_id=:conn AND table_fqn=:table
+        GROUP BY column_name, status
+    """), p).fetchall()
+    rule_coverage: dict = {}
+    rules_total = rules_active = 0
+    for col, status, cnt in rule_rows:
+        cnt = int(cnt)
+        entry = rule_coverage.setdefault(col or "(table-level)", {"total": 0, "active": 0})
+        entry["total"] += cnt
+        rules_total += cnt
+        if status in ("approved", "active"):
+            entry["active"] += cnt
+            rules_active += cnt
+
+    anom_rows = db.execute(text("""
+        SELECT anomaly_id, severity, anomaly_type, column_name, description, detected_at
+        FROM anomaly_log WHERE connection_id=:conn AND table_fqn=:table AND status='open'
+        ORDER BY CASE severity WHEN 'CRITICAL' THEN 0 WHEN 'HIGH' THEN 1 WHEN 'MEDIUM' THEN 2 ELSE 3 END
+        LIMIT 5
+    """), p).fetchall()
+    open_anomalies = [
+        {"anomaly_id": r[0], "severity": r[1], "type": r[2], "column_name": r[3],
+         "description": (r[4] or "").replace("[SIM] ", ""), "detected_at": r[5].isoformat() if r[5] else None}
+        for r in anom_rows
+    ]
+    anomaly_total = int(db.execute(text(
+        "SELECT COUNT(*) FROM anomaly_log WHERE connection_id=:conn AND table_fqn=:table AND status='open'"
+    ), p).scalar() or 0)
+
+    cde_rows = db.execute(text("""
+        SELECT column_name, health, cde_score FROM cde_registry
+        WHERE connection_id=:conn AND table_fqn=:table
+    """), p).fetchall()
+    cdes = [{"column_name": r[0], "health": r[1], "score": float(r[2] or 0)} for r in cde_rows]
+
+    dict_rows = db.execute(text("""
+        SELECT column_id, column_name FROM data_dictionary
+        WHERE connection_id=:conn AND table_fqn=:table
+    """), p).fetchall()
+    dictionary_by_col = {r[1]: r[0] for r in dict_rows}
+
+    open_tasks = int(db.execute(text("""
+        SELECT COUNT(*) FROM task_board
+        WHERE connection_id=:conn AND status IN ('open','in_progress')
+          AND related_entity_type IN ('profiling_risk','table')
+          AND related_entity_id LIKE :like
+    """), {"conn": connection_id, "like": f"%{table_fqn}%"}).scalar() or 0)
+
+    return {
+        "table_fqn": table_fqn,
+        "rules": {"total": rules_total, "active": rules_active, "by_column": rule_coverage},
+        "anomalies": {"open_total": anomaly_total, "top": open_anomalies},
+        "cdes": cdes,
+        "dictionary_by_column": dictionary_by_col,
+        "open_tasks": open_tasks,
+    }
+
+
+class RiskNoteRequest(_BaseModel):
+    note: str
+
+
+class RiskSuppressRequest(_BaseModel):
+    reason: str | None = None
+
+
+@router.post("/risks/{risk_id}/suppress")
+def suppress_risk(risk_id: str, req: RiskSuppressRequest, db: Session = Depends(get_db),
+                  current_user: CurrentUser = Depends(get_current_user)):
+    row = db.execute(text("SELECT connection_id, title FROM profiling_risks WHERE risk_id=:id"), {"id": risk_id}).fetchone()
+    if not row:
+        raise HTTPException(404, "Risk not found")
+    db.execute(text("""
+        UPDATE profiling_risks
+        SET is_suppressed=TRUE, suppressed_by=:by, suppression_reason=:reason
+        WHERE risk_id=:id
+    """), {"by": current_user.email, "reason": req.reason, "id": risk_id})
+    log_event(db, user_email=current_user.email, event_type="SUPPRESS", entity_type="PROFILING_RISK",
+              entity_id=risk_id, reason=req.reason, connection_id=row[0])
+    db.commit()
+    return {"status": "suppressed"}
+
+
+@router.post("/risks/{risk_id}/unsuppress")
+def unsuppress_risk(risk_id: str, db: Session = Depends(get_db),
+                    current_user: CurrentUser = Depends(get_current_user)):
+    row = db.execute(text("SELECT connection_id FROM profiling_risks WHERE risk_id=:id"), {"id": risk_id}).fetchone()
+    if not row:
+        raise HTTPException(404, "Risk not found")
+    db.execute(text("""
+        UPDATE profiling_risks
+        SET is_suppressed=FALSE, suppressed_by=NULL, suppression_reason=NULL
+        WHERE risk_id=:id
+    """), {"id": risk_id})
+    log_event(db, user_email=current_user.email, event_type="UNSUPPRESS", entity_type="PROFILING_RISK",
+              entity_id=risk_id, connection_id=row[0])
+    db.commit()
+    return {"status": "active"}
+
+
+@router.post("/risks/{risk_id}/note")
+def note_risk(risk_id: str, req: RiskNoteRequest, db: Session = Depends(get_db),
+             current_user: CurrentUser = Depends(get_current_user)):
+    row = db.execute(text("SELECT connection_id FROM profiling_risks WHERE risk_id=:id"), {"id": risk_id}).fetchone()
+    if not row:
+        raise HTTPException(404, "Risk not found")
+    db.execute(text("UPDATE profiling_risks SET note=:note WHERE risk_id=:id"), {"note": req.note, "id": risk_id})
+    log_event(db, user_email=current_user.email, event_type="NOTE", entity_type="PROFILING_RISK",
+              entity_id=risk_id, new_value={"note": req.note}, connection_id=row[0])
+    db.commit()
+    return {"status": "noted", "note": req.note}
 
 
 @router.post("/run")
@@ -439,13 +632,16 @@ def run_profiling_stream(req: ProfilingRunRequest, db: Session = Depends(get_db)
                 schema_name=schema_name,
                 table_name=req.table_name,
                 layer_override=layer_override,
+                partition_column=req.partition_column,
+                window_from=req.window_from,
+                window_to=req.window_to,
             ):
                 if isinstance(item, ProfilingProgressEvent):
                     payload = _json_safe({"type": "progress", "data": item.model_dump()})
                 elif isinstance(item, ProfilingReport):
                     # Persist report to DB (also normalizes into column_stats + profiling_risks)
-                    _save_report(db, item, triggered_by=current_user.email)
-                    payload = _json_safe({"type": "report", "data": _report_to_frontend_shape(item)})
+                    schema_drift = _save_report(db, item, triggered_by=current_user.email)
+                    payload = _json_safe({"type": "report", "data": _report_to_frontend_shape(item, schema_drift)})
                 else:
                     continue
                 yield f"data: {payload}\n\n"
@@ -490,7 +686,7 @@ def get_report(report_id: str, db: Session = Depends(get_db),
     )
 
 
-def _report_to_frontend_shape(report: ProfilingReport) -> dict:
+def _report_to_frontend_shape(report: ProfilingReport, schema_drift: dict | None = None) -> dict:
     """Convert ProfilingReport to the same field names that get_report_by_table returns."""
     row_count = report.row_count or 0
     column_stats = [
@@ -515,6 +711,9 @@ def _report_to_frontend_shape(report: ProfilingReport) -> dict:
             "description": r.description or "",
             "column_name": r.column or "—",
             "risk_type": r.risk_type,
+            "risk_id": None, "is_suppressed": False, "suppressed_by": None,
+            "suppression_reason": None, "note": None,
+            "sample_failed_records": r.sample_failed_records or [],
         }
         for i, r in enumerate(report.risks)
     ]
@@ -543,6 +742,11 @@ def _report_to_frontend_shape(report: ProfilingReport) -> dict:
         "summary_stats": summary_stats,
         "column_stats": column_stats,
         "risks_flagged": risks_flagged,
+        "schema_drift": schema_drift,
+        "partition_column": report.partition_column,
+        "window_from": report.window_from.isoformat() if report.window_from else None,
+        "window_to": report.window_to.isoformat() if report.window_to else None,
+        "is_partial_scan": report.is_partial_scan,
     }
 
 
@@ -561,8 +765,46 @@ def _json_safe(data) -> str:
     return json.dumps(data, cls=_SafeEncoder)
 
 
-def _save_report(db: Session, report: ProfilingReport, triggered_by: str | None = None) -> None:
+def _compute_schema_drift(db: Session, report: ProfilingReport) -> dict | None:
+    """Diff this run's column list/types against the immediately-previous run
+    for the same table_fqn — CONFIRMED-MISSING before this: nothing in the
+    codebase ever compared column shape across runs, so a silently dropped
+    column or a type change (INT -> VARCHAR) produced no signal anywhere.
+    Returns None for a table's first-ever run (nothing to diff against)."""
+    prev_report_id = db.execute(text("""
+        SELECT report_id FROM profiling_reports
+        WHERE table_fqn=:fqn AND connection_id=:conn
+        ORDER BY run_at DESC LIMIT 1
+    """), {"fqn": report.table_fqn, "conn": report.connection_id}).scalar()
+    if not prev_report_id:
+        return None
+
+    prev_rows = db.execute(text(
+        "SELECT column_name, data_type FROM column_stats WHERE report_id=:rid"
+    ), {"rid": prev_report_id}).fetchall()
+    if not prev_rows:
+        return None
+    prev_cols = {r[0]: (r[1] or "").upper() for r in prev_rows}
+    cur_cols = {c.name: (c.data_type or "").upper() for c in report.columns}
+
+    added = sorted(set(cur_cols) - set(prev_cols))
+    dropped = sorted(set(prev_cols) - set(cur_cols))
+    type_changed = [
+        {"column": name, "old_type": prev_cols[name], "new_type": cur_cols[name]}
+        for name in sorted(set(cur_cols) & set(prev_cols))
+        if prev_cols[name] != cur_cols[name]
+    ]
+    if not added and not dropped and not type_changed:
+        return {"has_drift": False, "added": [], "dropped": [], "type_changed": [], "compared_to_report_id": prev_report_id}
+    return {
+        "has_drift": True, "added": added, "dropped": dropped, "type_changed": type_changed,
+        "compared_to_report_id": prev_report_id,
+    }
+
+
+def _save_report(db: Session, report: ProfilingReport, triggered_by: str | None = None) -> dict | None:
     try:
+        schema_drift = _compute_schema_drift(db, report)
         # Ensure schema + table entries exist in the topology cache, then capture their IDs
         # so every report row carries the FK chain: connection → schema → table → report
         schema_name = report.table_fqn.split(".")[0] if "." in report.table_fqn else ""
@@ -605,13 +847,15 @@ def _save_report(db: Session, report: ProfilingReport, triggered_by: str | None 
                 (report_id, connection_id, table_fqn, layer, run_at, row_count,
                  quality_score, completeness_score, uniqueness_score,
                  consistency_score, freshness_score, risks_flagged,
-                 column_stats, summary_text, triggered_by, table_id, schema_id)
+                 column_stats, summary_text, triggered_by, table_id, schema_id,
+                 schema_drift, partition_column, window_from, window_to, is_partial_scan)
             VALUES
                 (:report_id, :connection_id, :table_fqn, :layer, :run_at, :row_count,
                  :quality_score, :completeness_score, :uniqueness_score,
                  :consistency_score, :freshness_score, CAST(:risks_flagged AS jsonb),
                  CAST(:column_stats AS jsonb), :summary_text, :triggered_by,
-                 :table_id, :schema_id)
+                 :table_id, :schema_id, CAST(:schema_drift AS jsonb),
+                 :partition_column, :window_from, :window_to, :is_partial_scan)
         """), {
             "report_id": report.report_id,
             "connection_id": report.connection_id,
@@ -630,6 +874,11 @@ def _save_report(db: Session, report: ProfilingReport, triggered_by: str | None 
             "triggered_by": triggered_by,
             "table_id": table_id,
             "schema_id": schema_id,
+            "partition_column": report.partition_column,
+            "window_from": report.window_from,
+            "window_to": report.window_to,
+            "is_partial_scan": report.is_partial_scan,
+            "schema_drift": _json_safe(schema_drift) if schema_drift else None,
         })
 
         # Normalize column stats into the column_stats table for per-column queries
@@ -670,10 +919,10 @@ def _save_report(db: Session, report: ProfilingReport, triggered_by: str | None 
             db.execute(text("""
                 INSERT INTO profiling_risks
                     (report_id, connection_id, risk_code, severity, title,
-                     description, column_name, risk_type, created_at)
+                     description, column_name, risk_type, sample_failed_records, created_at)
                 VALUES
                     (:report_id, :conn, :code, :severity, :title,
-                     :desc, :col, :rtype, NOW())
+                     :desc, :col, :rtype, CAST(:samples AS jsonb), NOW())
             """), {
                 "report_id": report.report_id,
                 "conn": report.connection_id,
@@ -683,6 +932,7 @@ def _save_report(db: Session, report: ProfilingReport, triggered_by: str | None 
                 "desc": r.description or "",
                 "col": r.column or None,
                 "rtype": r.risk_type,
+                "samples": _json_safe(r.sample_failed_records or []),
             })
 
         db.commit()
@@ -719,6 +969,9 @@ def _save_report(db: Session, report: ProfilingReport, triggered_by: str | None 
                 db.rollback()
             except Exception:
                 pass
+
+        return schema_drift
     except Exception as e:
         logger.warning("Failed to save profiling report: %s", e)
         db.rollback()
+        return None

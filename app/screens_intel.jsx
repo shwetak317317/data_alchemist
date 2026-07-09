@@ -2,34 +2,104 @@
 (function () {
 
   // ---------------- Pre-run Advisory ----------------
+  const ADVISORY_STALE_H = 24;
   const Advisory = () => {
     const { go, activeConnectionId } = useApp();
     const [decision, setDecision] = React.useState(null);
     const [advisory, setAdvisory] = React.useState(null);
+    const [generating, setGenerating] = React.useState(false);
+    const [loadState, setLoadState] = React.useState("loading"); // loading | ready | error | noconn
     useIcons();
+
+    const fromApi = (data) => ({
+      predicted: data.predicted_score ?? 0,
+      reasons: data.risk_reasons ?? [],
+      rec: data.recommendation ?? "—",
+      advisory_time: data.advisory_time ?? "—",
+      generatedAt: data.generated_at ? new Date(data.generated_at.replace(" ", "T")) : null,
+      generatedBy: data.generated_by || null,
+    });
+
+    const generate = async () => {
+      if (!activeConnectionId || generating) return;
+      setGenerating(true);
+      try {
+        const data = await window.DTApi.generateAdvisory(activeConnectionId);
+        setAdvisory(fromApi(data));
+        setDecision(null);
+        setLoadState("ready");
+        toast("Fresh advisory generated from live signals", { kind: "success" });
+      } catch (_) {
+        toast("Advisory generation failed — backend unreachable or LLM error", { kind: "error" });
+        setLoadState(s => (s === "loading" ? "error" : s));
+      }
+      setGenerating(false);
+    };
 
     React.useEffect(() => {
       if (!window.DTApi?.getAdvisory) return;
-      setAdvisory(null);
+      setAdvisory(null); setDecision(null);
+      if (!activeConnectionId) { setLoadState("noconn"); return; }
+      setLoadState("loading");
       window.DTApi.getAdvisory(activeConnectionId)
         .then(data => {
-          if (!data || data.advisory_id === "none") return;
-          setAdvisory({
-            predicted: data.predicted_score ?? 0,
-            reasons: data.risk_reasons ?? [],
-            rec: data.recommendation ?? "—",
-            advisory_time: data.advisory_time ?? "—",
-          });
+          if (!data || data.advisory_id === "none") {
+            // Never generated for this connection — derive one now, automatically.
+            generate();
+            return;
+          }
+          const adv = fromApi(data);
+          setAdvisory(adv);
+          setLoadState("ready");
+          // Auto-refresh when stale: a pre-RUN advisory from two days ago is
+          // worse than none — it confidently describes yesterday's world.
+          if (adv.generatedAt && (Date.now() - adv.generatedAt.getTime()) > ADVISORY_STALE_H * 3600e3) {
+            generate();
+          }
         })
-        .catch(() => {});
+        .catch(() => setLoadState("error"));
     }, [activeConnectionId]);
 
-    if (!advisory) return <div style={{ padding: 32, textAlign: "center", color: "var(--fg-3)" }}>Loading advisory…</div>;
+    const ageLabel = advisory?.generatedAt
+      ? (() => {
+          const h = (Date.now() - advisory.generatedAt.getTime()) / 3600e3;
+          return h < 1 ? "just now" : h < 24 ? `${Math.round(h)}h ago` : `${Math.round(h / 24)}d ago`;
+        })()
+      : null;
+
+    if (loadState === "noconn") return (
+      <Card style={{ margin: 24, fontSize: 13, color: "var(--fg-3)" }}>Select a connection to see its pre-run advisory.</Card>
+    );
+    if (loadState === "error" && !advisory) return (
+      <Card style={{ margin: 24, fontSize: 13, color: "var(--red-600)", display: "flex", gap: 10, alignItems: "center" }}>
+        Failed to load the advisory.
+        <Button size="sm" variant="outline" onClick={generate} disabled={generating}>{generating ? "Generating…" : "Try generating one"}</Button>
+      </Card>
+    );
+    if (!advisory) return (
+      <div style={{ padding: 32, textAlign: "center", color: "var(--fg-3)", fontSize: 13 }}>
+        <span className="dt-spin" style={{ width: 14, height: 14, marginRight: 8, borderRadius: "50%", display: "inline-block", border: "2px solid var(--grey-200)", borderTopColor: "var(--fg-3)", verticalAlign: "-2px" }}></span>
+        {generating ? "Analyzing live signals — failures, volume trends, anomaly history…" : "Loading advisory…"}
+      </div>
+    );
     const a = advisory;
     return (
       <div className="dt-fade-up">
         <Card style={{ marginBottom: 16 }}>
-          <SectionTitle icon="cloud-lightning" sub="The only genuinely proactive layer: before the pipeline even runs, predict today's trust score from historical patterns — and recommend whether to proceed.">Pre-run advisory</SectionTitle>
+          <SectionTitle icon="cloud-lightning" sub="The only genuinely proactive layer: before the pipeline even runs, predict today's trust score from live signals — and recommend whether to proceed."
+            right={
+              <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+                {a.generatedBy && (
+                  <span title={a.generatedBy === "ai" ? "Risk narrative written by the LLM from measured signals" : "LLM unavailable — deterministic narrative from the same measured signals"}>
+                    <Chip size="sm" intent={a.generatedBy === "ai" ? "brand" : "neutral"}>{a.generatedBy === "ai" ? "AI-generated" : "heuristic"}</Chip>
+                  </span>
+                )}
+                {ageLabel && <span style={{ fontSize: 11.5, color: "var(--fg-3)" }}>generated {ageLabel}</span>}
+                <Button size="sm" variant="outline" icon="refresh-cw" onClick={generate} disabled={generating}>
+                  {generating ? "Analyzing…" : "Refresh advisory"}
+                </Button>
+              </span>
+            }>Pre-run advisory</SectionTitle>
         </Card>
 
         <Card style={{ marginBottom: 16, border: "1px solid var(--yellow-300)", background: "linear-gradient(180deg, var(--yellow-50), #fff)" }}>
@@ -94,37 +164,95 @@
   const Receipt = () => {
     const { go, activeConnectionId } = useApp();
     const [receipt, setReceipt] = React.useState(null);
+    const [tables, setTables] = React.useState([]);
+    const [pickedTable, setPickedTable] = React.useState("");
+    const [generating, setGenerating] = React.useState(false);
+    const [loading, setLoading] = React.useState(true);
     useIcons();
+
+    const fromApi = (data) => ({
+      query:     data.query_text,
+      at:        data.executed_at,
+      by:        data.executed_by,
+      rows:      data.row_count,
+      score:     data.trust_score,
+      fields:    data.fields || [],
+      rec:       data.recommendation,
+      lastClean: data.last_clean_snapshot,
+      table:     data.table_fqn,
+    });
 
     React.useEffect(() => {
       if (!window.DTApi?.getReceipt) return;
-      setReceipt(null);
-      window.DTApi.getReceipt(activeConnectionId)
-        .then(data => {
-          if (!data || data.receipt_id === "none") return;
-          setReceipt({
-            query:     data.query_text,
-            at:        data.executed_at,
-            by:        data.executed_by,
-            rows:      data.row_count,
-            score:     data.trust_score,
-            fields:    data.fields || [],
-            rec:       data.recommendation,
-            lastClean: data.last_clean_snapshot,
-          });
-        })
-        .catch(() => {});
+      setReceipt(null); setTables([]); setPickedTable(""); setLoading(true);
+      Promise.all([
+        window.DTApi.getReceipt(activeConnectionId).catch(() => null),
+        activeConnectionId && window.DTApi.getReceiptTables
+          ? window.DTApi.getReceiptTables(activeConnectionId).catch(() => [])
+          : Promise.resolve([]),
+      ]).then(([data, tbls]) => {
+        if (data && data.receipt_id !== "none") setReceipt(fromApi(data));
+        setTables(tbls || []);
+        if (tbls && tbls.length) setPickedTable((data && data.receipt_id !== "none" && data.table_fqn) || tbls[0].table_fqn);
+        setLoading(false);
+      });
     }, [activeConnectionId]);
 
-    if (!receipt) return <div style={{ padding: 32, textAlign: "center", color: "var(--fg-3)" }}>Loading receipt…</div>;
+    const generate = async () => {
+      if (!pickedTable || generating) return;
+      setGenerating(true);
+      try {
+        const data = await window.DTApi.generateReceipt(activeConnectionId, pickedTable);
+        setReceipt(fromApi(data));
+        toast(`Receipt generated for ${pickedTable}`, { kind: "success" });
+      } catch (e) {
+        toast(e?.message || "Receipt generation failed", { kind: "error" });
+      }
+      setGenerating(false);
+    };
+
+    const picker = (
+      <Card style={{ marginBottom: 16 }}>
+        <SectionTitle icon="receipt-text" sub="A nutrition label for a table you're about to use: per-column verdicts from live rule results, profiling, open anomalies, and upstream feed health — plus what to do about it.">Data trust receipt</SectionTitle>
+        <div style={{ display: "flex", gap: 10, marginTop: 12, alignItems: "center", flexWrap: "wrap" }}>
+          {tables.length > 0 ? (
+            <>
+              <span style={{ fontSize: 12.5, color: "var(--fg-2)" }}>Which table are you about to use?</span>
+              <select value={pickedTable} onChange={e => setPickedTable(e.target.value)}
+                style={{ fontSize: 12.5, padding: "6px 10px", borderRadius: 8, border: "1px solid var(--grey-200)", minWidth: 240, color: "var(--fg-1)", background: "var(--bg-1, #fff)" }}>
+                {tables.map(t => <option key={t.table_fqn} value={t.table_fqn}>{t.table_fqn} ({t.layer || "?"})</option>)}
+              </select>
+              <Button variant="primary" icon="receipt-text" onClick={generate} disabled={generating || !pickedTable}>
+                {generating ? "Checking the table…" : "Generate receipt"}
+              </Button>
+            </>
+          ) : !loading && (
+            <span style={{ fontSize: 12.5, color: "var(--fg-3)" }}>No profiled tables on this connection yet — run Profiling first, then come back for a receipt.</span>
+          )}
+        </div>
+      </Card>
+    );
+
+    if (loading) return (
+      <div className="dt-fade-up">
+        {picker}
+        <div style={{ padding: 32, textAlign: "center", color: "var(--fg-3)", fontSize: 13 }}>Loading receipt…</div>
+      </div>
+    );
+    if (!receipt) return (
+      <div className="dt-fade-up">
+        {picker}
+        <Card style={{ fontSize: 13, color: "var(--fg-3)", textAlign: "center", padding: 28 }}>
+          No receipt yet for this connection — pick a table above and generate one.
+        </Card>
+      </div>
+    );
     const r = receipt;
     return (
       <div className="dt-fade-up">
-        <Card style={{ marginBottom: 16 }}>
-          <SectionTitle icon="receipt-text" sub="A nutrition label for every query. When a consumer reads a Gold table, they get a trust receipt — how much to trust each field, and what to do about it.">Data trust receipt</SectionTitle>
-        </Card>
+        {picker}
 
-        <div style={{ maxWidth: 620, margin: "0 auto" }}>
+        <div>
           <Card pad={0} style={{ overflow: "hidden", border: "1px solid var(--grey-200)" }}>
             {/* receipt header */}
             <div style={{ padding: "18px 22px", borderBottom: "1px dashed var(--grey-300)", background: "var(--grey-50)" }}>
@@ -133,7 +261,7 @@
                 <span style={{ fontFamily: "var(--font-doc-head)", fontWeight: 700, fontSize: 15 }}>Data Trust Receipt</span>
               </div>
               <Mono style={{ fontSize: 12, color: "var(--fg-2)", display: "block", marginBottom: 4 }}>{r.query}</Mono>
-              <div style={{ fontSize: 11.5, color: "var(--fg-3)" }}>Executed {r.at} · by {r.by} · {r.rows} row returned</div>
+              <div style={{ fontSize: 11.5, color: "var(--fg-3)" }}>Executed {r.at} · by {r.by} · {(r.rows || 0).toLocaleString()} row{r.rows === 1 ? "" : "s"}</div>
             </div>
 
             {/* score */}
@@ -152,28 +280,41 @@
               </div>
             </div>
 
-            {/* fields */}
+            {/* fields — multi-column grid so a full-width receipt uses the
+                horizontal space instead of forcing a long scroll */}
             <div style={{ padding: "8px 22px" }}>
               <Eyebrow style={{ margin: "12px 0 8px" }}>What you should know</Eyebrow>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", columnGap: 32 }}>
               {r.fields.map(f => {
                 const [col, icon] = ST[f.status];
+                const displayName = f.name === "(table-level)" ? "Entire table" : f.name;
                 return (
                   <div key={f.name} style={{ display: "flex", gap: 10, padding: "10px 0", borderBottom: "1px solid var(--grey-100)" }}>
                     <i data-lucide={icon} style={{ width: 16, height: 16, color: col, flexShrink: 0, marginTop: 1 }}></i>
                     <div>
-                      <Mono style={{ fontWeight: 700, color: "var(--fg-1)" }}>{f.name}</Mono>
+                      {displayName === "Entire table"
+                        ? <span style={{ fontWeight: 700, fontSize: 12.5, color: "var(--fg-1)" }}>Entire table</span>
+                        : <Mono style={{ fontWeight: 700, color: "var(--fg-1)" }}>{displayName}</Mono>}
                       <div style={{ fontSize: 12.5, color: "var(--fg-2)", lineHeight: 1.5, marginTop: 2 }}>{f.note}</div>
                     </div>
                   </div>
                 );
               })}
+              </div>
             </div>
 
-            {/* rec */}
-            <div style={{ padding: "14px 22px", background: "var(--red-50)", margin: "8px 22px 0", borderRadius: 10 }}>
-              <Eyebrow color="var(--red-600)" style={{ marginBottom: 5 }}>Recommendation</Eyebrow>
-              <div style={{ fontSize: 13, color: "var(--fg-1)", lineHeight: 1.55 }}>{r.rec}</div>
-            </div>
+            {/* rec — colored by the worst field verdict, not permanently alarming */}
+            {(() => {
+              const worst = r.fields.some(f => f.status === "fail") ? "fail" : r.fields.some(f => f.status === "warn") ? "warn" : "ok";
+              const bg = worst === "fail" ? "var(--red-50)" : worst === "warn" ? "var(--yellow-50, #fefce8)" : "var(--green-50, #f0fdf4)";
+              const fg = worst === "fail" ? "var(--red-600)" : worst === "warn" ? "var(--yellow-700)" : "var(--green-600)";
+              return (
+                <div style={{ padding: "14px 22px", background: bg, margin: "8px 22px 0", borderRadius: 10 }}>
+                  <Eyebrow color={fg} style={{ marginBottom: 5 }}>Recommendation</Eyebrow>
+                  <div style={{ fontSize: 13, color: "var(--fg-1)", lineHeight: 1.55 }}>{r.rec}</div>
+                </div>
+              );
+            })()}
 
             <div style={{ padding: "16px 22px", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
               <span style={{ flex: 1, fontSize: 12, color: "var(--fg-3)" }}>Last fully-trusted snapshot: <strong style={{ color: "var(--green-600)" }}>{r.lastClean || "—"}</strong></span>

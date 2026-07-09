@@ -14,6 +14,7 @@ from app.agents.execution_agent import SEVERITY_WEIGHT
 
 class AuditEntry(BaseModel):
     time: str
+    date: str = ""          # ISO date (YYYY-MM-DD) — lets consumers scope to "today"
     user: str
     action: str
     entity: str
@@ -109,8 +110,9 @@ def get_summary(connection_id: str | None = None, db: Session = Depends(get_db),
         SELECT COUNT(DISTINCT run_id) FROM dq_run_results {conn_where}
     """), params).scalar() or 0)
 
-    # Per-layer open failures (latest run)
+    # Per-layer open failures + rules executed (latest run)
     layer_fail_counts: dict = {}
+    layer_rule_counts: dict = {}
     if latest_run_id:
         lf_rows = db.execute(text("""
             SELECT layer, COUNT(*) FROM dq_run_results
@@ -118,6 +120,36 @@ def get_summary(connection_id: str | None = None, db: Session = Depends(get_db),
             GROUP BY layer
         """), {"run_id": latest_run_id}).fetchall()
         layer_fail_counts = {r[0]: int(r[1]) for r in lf_rows if r[0]}
+        lr_rows = db.execute(text("""
+            SELECT layer, COUNT(*) FROM dq_run_results
+            WHERE run_id=:run_id
+            GROUP BY layer
+        """), {"run_id": latest_run_id}).fetchall()
+        layer_rule_counts = {r[0]: int(r[1]) for r in lr_rows if r[0]}
+
+    # Per-layer trend: latest profiling score per table vs the previous profiling
+    # of the SAME table, averaged per layer. None when a layer has no repeat
+    # profilings to compare — the UI shows "—" honestly in that case.
+    layer_trend_deltas: dict = {}
+    trend_rows = db.execute(text(f"""
+        SELECT layer, table_fqn, quality_score,
+               ROW_NUMBER() OVER (PARTITION BY table_fqn ORDER BY run_at DESC) AS rn
+        FROM profiling_reports {conn_where}
+    """), params).fetchall()
+    _cur: dict = {}
+    _prev: dict = {}
+    for r in trend_rows:
+        if r[3] == 1:
+            _cur[r[1]] = (r[0] or "UNKNOWN", float(r[2] or 0))
+        elif r[3] == 2:
+            _prev[r[1]] = float(r[2] or 0)
+    _deltas_by_layer: dict = {}
+    for tbl, (layer, cur_score) in _cur.items():
+        if tbl in _prev:
+            _deltas_by_layer.setdefault(layer, []).append(cur_score - _prev[tbl])
+    layer_trend_deltas = {
+        layer: round(sum(ds) / len(ds), 1) for layer, ds in _deltas_by_layer.items()
+    }
 
     # ── Active anomalies ──────────────────────────────────────────────────────
     anomaly_count = int(db.execute(text(f"""
@@ -235,6 +267,8 @@ def get_summary(connection_id: str | None = None, db: Session = Depends(get_db),
             layer=layer, score=round(score, 1), status=status,
             open_issues=layer_fail_counts.get(layer, 0),
             critical_count=0, high_count=0,
+            rule_count=layer_rule_counts.get(layer, 0),
+            trend_delta=layer_trend_deltas.get(layer),
         ))
 
     # Prefer the latest execution run's own health over historical profiling
@@ -272,6 +306,159 @@ def get_summary(connection_id: str | None = None, db: Session = Depends(get_db),
         profiled_table_count=profiled_table_count,
         layer_anomaly_counts=layer_anomaly_counts,
     )
+
+
+_SEV_RANK = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}
+
+
+@router.get("/attention")
+def get_attention(connection_id: str | None = None, db: Session = Depends(get_db),
+                  current_user: CurrentUser = Depends(get_current_user)):
+    """The 7:45am queue: everything that needs a human, ranked — open critical/high
+    anomalies, failing rules from the latest run, overdue tasks, and stale layers —
+    plus a since-yesterday delta strip and per-layer freshness."""
+    conn_filter = "AND connection_id=:conn" if connection_id else ""
+    conn_where = "WHERE connection_id=:conn" if connection_id else ""
+    params: dict = {"conn": connection_id} if connection_id else {}
+
+    items: list[dict] = []
+
+    # ── Open anomalies (CRITICAL/HIGH float to the top; cap to keep it a queue) ──
+    anom_rows = db.execute(text(f"""
+        SELECT anomaly_id, description, table_fqn, severity, anomaly_type, detected_at, layer
+        FROM anomaly_log
+        WHERE status='open' {conn_filter}
+        ORDER BY CASE severity WHEN 'CRITICAL' THEN 0 WHEN 'HIGH' THEN 1 WHEN 'MEDIUM' THEN 2 ELSE 3 END,
+                 detected_at DESC
+        LIMIT 10
+    """), params).fetchall()
+    for r in anom_rows:
+        items.append({
+            "kind": "anomaly", "entity_id": r[0],
+            "severity": r[3] or "MEDIUM",
+            "title": (r[1] or "Anomaly").replace("[SIM] ", ""),
+            "detail": f"{r[4] or 'anomaly'} · {r[2] or 'unknown table'}",
+            "table_fqn": r[2], "layer": r[6],
+            "ts": str(r[5]) if r[5] else None,
+            "action": "anomalies",
+        })
+
+    # ── Failing rules from the latest run ────────────────────────────────────
+    latest_run_id = db.execute(text(f"""
+        SELECT run_id FROM dq_run_results {conn_where}
+        ORDER BY run_timestamp DESC LIMIT 1
+    """), params).scalar()
+    if latest_run_id:
+        fail_rows = db.execute(text("""
+            SELECT COALESCE(NULLIF(rr.rule_name, ''), NULLIF(dr.rule_name, ''), 'unnamed rule') AS rule_name,
+                   rr.table_fqn, rr.severity, rr.fail_pct, rr.failed_records, rr.run_timestamp
+            FROM dq_run_results rr
+            LEFT JOIN dq_rules dr ON dr.rule_id = rr.rule_id
+            WHERE rr.run_id=:run_id AND rr.status='FAIL'
+              AND COALESCE(rr.is_expected_failure, FALSE) = FALSE
+            ORDER BY CASE rr.severity WHEN 'CRITICAL' THEN 0 WHEN 'HIGH' THEN 1 WHEN 'MEDIUM' THEN 2 ELSE 3 END,
+                     rr.fail_pct DESC
+            LIMIT 8
+        """), {"run_id": latest_run_id}).fetchall()
+        for r in fail_rows:
+            items.append({
+                "kind": "rule", "entity_id": r[0],
+                "severity": r[2] or "MEDIUM",
+                "title": f"Rule failing: {r[0]}",
+                "detail": f"{r[1]} · {int(r[4] or 0):,} rows ({float(r[3] or 0)}%) failing in the latest run",
+                "table_fqn": r[1], "layer": None,
+                "ts": str(r[5]) if r[5] else None,
+                "action": "execution",
+            })
+
+    # ── Overdue open tasks ────────────────────────────────────────────────────
+    task_rows = db.execute(text(f"""
+        SELECT task_id, title, priority, owner, due_date
+        FROM task_board
+        WHERE status IN ('open','in_progress') AND due_date IS NOT NULL AND due_date < CURRENT_DATE
+        {conn_filter}
+        ORDER BY due_date ASC LIMIT 5
+    """), params).fetchall()
+    for r in task_rows:
+        days_over = db.execute(text("SELECT (CURRENT_DATE - CAST(:d AS DATE))"), {"d": str(r[4])}).scalar()
+        items.append({
+            "kind": "task", "entity_id": r[0],
+            "severity": r[2] or "MEDIUM",
+            "title": f"Overdue task: {r[1]}",
+            "detail": f"due {r[4]} ({int(days_over)} day{'s' if int(days_over) != 1 else ''} ago) · owner {r[3] or 'unassigned'}",
+            "table_fqn": None, "layer": None, "ts": None,
+            "action": "tasks",
+        })
+
+    items.sort(key=lambda i: (_SEV_RANK.get(i["severity"], 9), i["ts"] is None, str(i.get("ts") or "")))
+
+    # ── Since-yesterday strip ─────────────────────────────────────────────────
+    new_anoms = int(db.execute(text(f"""
+        SELECT COUNT(*) FROM anomaly_log
+        WHERE detected_at > NOW() - INTERVAL '24 hours' {conn_filter}
+    """), params).scalar() or 0)
+    hist = db.execute(text(f"""
+        SELECT overall_score, score_date FROM trust_score_history {conn_where}
+        ORDER BY score_date DESC LIMIT 2
+    """), params).fetchall()
+    trust_now = float(hist[0][0]) if hist else None
+    trust_prev = float(hist[1][0]) if len(hist) > 1 else None
+    trust_date = str(hist[0][1]) if hist else None  # lets the UI suppress stale history
+
+    # Newly failing rules: FAIL in the latest run but not in the previous run.
+    newly_failing: list[str] = []
+    if latest_run_id:
+        prev_run_id = db.execute(text(f"""
+            SELECT run_id FROM (
+                SELECT DISTINCT run_id, MAX(run_timestamp) AS ts FROM dq_run_results {conn_where}
+                GROUP BY run_id ORDER BY ts DESC LIMIT 2
+            ) t ORDER BY ts ASC LIMIT 1
+        """), params).scalar()
+        if prev_run_id and prev_run_id != latest_run_id:
+            nf_rows = db.execute(text("""
+                SELECT DISTINCT cur.rule_name FROM dq_run_results cur
+                WHERE cur.run_id=:cur AND cur.status='FAIL'
+                  AND NOT EXISTS (
+                      SELECT 1 FROM dq_run_results prev
+                      WHERE prev.run_id=:prev AND prev.rule_name=cur.rule_name AND prev.status='FAIL'
+                  )
+            """), {"cur": latest_run_id, "prev": prev_run_id}).fetchall()
+            newly_failing = [r[0] for r in nf_rows if r[0]]
+
+    # ── Per-layer freshness (last profiling or execution touch) ───────────────
+    fresh_rows = db.execute(text(f"""
+        SELECT layer, MAX(run_at) FROM profiling_reports {conn_where} GROUP BY layer
+    """), params).fetchall()
+    exec_rows = db.execute(text(f"""
+        SELECT layer, MAX(run_timestamp) FROM dq_run_results {conn_where} GROUP BY layer
+    """), params).fetchall()
+    last_touch: dict = {}
+    for r in list(fresh_rows) + list(exec_rows):
+        if r[0] and r[1] and (r[0] not in last_touch or r[1] > last_touch[r[0]]):
+            last_touch[r[0]] = r[1]
+    freshness = []
+    from datetime import datetime as _dtt
+    for layer in _LAYER_ORDER:
+        ts = last_touch.get(layer)
+        if ts is None:
+            freshness.append({"layer": layer, "last_checked": None, "age_hours": None, "state": "never"})
+        else:
+            age_h = round((_dtt.utcnow() - ts).total_seconds() / 3600, 1)
+            state = "fresh" if age_h <= 24 else ("aging" if age_h <= 72 else "stale")
+            freshness.append({"layer": layer, "last_checked": str(ts), "age_hours": age_h, "state": state})
+
+    return {
+        "items": items[:10],
+        "since": {
+            "window_hours": 24,
+            "new_anomalies": new_anoms,
+            "newly_failing_rules": newly_failing[:5],
+            "trust_now": trust_now,
+            "trust_prev": trust_prev,
+            "trust_date": trust_date,
+        },
+        "freshness": freshness,
+    }
 
 
 @router.get("/trends", response_model=list[TrendPoint])
@@ -332,7 +519,7 @@ def get_cde_status(connection_id: str | None = None, db: Session = Depends(get_d
             SELECT table_fqn FROM profiling_reports GROUP BY table_fqn
         ) pr ON d.table_fqn=pr.table_fqn
         LEFT JOIN (
-            SELECT column_name, AVG((cs->>'null_pct')::float) as null_avg
+            SELECT cs->>'name' AS column_name, AVG((cs->>'null_pct')::float) as null_avg
             FROM profiling_reports, jsonb_array_elements(column_stats) cs
             GROUP BY cs->>'name'
         ) p ON d.column_name=p.column_name
@@ -378,9 +565,139 @@ def get_audit_trail(connection_id: Optional[str] = None, limit: int = 20, db: Se
     return [
         AuditEntry(
             time=str(r[0])[:16].replace("T", " ")[-5:] if r[0] else "—",
+            date=str(r[0])[:10] if r[0] else "",
             user=r[1] or "System",
             action=r[2] or "—",
             entity=r[3] or "—",
         )
         for r in rows
     ]
+
+
+# ── AI Usage & Cost — governance transparency panel ─────────────────────────
+# Every AI call in this app is already logged at its call site (rule_ai_calls
+# for RECOMMEND/NL_CONVERT/ANOMALY_EXPLAIN/REMEDIATION; ai_usage_log for
+# sim_classify/sim_narrative/lineage_narrative/advisory/receipt/daily_summary).
+# This endpoint is the union of both — one number, not scattered log lines.
+
+# Approximate list-price $/1K tokens (input, output). Local/open-weight models
+# served via the Ollama proxy cost $0 in this deployment. Unknown models fall
+# back to a conservative mid-tier estimate rather than silently reporting $0,
+# which would understate spend for anyone who swaps in an unlisted provider.
+_MODEL_PRICE_PER_1K = {
+    "claude-sonnet-4-6": (0.003, 0.015), "claude-opus": (0.015, 0.075),
+    "claude-haiku": (0.0008, 0.004),
+    "gpt-4o": (0.0025, 0.01), "gpt-4o-mini": (0.00015, 0.0006),
+    "gemini-1.5-pro": (0.00125, 0.005), "gemini-2.0-flash": (0.0001, 0.0004),
+    "gemini": (0.0001, 0.0004),
+    "azure/gpt-4o": (0.0025, 0.01),
+}
+_LOCAL_MODEL_PREFIXES = ("openai/", "ollama/")   # LiteLLM-proxied local models — free to run
+
+
+def _estimate_cost(model: str | None, input_tokens: int, output_tokens: int) -> float | None:
+    if not model:
+        return None
+    if model.startswith(_LOCAL_MODEL_PREFIXES):
+        return 0.0
+    for key, (in_price, out_price) in _MODEL_PRICE_PER_1K.items():
+        if key in model:
+            return round(input_tokens / 1000 * in_price + output_tokens / 1000 * out_price, 4)
+    # Unknown cloud model — conservative mid-tier estimate so cost is never
+    # silently reported as zero for a real paid call.
+    return round(input_tokens / 1000 * 0.003 + output_tokens / 1000 * 0.012, 4)
+
+
+@router.get("/ai-usage")
+def get_ai_usage(connection_id: str | None = None, days: int = 30, db: Session = Depends(get_db),
+                 current_user: CurrentUser = Depends(get_current_user)):
+    """Aggregate AI cost, token spend, latency, and AI-vs-fallback rate across
+    every LLM call site in the app — the evidence trail for 'does the AI usage
+    justify the value', not a claim without a number behind it."""
+    conn_filter_a = "AND connection_id=:conn" if connection_id else ""
+    conn_filter_b = "AND connection_id=:conn" if connection_id else ""
+    params: dict = {"days": days}
+    if connection_id:
+        params["conn"] = connection_id
+
+    rule_rows = db.execute(text(f"""
+        SELECT call_type AS feature, model, status,
+               COUNT(*), COALESCE(SUM(input_tokens),0), COALESCE(SUM(output_tokens),0),
+               COALESCE(AVG(latency_ms),0)
+        FROM rule_ai_calls
+        WHERE created_at > NOW() - (CAST(:days AS INTEGER) * INTERVAL '1 day') {conn_filter_a}
+        GROUP BY call_type, model, status
+    """), params).fetchall()
+
+    usage_rows = db.execute(text(f"""
+        SELECT feature, model, status,
+               COUNT(*), COALESCE(SUM(input_tokens),0), COALESCE(SUM(output_tokens),0),
+               COALESCE(AVG(latency_ms),0)
+        FROM ai_usage_log
+        WHERE created_at > NOW() - (CAST(:days AS INTEGER) * INTERVAL '1 day') {conn_filter_b}
+        GROUP BY feature, model, status
+    """), params).fetchall()
+
+    by_feature: dict = {}
+    total_calls = total_in = total_out = 0
+    total_latency_weighted = 0.0
+    ai_calls = fallback_calls = error_calls = 0
+    total_cost = 0.0
+    cost_known = True
+
+    for feature, model, status, cnt, in_tok, out_tok, avg_lat in list(rule_rows) + list(usage_rows):
+        cnt, in_tok, out_tok, avg_lat = int(cnt), int(in_tok), int(out_tok), float(avg_lat)
+        entry = by_feature.setdefault(feature, {
+            "feature": feature, "calls": 0, "input_tokens": 0, "output_tokens": 0,
+            "latency_weighted": 0.0, "ai": 0, "fallback": 0, "error": 0, "cost": 0.0,
+        })
+        entry["calls"] += cnt
+        entry["input_tokens"] += in_tok
+        entry["output_tokens"] += out_tok
+        entry["latency_weighted"] += avg_lat * cnt
+        # rule_ai_calls uses status success|error; ai_usage_log uses ai|fallback|error
+        norm_status = "ai" if status == "success" else status
+        entry[norm_status if norm_status in ("ai", "fallback", "error") else "ai"] += cnt
+
+        cost = _estimate_cost(model, in_tok, out_tok)
+        if cost is None:
+            cost_known = False
+        else:
+            entry["cost"] += cost
+            total_cost += cost
+
+        total_calls += cnt
+        total_in += in_tok
+        total_out += out_tok
+        total_latency_weighted += avg_lat * cnt
+        if norm_status == "fallback":
+            fallback_calls += cnt
+        elif norm_status == "error":
+            error_calls += cnt
+        else:
+            ai_calls += cnt
+
+    feature_list = []
+    for f in by_feature.values():
+        feature_list.append({
+            "feature": f["feature"], "calls": f["calls"],
+            "input_tokens": f["input_tokens"], "output_tokens": f["output_tokens"],
+            "avg_latency_ms": round(f["latency_weighted"] / f["calls"], 0) if f["calls"] else 0,
+            "ai_calls": f["ai"], "fallback_calls": f["fallback"], "error_calls": f["error"],
+            "estimated_cost_usd": round(f["cost"], 4),
+        })
+    feature_list.sort(key=lambda f: -f["calls"])
+
+    return {
+        "window_days": days,
+        "total_calls": total_calls,
+        "total_input_tokens": total_in,
+        "total_output_tokens": total_out,
+        "avg_latency_ms": round(total_latency_weighted / total_calls, 0) if total_calls else 0,
+        "ai_success_rate": round(ai_calls / total_calls * 100, 1) if total_calls else None,
+        "fallback_rate": round(fallback_calls / total_calls * 100, 1) if total_calls else None,
+        "error_rate": round(error_calls / total_calls * 100, 1) if total_calls else None,
+        "estimated_cost_usd": round(total_cost, 2),
+        "cost_fully_known": cost_known,
+        "by_feature": feature_list,
+    }

@@ -262,6 +262,9 @@ class SqlServerConnector(BaseConnector):
             return f"[{esc(schema)}].[{esc(db_schema)}].[{esc(tname)}]"
         return f"[{esc(schema)}].[{esc(table)}]"
 
+    def quote_ident(self, name: str) -> str:
+        return f"[{name.replace(']', ']]')}]"
+
     def query(self, sql: str, params: dict | None = None) -> QueryResult:
         conn = self._connect()
         cursor = conn.cursor()

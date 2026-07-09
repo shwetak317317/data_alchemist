@@ -13,7 +13,7 @@ from sqlalchemy import text as sqlt
 from sqlalchemy.orm import Session
 
 from app.core.metadata_db import get_db, db_session
-from app.core.auth_deps import get_current_user, CurrentUser
+from app.core.auth_deps import get_current_user, assert_connection_access, CurrentUser
 from app.services.audit_service import log_event
 from app.services.simulation_classify import (
     CLASSIFY_PROMPT_VERSION,
@@ -254,12 +254,26 @@ def _resolve_grounding_table(
 
     try:
         with db_session() as db:
-            rows = db.execute(sqlt("""
-                SELECT DISTINCT ON (table_fqn) table_fqn, layer
-                FROM profiling_reports
-                WHERE connection_id = :conn AND layer = :layer
-                ORDER BY table_fqn, run_at DESC
-            """), {"conn": connection_id, "layer": target_layer}).fetchall()
+            # When the USER named a table (table_hint), search every layer — a data
+            # engineer saying "br_customers went 40% null" means THAT Bronze table,
+            # and forcing the scenario template's canonical layer grounded it to
+            # SilverDB.dim_customer instead (seen live). The canonical-layer
+            # restriction only applies when we're matching the template's own
+            # fictional default name.
+            if table_hint:
+                rows = db.execute(sqlt("""
+                    SELECT DISTINCT ON (table_fqn) table_fqn, layer
+                    FROM profiling_reports
+                    WHERE connection_id = :conn
+                    ORDER BY table_fqn, run_at DESC
+                """), {"conn": connection_id}).fetchall()
+            else:
+                rows = db.execute(sqlt("""
+                    SELECT DISTINCT ON (table_fqn) table_fqn, layer
+                    FROM profiling_reports
+                    WHERE connection_id = :conn AND layer = :layer
+                    ORDER BY table_fqn, run_at DESC
+                """), {"conn": connection_id, "layer": target_layer}).fetchall()
     except Exception as exc:
         logger.warning("_resolve_grounding_table connection=%s scenario=%s: %s", connection_id, scn_key, exc)
         return None
@@ -319,6 +333,25 @@ def _fetch_profiling_context(
         logger.warning("_fetch_profiling_context %s: %s", table_fqn, exc)
         return {}
 
+
+def _fetch_column_lineage_context(connection_id, table_fqn, column):
+    """Exact downstream columns derived from (table_fqn, column) — the verified
+    column-precision blast radius from lineage_column_edges (parsed ETL).
+    Empty list on any failure or when no column was named."""
+    if not connection_id or not table_fqn or not column:
+        return []
+    try:
+        with db_session() as db:
+            rows = db.execute(sqlt(
+                "SELECT target_fqn, target_column FROM lineage_column_edges "
+                "WHERE connection_id = :conn AND source_fqn = :fqn "
+                "AND LOWER(source_column) = LOWER(:col) "
+                "ORDER BY target_fqn, target_column LIMIT 12"
+            ), {"conn": connection_id, "fqn": table_fqn, "col": column}).fetchall()
+        return [{"target_fqn": r[0], "target_column": r[1]} for r in rows]
+    except Exception as exc:
+        logger.warning("_fetch_column_lineage_context %s.%s: %s", table_fqn, column, exc)
+        return []
 
 def _fetch_lineage_context(connection_id: str | None, table_fqn: str) -> dict:
     """Fetch immediate downstream lineage for the narrative prompt. Returns {} on any failure."""
@@ -424,6 +457,21 @@ def _parameterize_scenario(
     }
 
 
+# ── Org access ────────────────────────────────────────────────────────────────
+
+def _assert_connection_org(connection_id: str | None, db, current_user: CurrentUser) -> None:
+    """403 if the connection belongs to another org; 404 if unknown. connection_id
+    is optional on simulator routes (demo mode) — None skips the check."""
+    if not connection_id:
+        return
+    row = db.execute(sqlt(
+        "SELECT org_id FROM connections WHERE id=:id AND deleted_at IS NULL"
+    ), {"id": connection_id}).fetchone()
+    if not row:
+        raise HTTPException(404, "Connection not found")
+    assert_connection_access(row[0], current_user)
+
+
 # ── Concurrency guard ─────────────────────────────────────────────────────────
 
 _INJECT_LOCKS: dict[str, asyncio.Lock] = {}
@@ -458,9 +506,9 @@ async def _synthesize_unknown_scenario(
                 temperature=0,
                 max_tokens=150,
                 num_retries=0,
-                request_timeout=4,
+                request_timeout=12,
             ),
-            timeout=5.0,
+            timeout=14.0,
         )
         shape = UnknownScenarioShape.model_validate(parse_llm_json(raw))
 
@@ -499,18 +547,28 @@ async def _synthesize_unknown_scenario(
 # ── Anomaly creation ───────────────────────────────────────────────────────────
 
 def _create_simulation_anomaly(
-    db, run_id: str, connection_id: str, scn_key: str, event: dict
+    db, run_id: str, connection_id: str, scn_key: str, event: dict,
+    grounded_table: tuple[str, str] | None = None,
 ) -> str:
     scn = _SCENARIOS[scn_key]
     tables = _SCENARIO_TABLES.get(scn_key, [("silver.orders_enriched", "SILVER")])
 
-    table_fqn, layer = tables[0]
-    title_lower = event["title"].lower()
-    for t, l in tables:
-        schema = t.split(".")[0]
-        if schema in title_lower:
-            table_fqn, layer = t, l
-            break
+    # The grounded REAL table (the same one shown in the timeline/narrative/SQL)
+    # takes priority — a [SIM] anomaly against a fictional table breaks every
+    # consumer keying on table_fqn: the inbox layer pill, the "View impact"
+    # cross-link into the lineage graph, and reviewer trust (seen live: sims
+    # logged against silver.orders_enriched on a connection whose real table
+    # is SilverDB.fact_sales).
+    if grounded_table:
+        table_fqn, layer = grounded_table[0], (grounded_table[1] or "SILVER").upper()
+    else:
+        table_fqn, layer = tables[0]
+        title_lower = event["title"].lower()
+        for t, l in tables:
+            schema = t.split(".")[0]
+            if schema in title_lower:
+                table_fqn, layer = t, l
+                break
 
     anomaly_type = _ANOMALY_TYPE_MAP.get(scn_key, "VOLUME")
     severity = "CRITICAL" if scn["drop"] >= 50 else "HIGH"
@@ -573,6 +631,10 @@ async def _event_stream(
             "body": scn["body"],
             "confidence": round(classify_result.confidence, 3),
             "compound": classify_result.compound,
+            # The REAL table this scenario grounded to — lets the frontend draw
+            # the affected-tables blast radius from actual lineage.
+            "grounded_table": grounded_table[0] if grounded_table else None,
+            "grounded_layer": grounded_table[1] if grounded_table else None,
         },
     }
     yield f"data: {json.dumps(_meta_payload)}\n\n"
@@ -632,10 +694,13 @@ async def _event_stream(
 
         # Parallelize independent DB fetches — each uses its own db_session().
         loop = asyncio.get_event_loop()
-        profiling_ctx, lineage_ctx = await asyncio.gather(
+        profiling_ctx, lineage_ctx, col_downstream = await asyncio.gather(
             loop.run_in_executor(None, _fetch_profiling_context, connection_id, primary_table, e.column),
             loop.run_in_executor(None, _fetch_lineage_context, connection_id, primary_table),
+            loop.run_in_executor(None, _fetch_column_lineage_context, connection_id, primary_table, e.column),
         )
+        if col_downstream:
+            lineage_ctx = {**lineage_ctx, "column_downstream": col_downstream, "column_name": e.column}
         _has_real_metrics = bool(profiling_ctx)
 
         messages = build_narrative_prompt(
@@ -744,15 +809,15 @@ async def _event_stream(
                 logger.warning("P4 tracking column update skipped (migration may be absent): %s", p4_exc)
                 post_db.rollback()
 
-            if connection_id and fail_events:
-                for fe in fail_events:
-                    _create_simulation_anomaly(post_db, run_id, connection_id, scn_key, fe)
-                logger.info(json.dumps({
-                    "event": "simulation.post_stream_complete",
-                    "run_id": run_id,
-                    "anomalies_created": len(fail_events),
-                    "events_persisted": len(all_events),
-                }))
+            # Sandbox contract: a simulation never writes to shared monitoring
+            # surfaces. No anomaly_log rows — the would-be alerts are shown only
+            # in the simulator's own timeline. (Real [SIM] inbox rows made
+            # engineers distrust the real inbox badge and dashboard trend.)
+            logger.info(json.dumps({
+                "event": "simulation.post_stream_complete",
+                "run_id": run_id,
+                "events_persisted": len(all_events),
+            }))
     except Exception as exc:
         logger.error("Post-stream DB update failed for run %s: %s", run_id, exc)
 
@@ -793,6 +858,7 @@ async def inject_scenario(
     text = req.scenario_text.strip()
     if not text:
         raise HTTPException(status_code=422, detail="scenario_text must not be empty")
+    _assert_connection_org(req.connection_id, db, current_user)
 
     logger.info(json.dumps({
         "event": "inject.entry",
@@ -802,7 +868,7 @@ async def inject_scenario(
     }))
 
     run_id = str(_uuid.uuid4())
-    classify_result = await classify_with_llm(text, run_id=run_id)
+    classify_result = await classify_with_llm(text, run_id=run_id, db=db, connection_id=req.connection_id)
     scn_key = classify_result.key
 
     # Resolve a REAL table this connection was actually profiled on (P5) — without this,
@@ -907,7 +973,8 @@ def remediate_simulation(
         "run_id": req.run_id,
         "connection_id": req.connection_id,
     }))
-    recovery_score = 88  # safe fallback when no history exists
+    _assert_connection_org(req.connection_id, db, current_user)
+    recovery_score = 88  # display-only fallback when no baseline exists
 
     try:
         db.execute(sqlt(
@@ -939,16 +1006,10 @@ def remediate_simulation(
             baseline = float(baseline_row[0]) if baseline_row and baseline_row[0] is not None else None
             # Small uplift over pre-incident baseline (remediation fixed the root cause),
             # capped at 95 — we don't claim perfection from a single simulated fix.
+            # Display-only: the sandbox contract means simulations NEVER write to
+            # trust_score_history — the recovery score exists only on the
+            # simulator screen and vanishes on reset.
             recovery_score = min(95, round((baseline + 3) if baseline is not None else 88))
-
-            db.execute(sqlt("""
-                INSERT INTO trust_score_history
-                    (history_id, connection_id, score_date, overall_score, recorded_at)
-                VALUES
-                    (:id, :conn, NOW()::DATE, :score, NOW())
-                ON CONFLICT (connection_id, score_date)
-                DO UPDATE SET overall_score = :score, recorded_at = NOW()
-            """), {"id": str(_uuid.uuid4()), "conn": req.connection_id, "score": float(recovery_score)})
 
         log_event(
             db,
@@ -988,6 +1049,7 @@ def get_simulation_accuracy(
         "connection_id": connection_id,
         "days": days,
     }))
+    _assert_connection_org(connection_id, db, current_user)
     params: dict = {"days": days}
     conn_filter = "AND connection_id=:conn" if connection_id else ""
     if connection_id:
@@ -1071,6 +1133,7 @@ def get_simulation_history(
         "connection_id": connection_id,
         "limit": limit,
     }))
+    _assert_connection_org(connection_id, db, current_user)
     params: dict = {"limit": limit}
     where_parts = []
     if connection_id:

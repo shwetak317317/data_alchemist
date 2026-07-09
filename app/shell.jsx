@@ -155,7 +155,7 @@ const Sidebar = () => {
           <i data-lucide="shield-check" style={{ width: 17, height: 17 }}></i>
         </span>
         <div>
-          <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 16, letterSpacing: "-0.02em", lineHeight: 1 }}>DataTrust</div>
+          <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 16, letterSpacing: "-0.02em", lineHeight: 1 }}>Data Alchemist</div>
           <div style={{ fontSize: 10, color: "var(--fg-3)", fontWeight: 600, letterSpacing: ".04em", marginTop: 2 }}>AGENTIC DQ PLATFORM</div>
         </div>
       </div>
@@ -224,7 +224,7 @@ const TopBar = () => {
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: "flex", gap: 6, fontSize: 11, color: "var(--fg-3)", marginBottom: 1 }}>
           <span style={{ maxWidth: 130, overflow: "hidden", textOverflow: "ellipsis", display: "inline-block", verticalAlign: "bottom" }}>
-            {activeConnectionName || "DataTrust"}
+            {activeConnectionName || "Data Alchemist"}
           </span>
           <span>/</span>
           <span style={{ textTransform: "capitalize" }}>{meta.group || "Workflow"}</span>
