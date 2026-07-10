@@ -98,7 +98,12 @@ def get_inbox(connection_id: str | None = None, db: Session = Depends(get_db),
     result = []
     for r in rows:
         a = _row_to_anomaly(r)
-        if len(r) > 14 and r[14] is not None:
+        # The fetched series is always row-count-over-recent-runs — a real signal
+        # for VOLUME anomalies, but meaningless for SEGMENT/DISTRIBUTION/FRESHNESS
+        # ones (a freshness breach can sit on a perfectly flat row-count history).
+        # Only attach it where it actually reflects what went wrong; the frontend
+        # already renders the sparkline conditionally on history being present.
+        if a.anomaly_type == "VOLUME" and len(r) > 14 and r[14] is not None:
             hv = r[14]
             a.history_values = hv if isinstance(hv, list) else None
         if len(r) > 15:

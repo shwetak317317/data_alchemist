@@ -412,8 +412,16 @@ def _parameterize_scenario(
         replacements["Northeast"] = e.region
 
     elif scn_key == "nullcol" and e.column:
-        # Only replace the specific column placeholder — leave generic "revenue" prose alone.
         replacements["net_revenue"] = e.column
+        # The base template's title is natural-language ("Revenue Data Missing")
+        # and doesn't literally contain "net_revenue", so the substitution above
+        # never touched it — a scenario grounded to e.g. "email" still showed a
+        # title about revenue. Only override the title when the named column
+        # isn't itself revenue-related, so the default wording is untouched for
+        # the common case that prompted the original template.
+        if e.column.lower() not in ("net_revenue", "revenue"):
+            col_label = e.column.replace("_", " ").strip().title()
+            replacements["Revenue Data Missing"] = f"{col_label} Data Missing"
 
     elif scn_key == "whitelist":
         # Value first (with and without quotes), then column — order matters.
@@ -447,11 +455,22 @@ def _parameterize_scenario(
             text = text.replace(old, new)
         return text
 
+    inject_sql = _sub(base["inject_sql"])
+    # The WHERE clause is a template artifact of the DEFAULT table's assumed shape
+    # (e.g. order_date on orders, region on a segmented table) — swapping in a real
+    # but differently-shaped grounded table doesn't guarantee that column exists on
+    # it. inject_sql is illustrative only (never executed against any database), but
+    # showing a predicate that plainly can't be true of the displayed table read as
+    # a bug rather than a demo simplification. Flag it honestly instead of pretending
+    # precision we don't have.
+    if grounded_table and default_table and default_table in replacements and not inject_sql.lstrip().startswith("--"):
+        inject_sql += "  -- illustrative predicate; adjust to this table's actual columns"
+
     return {
         **base,
         "events":     [(_at, _kind, _sub(_title), _sub(_detail))
                        for _at, _kind, _title, _detail in base["events"]],
-        "inject_sql": _sub(base["inject_sql"]),
+        "inject_sql": inject_sql,
         "body":       [_sub(b) for b in base["body"]],
         "title":      _sub(base["title"]),
     }
@@ -977,9 +996,12 @@ def remediate_simulation(
     recovery_score = 88  # display-only fallback when no baseline exists
 
     try:
-        db.execute(sqlt(
+        result = db.execute(sqlt(
             "UPDATE simulation_runs SET status='remediated' WHERE sim_run_id=:id"
         ), {"id": req.run_id})
+        if result.rowcount == 0:
+            db.rollback()
+            raise HTTPException(404, f"Simulation run {req.run_id} not found")
 
         if req.connection_id:
             db.execute(sqlt("""
@@ -990,26 +1012,30 @@ def remediate_simulation(
                   AND status='open'
             """), {"by": current_user.email, "conn": req.connection_id})
 
-            # Fetch the pre-simulation baseline — last score recorded before this run started.
-            baseline_row = db.execute(sqlt("""
-                SELECT overall_score
-                FROM trust_score_history
-                WHERE connection_id = :conn
-                  AND recorded_at < COALESCE(
-                      (SELECT started_at FROM simulation_runs WHERE sim_run_id = :run_id),
-                      NOW()
-                  )
-                ORDER BY recorded_at DESC
-                LIMIT 1
-            """), {"conn": req.connection_id, "run_id": req.run_id}).fetchone()
+            # Best-effort only from here down: the recovery score is display-only
+            # (the sandbox contract means simulations NEVER write to
+            # trust_score_history), so a failure here must not undo the real
+            # remediation above or report it as failed — it only means the
+            # displayed score falls back to the flat default.
+            try:
+                baseline_row = db.execute(sqlt("""
+                    SELECT overall_score
+                    FROM trust_score_history
+                    WHERE connection_id = :conn
+                      AND recorded_at < COALESCE(
+                          (SELECT started_at FROM simulation_runs WHERE sim_run_id = :run_id),
+                          NOW()
+                      )
+                    ORDER BY recorded_at DESC
+                    LIMIT 1
+                """), {"conn": req.connection_id, "run_id": req.run_id}).fetchone()
 
-            baseline = float(baseline_row[0]) if baseline_row and baseline_row[0] is not None else None
-            # Small uplift over pre-incident baseline (remediation fixed the root cause),
-            # capped at 95 — we don't claim perfection from a single simulated fix.
-            # Display-only: the sandbox contract means simulations NEVER write to
-            # trust_score_history — the recovery score exists only on the
-            # simulator screen and vanishes on reset.
-            recovery_score = min(95, round((baseline + 3) if baseline is not None else 88))
+                baseline = float(baseline_row[0]) if baseline_row and baseline_row[0] is not None else None
+                # Small uplift over pre-incident baseline (remediation fixed the root
+                # cause), capped at 95 — we don't claim perfection from one fix.
+                recovery_score = min(95, round((baseline + 3) if baseline is not None else 88))
+            except Exception as be_exc:
+                logger.warning("Remediate baseline lookup failed, using display-only fallback: %s", be_exc)
 
         log_event(
             db,
@@ -1020,12 +1046,15 @@ def remediate_simulation(
             connection_id=req.connection_id,
         )
         db.commit()
+    except HTTPException:
+        raise
     except Exception as exc:
         logger.warning("Remediate update failed: %s", exc)
         try:
             db.rollback()
         except Exception:
             pass
+        raise HTTPException(500, "Remediation failed — the simulation run was not updated. Please retry.")
 
     logger.info(json.dumps({
         "event": "remediate.exit",

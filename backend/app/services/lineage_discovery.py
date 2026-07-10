@@ -571,7 +571,20 @@ def _discover_query_log_edges(
     report.llm_fallback_enabled = include_llm_fallback
     report.query_log_supported = connector.supports_query_log()
     if not report.query_log_supported:
-        report.query_log_unsupported_reason = (
+        # "Not yet implemented" is honest for platforms with a real, queryable
+        # history mechanism we just haven't wired up (Snowflake's
+        # ACCOUNT_USAGE.QUERY_HISTORY, Databricks' system.query.history,
+        # Postgres' pg_stat_statements) — that's a backlog item. It's misleading
+        # for DuckDB: as used here (an embedded, per-connection engine with no
+        # server-side session), there is no persistent cross-session query log
+        # to mine at all, so this isn't pending work — it's a platform property.
+        structural_reason = {
+            "duckdb": ("Query-log lineage discovery isn't available for DuckDB — as an embedded, "
+                       "per-connection engine it has no persistent, cross-session query log to mine "
+                       "(unlike Snowflake/Databricks/Postgres). FK-constraint and dbt-manifest "
+                       "discovery still apply."),
+        }.get(platform)
+        report.query_log_unsupported_reason = structural_reason or (
             f"Query-log lineage discovery is not yet implemented for platform '{platform}'. "
             "FK-constraint and dbt-manifest discovery still apply."
         )

@@ -125,11 +125,13 @@
       </div>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <Button size="sm" variant="primary" icon="user-check" onClick={() => createAnomalyTask("Anomaly")}>Accept & create task</Button>
-        <Button size="sm" variant="soft" icon="share-2" onClick={() => {
-          window.DTApi?.shareAnomaly?.(anomalyId, { channel: "#data-quality" })
-            .then(() => toast("Explanation shared to #data-quality", { kind: "success" }))
-            .catch(() => toast("Share failed — check backend", { kind: "error" }));
-        }}>Share to Slack</Button>
+        <span title="Records this share in the audit trail — Slack delivery isn't wired to a live webhook yet">
+          <Button size="sm" variant="soft" icon="share-2" onClick={() => {
+            window.DTApi?.shareAnomaly?.(anomalyId, { channel: "#data-quality" })
+              .then(() => toast("Logged as shared to #data-quality (audit trail only — no live Slack delivery yet)", { kind: "success" }))
+              .catch(() => toast("Share failed — check backend", { kind: "error" }));
+          }}>Log share (Slack)</Button>
+        </span>
         <span title="Editing explanations isn't wired to a backend annotation endpoint yet">
           <Button size="sm" variant="ghost" icon="pencil" disabled>Edit explanation</Button>
         </span>
@@ -327,6 +329,7 @@
                     </div>
                     {a.history && (
                       <div style={{ width: 180, flexShrink: 0 }}>
+                        <div style={{ fontSize: 9.5, color: "var(--fg-3)", textAlign: "right", marginBottom: 2 }}>Row count, last {a.history.length} runs</div>
                         <BarSeries data={a.history.map((v, i) => ({ label: i === a.history.length - 1 ? "Latest" : `−${a.history.length - 1 - i}`, value: v }))} height={56} highlightLast />
                       </div>
                     )}

@@ -13,7 +13,9 @@ class SnowflakeConnector(BaseConnector):
     """
     Config keys:
         account     Snowflake account identifier, e.g. "myorg-myaccount"
-        user        Login name
+        username    Login name (matches ConnectionCredentials.username / the
+                    connection form field — NOT "user", despite that being the
+                    keyword snowflake.connector.connect() itself takes)
         warehouse   Virtual warehouse name
         database    Database name
         role        Role to use (optional)
@@ -36,9 +38,22 @@ class SnowflakeConnector(BaseConnector):
             raise ImportError("snowflake-connector-python is required for Snowflake connections")
 
         cfg = self._config
+        # Users routinely copy the full hostname straight from the Snowflake
+        # login page (e.g. "org-account.snowflakecomputing.com") into the
+        # account field, which only wants the identifier before that suffix.
+        # Passing the full hostname makes the driver build a malformed URL
+        # and fail with an opaque connection error. Strip it defensively so
+        # both forms work.
+        account = cfg["account"].strip()
+        if account.lower().endswith(".snowflakecomputing.com"):
+            account = account[: -len(".snowflakecomputing.com")]
+
         kwargs = {
-            "account": cfg["account"],
-            "user": cfg["user"],
+            "account": account,
+            # cfg key is "username" (matches ConnectionCredentials and the
+            # connection form) — "user" is only the snowflake.connector.connect()
+            # keyword on the other side of this call, not our own config key.
+            "user": cfg["username"],
             "warehouse": cfg.get("warehouse", ""),
             "database": cfg.get("database", ""),
             "role": cfg.get("role", ""),

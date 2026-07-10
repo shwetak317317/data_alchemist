@@ -101,6 +101,7 @@ def test_connection(req: ConnectionTestRequest):
     """Test connectivity without saving. No auth required (no data exposed)."""
     steps = []
     start = time.monotonic()
+    connector = None
     try:
         steps.append("Building connector configuration")
         creds = req.credentials.model_dump(exclude_none=True)
@@ -119,7 +120,6 @@ def test_connection(req: ConnectionTestRequest):
         steps.append("Enumerating accessible schemas")
         schemas = connector.list_schemas()
         steps.append(f"Found {len(schemas)} schema(s): {', '.join(schemas[:6]) or '(none)'}")
-        connector.close()
         return ConnectionTestResult(success=True, message="Connection successful",
                                     latency_ms=latency, details=steps, schemas=schemas)
 
@@ -142,6 +142,17 @@ def test_connection(req: ConnectionTestRequest):
         logger.error("Connection test failed (%s): %s", req.platform, raw)
         return ConnectionTestResult(success=False, message=clean,
                                     latency_ms=latency, details=steps)
+    finally:
+        # Every early-return above skips this on success too (already closed
+        # there historically), so close unconditionally here instead — a
+        # connector left open on a failed test leaks a live session in this
+        # worker process for the rest of its life, which can corrupt driver-
+        # internal state for the *next* unrelated test in the same process.
+        if connector is not None:
+            try:
+                connector.close()
+            except Exception:
+                pass
 
 
 @router.post("", response_model=ConnectionResponse, status_code=201)
@@ -305,6 +316,7 @@ def test_saved_connection(
         config.update(overrides)
 
     steps, start = [], time.monotonic()
+    connector = None
     try:
         steps.append("Building connector configuration")
         connector = get_connector(platform, config)
@@ -317,7 +329,6 @@ def test_saved_connection(
         steps.append("Enumerating accessible schemas")
         schemas = connector.list_schemas()
         steps.append(f"Found {len(schemas)} schema(s): {', '.join(schemas[:6]) or '(none)'}")
-        connector.close()
         db.execute(text(
             "UPDATE connections SET status='active', error_message=NULL, "
             "last_tested_at=NOW(), updated_at=NOW() WHERE id=:id"
@@ -347,6 +358,12 @@ def test_saved_connection(
         ), {"id": connection_id, "err": clean})
         db.commit()
         return ConnectionTestResult(success=False, message=clean, latency_ms=latency, details=steps)
+    finally:
+        if connector is not None:
+            try:
+                connector.close()
+            except Exception:
+                pass
 
 
 @router.get("/{connection_id}/schemas")
@@ -365,12 +382,18 @@ def get_connection_schemas(
 
     platform, encrypted, current_scope = row[0], row[1], row[2]
     config = _decrypt(encrypted)
+    connector = None
     try:
         connector = get_connector(platform, config)
         available = connector.list_schemas()
-        connector.close()
     except Exception:
         available = list(current_scope or [])
+    finally:
+        if connector is not None:
+            try:
+                connector.close()
+            except Exception:
+                pass
 
     return {"available": available, "selected": list(current_scope or [])}
 
